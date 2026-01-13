@@ -1,3 +1,41 @@
 <resources>
     <string name="app_name">Deeztracker Mobile</string>
+    
+    <!-- Login Screen -->
+    <string name="login_title">Login to Deezer</string>
+    <string name="login_arl_hint">Enter your ARL</string>
+    <string name="login_button">Login</string>
+    
+    <!-- Search Screen -->
+    <string name="search_hint">Search tracks, artists, playlists...</string>
+    <string name="tab_tracks">Tracks</string>
+    <string name="tab_artists">Artists</string>
+    <string name="tab_playlists">Playlists</string>
+    <string name="no_results">No results found</string>
+    <string name="tab_albums">Albums</string>
+    
+    <!-- Search Screen Items -->
+    <string name="unknown_track">Unknown Track</string>
+    <string name="unknown_artist">Unknown Artist</string>
+    <string name="unknown_album">Unknown Album</string>
+    <string name="unknown_playlist">Unknown Playlist</string>
+    <string name="label_song">Song</string>
+    <string name="label_fans">Fans</string>
+    <string name="label_tracks">Tracks</string>
+    
+    <!-- Navigation -->
+    <string name="nav_search">Search</string>
+    <string name="nav_library">Library</string>
+    <string name="nav_downloads">Downloads</string>
+    <string name="nav_settings">Settings</string>
+    
+    <!-- Login Screen -->
+    <string name="app_title">Deeztracker</string>
+    <string name="app_subtitle">PREMIUM AUDIO CORE</string>
+    <string name="login_welcome">Welcome Back</string>
+    <string name="login_instruction">Enter your ARL token to sync your library.</string>
+    <string name="login_label_arl">ARL Token</string>
+    <string name="login_paste">Paste</string>
+    <string name="login_action">Log In</string>
+    <string name="login_help">How do I get my ARL?</string>
 </resources>
