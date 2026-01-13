@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Album Details</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#33ddff",
+                        "background-light": "#fafafa",
+                        "background-dark": "#000000",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                },
+            },
+        }
+    </script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }.gradient-fade {
+            background: linear-gradient(to top, #000000 0%, transparent 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased selection:bg-primary selection:text-black">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden pb-10">
+<div class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-6 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+<button class="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-white/5 backdrop-blur-md border border-white/10 active:bg-white/10 transition-all">
+<span class="material-symbols-outlined text-white" style="font-size: 20px;">arrow_back_ios_new</span>
+</button>
+<button class="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-white/5 backdrop-blur-md border border-white/10 active:bg-white/10 transition-all">
+<span class="material-symbols-outlined text-white" style="font-size: 24px;">more_horiz</span>
+</button>
+</div>
+<main class="flex-1 w-full max-w-md mx-auto pt-20 px-6">
+<div class="relative w-full aspect-square mb-8 group perspective-1000">
+<div class="absolute inset-4 bg-primary/20 blur-3xl rounded-full opacity-0 group-hover:opacity-40 transition-opacity duration-700"></div>
+<div class="relative w-full h-full rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.9)] border border-white/5">
+<div class="w-full h-full bg-center bg-cover transform transition-transform duration-700 group-hover:scale-105" data-alt="Daft Punk Random Access Memories album cover art showing two robot helmets" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC5wBn6k12UNwcdZMeZHF4sBK6gDSBlw2lQku0iGUJz8kP3KSzx9KYKwErvNwxnY7w0iHCan7QscPPMJG6xPkpIGfcJG6UI0O0_DalhHU6zfeaFbBMnLaN5V-8NmQsCj9SFo9ce9uq1CA92rnhH0BJtigHwWtTpL4VfWTl_Sg2Aj4gyEj2tfnAZHHjQWLynsPdu4vfHpscfA1SHUTx-oE35x9MLjNxxvAPDBen-E4YYGNt74XLDV9SQyMJrcOHE8ZcgVItS7x6QnKCi");'>
+</div>
+<div class="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-50 pointer-events-none"></div>
+</div>
+</div>
+<div class="flex flex-col items-center text-center space-y-2 mb-8">
+<h1 class="text-white text-3xl font-bold leading-tight tracking-wide drop-shadow-md">Random Access Memories</h1>
+<h2 class="text-primary text-xl font-medium tracking-wide drop-shadow-[0_0_10px_rgba(51,221,255,0.5)]">Daft Punk</h2>
+<p class="text-gray-400 text-xs font-normal uppercase tracking-widest pt-1">2013 • Pop/Funk • Columbia</p>
+</div>
+<div class="w-full mb-10">
+<button class="group relative w-full overflow-hidden rounded-xl bg-white/5 p-[1px] transition-all active:scale-[0.98]">
+<div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+<div class="relative flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-black/40 backdrop-blur-xl px-6 text-primary font-bold border border-primary/30 shadow-[0_0_20px_-5px_rgba(51,221,255,0.3)] hover:bg-primary/10 hover:border-primary hover:shadow-[0_0_30px_-5px_rgba(51,221,255,0.5)] transition-all">
+<span class="material-symbols-outlined animate-pulse-slow">download</span>
+<span class="tracking-wider text-sm uppercase">Download Album</span>
+</div>
+</button>
+</div>
+<div class="flex flex-col space-y-1 pb-12">
+<div class="group flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5">
+<div class="flex items-center gap-4 flex-1 min-w-0">
+<span class="text-gray-500 font-mono text-xs w-6 text-right group-hover:text-primary transition-colors">01</span>
+<div class="flex flex-col truncate pr-2">
+<span class="text-white font-medium truncate text-base group-hover:translate-x-1 transition-transform">Give Life Back to Music</span>
+<span class="text-gray-600 text-xs truncate">Daft Punk, Nile Rodgers</span>
+</div>
+</div>
+<div class="flex items-center gap-4 shrink-0">
+<span class="text-gray-500 text-xs font-mono">4:34</span>
+<button class="flex items-center justify-center size-8 rounded-full bg-white/5 text-gray-400 hover:text-primary hover:bg-primary/10 transition-all">
+<span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5">
+<div class="flex items-center gap-4 flex-1 min-w-0">
+<span class="text-gray-500 font-mono text-xs w-6 text-right group-hover:text-primary transition-colors">02</span>
+<div class="flex flex-col truncate pr-2">
+<span class="text-white font-medium truncate text-base group-hover:translate-x-1 transition-transform">The Game of Love</span>
+</div>
+</div>
+<div class="flex items-center gap-4 shrink-0">
+<span class="text-gray-500 text-xs font-mono">5:22</span>
+<button class="flex items-center justify-center size-8 rounded-full bg-white/5 text-gray-400 hover:text-primary hover:bg-primary/10 transition-all">
+<span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5">
+<div class="flex items-center gap-4 flex-1 min-w-0">
+<span class="text-gray-500 font-mono text-xs w-6 text-right group-hover:text-primary transition-colors">03</span>
+<div class="flex flex-col truncate pr-2">
+<span class="text-white font-medium truncate text-base group-hover:translate-x-1 transition-transform">Giorgio by Moroder</span>
+<span class="text-gray-600 text-xs truncate">Daft Punk, Giorgio Moroder</span>
+</div>
+</div>
+<div class="flex items-center gap-4 shrink-0">
+<span class="text-gray-500 text-xs font-mono">9:04</span>
+<button class="flex items-center justify-center size-8 rounded-full bg-white/5 text-gray-400 hover:text-primary hover:bg-primary/10 transition-all">
+<span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5">
+<div class="flex items-center gap-4 flex-1 min-w-0">
+<span class="text-gray-500 font-mono text-xs w-6 text-right group-hover:text-primary transition-colors">04</span>
+<div class="flex flex-col truncate pr-2">
+<span class="text-white font-medium truncate text-base group-hover:translate-x-1 transition-transform">Within</span>
+<span class="text-gray-600 text-xs truncate">Daft Punk, Chilly Gonzales</span>
+</div>
+</div>
+<div class="flex items-center gap-4 shrink-0">
+<span class="text-gray-500 text-xs font-mono">3:48</span>
+<button class="flex items-center justify-center size-8 rounded-full bg-white/5 text-gray-400 hover:text-primary hover:bg-primary/10 transition-all">
+<span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5">
+<div class="flex items-center gap-4 flex-1 min-w-0">
+<span class="text-gray-500 font-mono text-xs w-6 text-right group-hover:text-primary transition-colors">05</span>
+<div class="flex flex-col truncate pr-2">
+<span class="text-white font-medium truncate text-base group-hover:translate-x-1 transition-transform">Instant Crush</span>
+<span class="text-gray-600 text-xs truncate">Daft Punk, Julian Casablancas</span>
+</div>
+</div>
+<div class="flex items-center gap-4 shrink-0">
+<span class="text-gray-500 text-xs font-mono">5:37</span>
+<button class="flex items-center justify-center size-8 rounded-full bg-white/5 text-gray-400 hover:text-primary hover:bg-primary/10 transition-all">
+<span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5">
+<div class="flex items-center gap-4 flex-1 min-w-0">
+<span class="text-gray-500 font-mono text-xs w-6 text-right group-hover:text-primary transition-colors">06</span>
+<div class="flex flex-col truncate pr-2">
+<span class="text-white font-medium truncate text-base group-hover:translate-x-1 transition-transform">Lose Yourself to Dance</span>
+<span class="text-gray-600 text-xs truncate">Daft Punk, Pharrell Williams</span>
+</div>
+</div>
+<div class="flex items-center gap-4 shrink-0">
+<span class="text-gray-500 text-xs font-mono">5:53</span>
+<button class="flex items-center justify-center size-8 rounded-full bg-white/5 text-gray-400 hover:text-primary hover:bg-primary/10 transition-all">
+<span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5">
+<div class="flex items-center gap-4 flex-1 min-w-0">
+<span class="text-gray-500 font-mono text-xs w-6 text-right group-hover:text-primary transition-colors">07</span>
+<div class="flex flex-col truncate pr-2">
+<span class="text-white font-medium truncate text-base group-hover:translate-x-1 transition-transform">Touch</span>
+<span class="text-gray-600 text-xs truncate">Daft Punk, Paul Williams</span>
+</div>
+</div>
+<div class="flex items-center gap-4 shrink-0">
+<span class="text-gray-500 text-xs font-mono">8:18</span>
+<button class="flex items-center justify-center size-8 rounded-full bg-white/5 text-gray-400 hover:text-primary hover:bg-primary/10 transition-all">
+<span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5">
+<div class="flex items-center gap-4 flex-1 min-w-0">
+<span class="text-gray-500 font-mono text-xs w-6 text-right group-hover:text-primary transition-colors">08</span>
+<div class="flex flex-col truncate pr-2">
+<span class="text-white font-medium truncate text-base group-hover:translate-x-1 transition-transform">Get Lucky</span>
+<span class="text-gray-600 text-xs truncate">Daft Punk, Pharrell Williams</span>
+</div>
+</div>
+<div class="flex items-center gap-4 shrink-0">
+<span class="text-gray-500 text-xs font-mono">6:09</span>
+<button class="flex items-center justify-center size-8 rounded-full bg-white/5 text-gray-400 hover:text-primary hover:bg-primary/10 transition-all">
+<span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+</button>
+</div>
+</div>
+</div>
+<div class="h-10"></div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Deeztracker Login</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#00aaff",
+                        "background-light": "#f1f2f4",
+                        "background-dark": "#000000",
+                        "surface-dark": "#121212",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                    boxShadow: {
+                        "glow": "0 0 20px -5px rgba(0, 170, 255, 0.3)",
+                        "input-focus": "0 0 0 1px #00aaff, 0 0 15px -3px rgba(0, 170, 255, 0.4)"
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar hiding for cleaner mobile look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Subtle animated background gradient */
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.05); }
+        }
+        .animate-pulse-slow {
+            animation: pulse-glow 8s ease-in-out infinite;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased overflow-hidden">
+<div class="relative flex min-h-screen w-full flex-col overflow-hidden selection:bg-primary/30 selection:text-primary">
+<!-- Abstract Background Art -->
+<div class="absolute inset-0 z-0 pointer-events-none">
+<!-- Deep OLED background base is handled by body class, adding texture here -->
+<div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(0,170,255,0.15),transparent_70%)]"></div>
+<!-- Soundwave Abstract Representation -->
+<div class="absolute bottom-0 left-0 right-0 h-2/3 opacity-20 dark:opacity-30 mix-blend-screen">
+<img alt="Abstract sound wave neon light pattern on dark background" class="w-full h-full object-cover object-bottom mask-gradient-to-t" data-alt="Abstract sound wave neon light pattern on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGDWlFJ710vKCtubvhY1FLXrv_ZOBUQC-FuLF1kqjj_scjPpMzsgzuxkm6g4YT4O3Nk0Y-Hr7olCfUynibAGWU7QYS49zlYPvjy0Hv32ILOFmQFE0G33GurMGj2EV0qV5IS7UOlEHl2pEORZCgTYswpbTcaRPAPYTdISAIVkgsqfENcDpPS7A8pfw0anNWNANdOpiEQ0-m8vBs17jSz9SwFBYLZIFhwkYizwdX2JFpHyyBs_AuE_qQ6U3JUhIHFRTuR6btLRcHAtkt" style="-webkit-mask-image: linear-gradient(to top, black, transparent);"/>
+</div>
+<!-- Additional texture/noise for OLED feel -->
+<div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
+</div>
+<!-- Main Content Area -->
+<div class="relative z-10 flex flex-1 flex-col justify-center px-6 py-8 sm:px-12 lg:px-8">
+<div class="mx-auto w-full max-w-[400px]">
+<!-- Logo Section -->
+<div class="mb-12 flex flex-col items-center justify-center text-center">
+<div class="relative mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-surface-dark/50 shadow-glow backdrop-blur-md ring-1 ring-white/10">
+<span class="material-symbols-outlined text-primary text-[40px]">graphic_eq</span>
+<div class="absolute -inset-1 rounded-2xl bg-primary/20 blur-lg animate-pulse-slow"></div>
+</div>
+<h1 class="text-3xl font-bold tracking-tight text-white mb-2">Deeztracker</h1>
+<p class="text-slate-400 text-sm font-medium tracking-wide uppercase opacity-80">Premium Audio Core</p>
+</div>
+<!-- Login Form -->
+<div class="group/form space-y-6">
+<!-- Headline for context -->
+<div class="text-center mb-8">
+<h2 class="text-xl font-semibold text-white">Welcome Back</h2>
+<p class="text-slate-500 text-sm mt-1">Enter your ARL token to sync your library.</p>
+</div>
+<!-- Input Field -->
+<div class="space-y-2">
+<label class="block text-sm font-medium text-slate-300 ml-1" for="arl-token">
+                            ARL Token
+                        </label>
+<div class="relative flex items-center group/input">
+<div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+<span class="material-symbols-outlined text-slate-500 transition-colors group-focus-within/input:text-primary">key</span>
+</div>
+<input class="block w-full rounded-xl border-0 bg-surface-dark/80 py-4 pl-12 pr-12 text-white shadow-sm ring-1 ring-inset ring-slate-800 placeholder:text-slate-600 focus:ring-2 focus:ring-inset focus:ring-primary focus:bg-black transition-all duration-200 sm:text-sm sm:leading-6 backdrop-blur-sm" id="arl-token" name="arl-token" placeholder="Paste your 192-char token..." type="text"/>
+<!-- Paste Action Button inside Input -->
+<button aria-label="Paste from clipboard" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-white transition-colors cursor-pointer" type="button">
+<div class="flex items-center justify-center h-8 w-8 rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="content_paste">content_paste</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Primary Action Button -->
+<button class="relative w-full overflow-hidden rounded-xl bg-primary px-4 py-4 text-base font-bold text-white shadow-lg shadow-primary/20 transition-all duration-300 hover:bg-[#33bbff] hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 active:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" type="button">
+<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] hover:translate-x-[100%] transition-transform duration-1000 ease-in-out"></div>
+<span class="relative flex items-center justify-center gap-2">
+                            Log In
+                            <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</span>
+</button>
+<!-- Helper Link -->
+<div class="text-center pt-4">
+<a class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary transition-colors duration-200 group/link" href="#">
+<span class="material-symbols-outlined text-[16px] group-hover/link:animate-bounce">help</span>
+<span class="underline decoration-slate-700 underline-offset-4 group-hover/link:decoration-primary">How do I get my ARL?</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom decorative gradient line -->
+<div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+</div>
+</body></html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Now Playing - Deeztracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#00aaff",
+                        "background-light": "#f1f2f4",
+                        "background-dark": "#000000",
+                        "surface-dark": "#121212",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                    backdropBlur: {
+                        'xs': '2px',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hiding if needed */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Smooth glow animation */
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.5; transform: scale(0.95); }
+            50% { opacity: 0.7; transform: scale(1.02); }
+        }
+        .animate-pulse-glow {
+            animation: pulse-glow 4s ease-in-out infinite;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white overflow-hidden h-screen w-full selection:bg-primary selection:text-white">
+<!-- Background Layer with Dynamic Blur -->
+<div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+<!-- The blurred ambient background -->
+<div class="absolute inset-[-50%] w-[200%] h-[200%] bg-cover bg-center opacity-30 dark:opacity-40 blur-[100px] brightness-75 transition-all duration-700 ease-in-out" data-alt="Abstract blurry gradient background derived from album art colors" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBfi558o8uiQoUjZEuBHhGSltbcA4UT4HQ_an4dtNdtUNxHPS8jM-VTV_JjaikbyKHOrd1L7sgZlIaKzp-m2iQyTQ64CDwD8OiXoWZs0sYwydlwIfiNA7j4GaCpFgpn9ysGcgPK8By34_FT8uD8Mx1Ihtn63Lo-FC_arzbWUGo7JC_9PRaovNVYP54AGEuMnhJ5_7NLYw0TJJz3rlIsd0DX-W8fsC4L50vC6IFC0j-Tw2-Jj0fMa4H_NYGc8PXkcFcEUiKe_6wjaAZk');">
+</div>
+<!-- Gradient overlay to fade into pure black at edges for OLED/Focus -->
+<div class="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-background-dark"></div>
+<div class="absolute inset-0 bg-background-dark/60 backdrop-blur-xs"></div>
+</div>
+<!-- Main Content Layer -->
+<div class="relative z-10 flex flex-col h-full w-full max-w-md mx-auto px-6 pb-8 pt-12 justify-between">
+<!-- Header Actions -->
+<div class="flex items-center justify-between w-full">
+<button class="flex items-center justify-center size-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 text-white hover:bg-white/10 active:scale-95 transition">
+<span class="material-symbols-outlined !text-[24px]">keyboard_arrow_down</span>
+</button>
+<div class="flex flex-col items-center">
+<span class="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-0.5">Playing From</span>
+<span class="text-sm font-bold text-white/90">Heavy Rotation</span>
+</div>
+<button class="flex items-center justify-center size-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 text-white hover:bg-white/10 active:scale-95 transition">
+<span class="material-symbols-outlined !text-[24px]">more_horiz</span>
+</button>
+</div>
+<!-- Central Album Art -->
+<div class="flex-1 flex flex-col items-center justify-center w-full py-6 min-h-0">
+<div class="relative w-full aspect-square max-w-[340px] group">
+<!-- Glow Effect Behind -->
+<div class="absolute inset-0 rounded-2xl bg-cover bg-center blur-2xl opacity-50 dark:opacity-40 scale-95 translate-y-4 animate-pulse-glow" data-alt="Blurred glow effect matching the album cover" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAoXdsROTJRtqnbtix1LGexp5XvNfSoE92h64_tI-a5aqoCSLtPfQitckG4tR-2OE0qJOItEHpLFfRbSFpL-zeNnomsFsfO28HNQ87QSUOZOtxf-ZLPpbNBM3Z3m91MEA8TvsbxHSiP0plN61O4ifqkK0gZwlfzJYF9fTFcmeF-4-VQX56i7LVWixyP1dVJV_S4YoCDvg3psg0wtJpC2Q5wHyI0UX_oaInIPRUEGpkPXaRFvDHa8gGevhtK9LdEuD6XKaRaZNCTIqpC');">
+</div>
+<!-- Main Image -->
+<div class="relative w-full h-full rounded-2xl overflow-hidden shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] border border-white/10">
+<img alt="Cyberpunk style city artwork for the song Midnight City" class="w-full h-full object-cover" data-alt="Album cover showing a stylized neon city night scene" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-IHAjIGg2-kD0Trhg0f7CzzxC9q4THHP6S3aXRb2yHU1cgop_e9sb9boE-_fun_RUW5vPglSP6e1G-spiDmdlHFqEENGHh72nRYT1OD8DR4BN-f5dV-F-zvB3kDCF0HQeGRAZi_rsnIfN1f0NG2pVLQ3-tZZKIRU3mSJqPuYTrOxAo5O3OSzL7juLAiThnjMwDncrHkk4r_IIYulVS9HQA7UUHmfTDv5HBQ3gUiQJn-Shvv6vP57RtEJsS_b5X8loC6I9yy06DLDt"/>
+</div>
+</div>
+</div>
+<!-- Track Information -->
+<div class="w-full mb-6">
+<div class="flex items-center justify-between mb-1">
+<div class="flex flex-col overflow-hidden mr-4">
+<!-- Marquee effect simulation/container -->
+<h1 class="text-2xl sm:text-3xl font-display font-extrabold text-white leading-tight truncate">
+                        Midnight City
+                    </h1>
+<p class="text-lg text-gray-400 font-medium truncate">M83</p>
+</div>
+<button class="shrink-0 flex items-center justify-center size-12 text-primary hover:scale-110 transition active:scale-90">
+<span class="material-symbols-outlined !text-[28px] filled" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+</div>
+</div>
+<!-- Progress Slider -->
+<div class="w-full mb-8 group/slider">
+<div class="relative h-1.5 w-full bg-white/10 rounded-full cursor-pointer overflow-visible">
+<!-- Buffered/Background track -->
+<div class="absolute top-0 left-0 h-full w-full rounded-full"></div>
+<!-- Progress Fill -->
+<div class="absolute top-0 left-0 h-full w-[35%] bg-primary rounded-full shadow-[0_0_10px_rgba(0,170,255,0.5)]"></div>
+<!-- Thumb/Handle -->
+<div class="absolute top-1/2 left-[35%] -translate-y-1/2 -translate-x-1/2 size-4 bg-white rounded-full shadow-lg scale-0 group-hover/slider:scale-100 transition-transform duration-200"></div>
+</div>
+<div class="flex justify-between mt-2.5">
+<span class="text-xs font-medium text-gray-400 tabular-nums">0:45</span>
+<span class="text-xs font-medium text-gray-400 tabular-nums">4:03</span>
+</div>
+</div>
+<!-- Playback Controls -->
+<div class="w-full mb-6">
+<div class="flex items-center justify-between max-w-[360px] mx-auto">
+<!-- Shuffle -->
+<button class="text-gray-500 hover:text-white transition active:scale-90">
+<span class="material-symbols-outlined !text-[24px]">shuffle</span>
+</button>
+<!-- Previous -->
+<button class="text-white hover:text-primary transition active:scale-90">
+<span class="material-symbols-outlined !text-[40px]">skip_previous</span>
+</button>
+<!-- Play/Pause (Glassmorphic) -->
+<button class="group relative flex items-center justify-center size-20 rounded-full bg-gradient-to-br from-primary/90 to-blue-600/90 shadow-[0_8px_32px_rgba(0,170,255,0.3)] hover:shadow-[0_8px_40px_rgba(0,170,255,0.5)] active:scale-95 transition-all duration-300">
+<div class="absolute inset-0 rounded-full bg-white/20 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition"></div>
+<span class="material-symbols-outlined !text-[44px] text-white filled" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<!-- Next -->
+<button class="text-white hover:text-primary transition active:scale-90">
+<span class="material-symbols-outlined !text-[40px]">skip_next</span>
+</button>
+<!-- Repeat -->
+<button class="text-primary hover:text-white transition active:scale-90 relative">
+<span class="material-symbols-outlined !text-[24px]">repeat</span>
+<span class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 size-1 bg-primary rounded-full"></span>
+</button>
+</div>
+</div>
+<!-- Bottom Utility Bar -->
+<div class="w-full">
+<div class="flex items-center justify-between px-6 py-4 rounded-2xl bg-white/5 backdrop-blur-md border border-white/5">
+<button class="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition group">
+<span class="material-symbols-outlined !text-[22px]">lyrics</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary hover:text-white transition group">
+<div class="flex items-end gap-[2px] h-4">
+<div class="w-[2px] h-2 bg-current rounded-full animate-[pulse_1s_ease-in-out_infinite]"></div>
+<div class="w-[2px] h-4 bg-current rounded-full animate-[pulse_1.2s_ease-in-out_infinite]"></div>
+<div class="w-[2px] h-3 bg-current rounded-full animate-[pulse_0.8s_ease-in-out_infinite]"></div>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-wider">Hi-Fi</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition group">
+<span class="material-symbols-outlined !text-[22px]">queue_music</span>
+</button>
+</div>
+</div>
+</div>
+</body></html>

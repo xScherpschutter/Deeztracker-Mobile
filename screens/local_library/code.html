@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Local Library</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#00aaff",
+              "background-light": "#f1f2f4",
+              "background-dark": "#000000",
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        /* Custom scrollbar hiding for cleaner look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .glass-panel {
+            background: rgba(25, 25, 25, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-header {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased selection:bg-primary selection:text-white">
+<div class="relative min-h-screen flex flex-col w-full max-w-md mx-auto shadow-2xl overflow-hidden bg-background-light dark:bg-background-dark">
+<!-- Glassmorphic Header -->
+<header class="glass-header sticky top-0 z-30 px-5 pt-12 pb-4 flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<h1 class="text-2xl font-extrabold tracking-tight">Local Music</h1>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 active:bg-primary/20 transition-colors group">
+<span class="material-symbols-outlined text-primary group-hover:animate-pulse" style="font-size: 20px;">radar</span>
+<span class="text-sm font-bold text-primary">Scan</span>
+</button>
+</div>
+<!-- Local Search Bar embedded in header for sticky behavior -->
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-gray-500 group-focus-within:text-primary transition-colors">search</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-3 rounded-xl border-none bg-gray-200 dark:bg-[#1A1A1A] text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-primary/50 transition-all shadow-inner" placeholder="Search local files..." type="text"/>
+</div>
+</header>
+<!-- Scrollable Content -->
+<main class="flex-1 flex flex-col pb-32"> <!-- Padding bottom for floating player -->
+<!-- Storage Indicator (Top of list as a subtle status) -->
+<div class="px-5 py-4 flex items-center justify-between text-xs font-medium text-gray-500 dark:text-gray-400">
+<span>124 Tracks</span>
+<div class="flex items-center gap-2">
+<div class="w-24 h-1.5 bg-gray-300 dark:bg-gray-800 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[65%] rounded-full"></div>
+</div>
+<span>2.4 GB Used</span>
+</div>
+</div>
+<!-- Track List -->
+<div class="flex flex-col space-y-1 px-2">
+<!-- Item 1 -->
+<div class="group flex items-center gap-4 p-3 rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] transition-all cursor-pointer">
+<div class="relative shrink-0">
+<div class="size-14 rounded-lg bg-cover bg-center shadow-lg group-hover:shadow-primary/20 transition-shadow" data-alt="Abstract dark red synthwave grid background representing Blinding Lights album art" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDqqR0eTbLADC0PsNgP7gFBqiXhGHsSwIbC9AQIFHIY2D27rg402sQthuRdgIcCjepHQty_VO1ixV7HrrJe2ni9yd_Zczg7Ew71jr8RI5qAuWI9eXntu6dDEKmglrqe7chazUsWp7_EyFFUJ0AK8zU0_ovlgASmrcGMTKTtGadEBaIU2ZAIns61lpDKDqNBP6sRHHphgacdickSYQjZexvYXBHhT_ZcpbqPMxIYFFQWGXxt2RRaEp5ZE4QKS1LlMK8p7Vh4PQhFsh0-');"></div>
+<div class="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/10"></div>
+</div>
+<div class="flex flex-col flex-1 min-w-0 justify-center gap-0.5">
+<p class="text-base font-bold text-gray-900 dark:text-white truncate">Blinding Lights</p>
+<div class="flex items-center gap-2 text-xs">
+<span class="text-gray-500 dark:text-[#9ab0bc] truncate max-w-[120px]">The Weeknd</span>
+<span class="px-1.5 py-0.5 rounded bg-primary/20 text-primary font-bold tracking-wide text-[10px]">FLAC</span>
+<span class="text-gray-600 dark:text-gray-500">24MB</span>
+</div>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Item 2 -->
+<div class="group flex items-center gap-4 p-3 rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] transition-all cursor-pointer">
+<div class="relative shrink-0">
+<div class="size-14 rounded-lg bg-cover bg-center shadow-lg group-hover:shadow-primary/20 transition-shadow" data-alt="Neon city skyline at night representing Midnight City album art" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDXrFf9n718hxItdBCziR0hAlk34_YvY0Z4wOGhoF-bjGCCjZjZX_t1GXCQVDp7BfsqOGkl88lt1jK466dyW2D4sJqCQqeIoU5dGUwSc-3QaWwE3krUvSO-R2AyJVdY69gZd9pkFwHZRkBPOPK3SvIPsmRPI7K6pL14XDExJyc827g8uEk6xCZqsd2Wr2blujBz_Nf20wsOJi69qlwHCs8pzY1WBDLcnJsCO2xBxjCObd-81UIke5PyE884qlihCK_lmM-KtOq3_b2n');"></div>
+<div class="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/10"></div>
+</div>
+<div class="flex flex-col flex-1 min-w-0 justify-center gap-0.5">
+<p class="text-base font-bold text-gray-900 dark:text-white truncate">Midnight City</p>
+<div class="flex items-center gap-2 text-xs">
+<span class="text-gray-500 dark:text-[#9ab0bc] truncate max-w-[120px]">M83</span>
+<span class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-bold tracking-wide text-[10px]">MP3</span>
+<span class="text-gray-600 dark:text-gray-500">8MB</span>
+</div>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Item 3 -->
+<div class="group flex items-center gap-4 p-3 rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] transition-all cursor-pointer">
+<div class="relative shrink-0">
+<div class="size-14 rounded-lg bg-cover bg-center shadow-lg group-hover:shadow-primary/20 transition-shadow" data-alt="Starry night sky space galaxy representing Starlight album art" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAVmb9MhFw-tY6TNpGQ_zlbtEB_fD-ztONrtHoVdnind2pmRDbaKWqdNQt_8OunnFc--aWq8Hw4Z7NQ7D_cqHljCOJuSOER-BasiOWfVrUHS8djeU1PXRYNuboQ4E4rHbhuA3lY6sst6TwBnf9zSFiFI9HNzQY2Gs83xo5sVhKJIpnIx-2-WkMEtQy0MGSsFw8k2zBqK10bD3bnRPGD3bkEn8GZIYdLyP44bz9ZoA5jbHLKfMTOiHebCxtdGVs2Jf4EQdU13ucgyDPs');"></div>
+<div class="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/10"></div>
+</div>
+<div class="flex flex-col flex-1 min-w-0 justify-center gap-0.5">
+<p class="text-base font-bold text-gray-900 dark:text-white truncate">Starlight</p>
+<div class="flex items-center gap-2 text-xs">
+<span class="text-gray-500 dark:text-[#9ab0bc] truncate max-w-[120px]">Muse</span>
+<span class="px-1.5 py-0.5 rounded bg-primary/20 text-primary font-bold tracking-wide text-[10px]">FLAC</span>
+<span class="text-gray-600 dark:text-gray-500">32MB</span>
+</div>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Item 4 -->
+<div class="group flex items-center gap-4 p-3 rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] transition-all cursor-pointer">
+<div class="relative shrink-0">
+<div class="size-14 rounded-lg bg-cover bg-center shadow-lg group-hover:shadow-primary/20 transition-shadow" data-alt="Retro microphone with bokeh background representing audio recording" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBFeFCHOgnEohX1Od1bKcVPiB9oNZoXykiMsw_tKTY-hvUzfNi-CXuk0R2auK_sBzWd11jTnD3LMIqFNTOxbaiBU8QtT2DQwQDK9zKmJ79k7Q3bNinOfO0jriwurs44og254Aj21HBs_wnwTsLloraRTX8Cxcn4-_h2LD1LHJUDU7VRN4scUnWAB7_MH3DscUzl0LqqPifbSsFAV0FrkgnQA8fKVsuFFh9YQl5ZF-6t5tr_pviKVoSnQgkTSIqbP7sORFZYZJ0K6R1k');"></div>
+<div class="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/10"></div>
+</div>
+<div class="flex flex-col flex-1 min-w-0 justify-center gap-0.5">
+<p class="text-base font-bold text-gray-900 dark:text-white truncate">Hotel California (Live)</p>
+<div class="flex items-center gap-2 text-xs">
+<span class="text-gray-500 dark:text-[#9ab0bc] truncate max-w-[120px]">Eagles</span>
+<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 font-bold tracking-wide text-[10px]">HI-RES</span>
+<span class="text-gray-600 dark:text-gray-500">86MB</span>
+</div>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Item 5 -->
+<div class="group flex items-center gap-4 p-3 rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] transition-all cursor-pointer">
+<div class="relative shrink-0">
+<div class="size-14 rounded-lg bg-cover bg-center shadow-lg group-hover:shadow-primary/20 transition-shadow" data-alt="Geometric robot helmet shapes representing Daft Punk album art" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDD3wh8mhCgQAWU8BzM_UtJv82qKE5-YcIbcWJ6HTmfxcArecGfZD4S2-nxIKdgMkfUjVSSOxBUwgois4IQzRyQGVtpu9qNPcVtW1ngSARiEXtNInaiqdTeqsaJvNn8X04z7IpesQ0cFwCz90vTpBqk2LzEzHLClYJeww8xvpyaNV58rEQ1dcpOrI0xnPTCVmis70FrGULIUj-XTKuUzdrE3CVRln5DbIiw2P5rAwfNoUshOIm2OuxM-nSyrvUP1GzdWzHCfgDWQiqK');"></div>
+<div class="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/10"></div>
+</div>
+<div class="flex flex-col flex-1 min-w-0 justify-center gap-0.5">
+<p class="text-base font-bold text-gray-900 dark:text-white truncate">Instant Crush</p>
+<div class="flex items-center gap-2 text-xs">
+<span class="text-gray-500 dark:text-[#9ab0bc] truncate max-w-[120px]">Daft Punk</span>
+<span class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-bold tracking-wide text-[10px]">MP3</span>
+<span class="text-gray-600 dark:text-gray-500">11MB</span>
+</div>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Item 6 -->
+<div class="group flex items-center gap-4 p-3 rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] transition-all cursor-pointer">
+<div class="relative shrink-0">
+<div class="size-14 rounded-lg bg-cover bg-center shadow-lg group-hover:shadow-primary/20 transition-shadow" data-alt="Neon pink and blue light tubes abstract composition" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAQXZrJX1eWMP0Jm_Rw9yHcUziEIBMV7d6rEp0mG4W1zvWMPOC0kLZaD-5BtMbmJd5fTq7zcEZl9Ks2lTFJcEsx-nYFHoTjoncZgQ27-DEhyzrrhC7Bt7gENJ-VwnW3qbigNL6pgMUan6qFBqnoDoOoN-eI35l4AZ8Qgelj1WWW0CBwbwfvOVGgDogWg6JBpXlYXYp6F06_meFvfm2monFBlEd_aPZvJiul8ICYF7WP-VrWCnor37OzKtZHZx-pXvHlo_gLE5ECfFYO');"></div>
+<div class="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/10"></div>
+</div>
+<div class="flex flex-col flex-1 min-w-0 justify-center gap-0.5">
+<p class="text-base font-bold text-gray-900 dark:text-white truncate">Resonance</p>
+<div class="flex items-center gap-2 text-xs">
+<span class="text-gray-500 dark:text-[#9ab0bc] truncate max-w-[120px]">Home</span>
+<span class="px-1.5 py-0.5 rounded bg-primary/20 text-primary font-bold tracking-wide text-[10px]">FLAC</span>
+<span class="text-gray-600 dark:text-gray-500">18MB</span>
+</div>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Empty state illustration (hidden for this populated state but ready in code structure) -->
+<!-- 
+            <div class="hidden flex-col items-center justify-center py-20 opacity-50">
+                <span class="material-symbols-outlined text-6xl text-gray-700 mb-4">folder_off</span>
+                <p class="text-gray-500">No local files found</p>
+            </div> 
+            -->
+</main>
+<!-- Floating Mini Player -->
+<div class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto">
+<!-- Progress Line (Absolute top of player) -->
+<div class="absolute top-0 left-0 right-0 h-[2px] bg-white/10 z-50">
+<div class="h-full bg-primary w-1/3 shadow-[0_0_10px_rgba(0,170,255,0.8)]"></div>
+</div>
+<div class="glass-panel px-4 py-3 flex items-center gap-3">
+<div class="size-10 rounded bg-cover bg-center shadow-sm shrink-0" data-alt="Thumbnail of currently playing song Blinding Lights" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAcm4Z8HO4_cWsqMi3pjyG8VfN7yBCg8VfM3TcUSulvYCKC0MWv1vud0Imni-IKGE6_035xEZIVccj7_RE5--Hgfx_5oFmtPJjPvJAQT09mm78FYD-30OzzJcuc679X_q2ewhgYVj_L1fIfOqSeIaWMtxC2N_cVBqRq4q23dy1MemJzGUi9SeWsyyeUANkWQfJvaCyXor_i6bv8O_ShGEt7dXlAUM9WdvHIR9iOAP8ZiVqVacJnYN4y3n27nkI3bsQwLjDRD-3YjttG');"></div>
+<div class="flex flex-col flex-1 min-w-0 justify-center cursor-pointer">
+<div class="flex items-center gap-2">
+<p class="text-sm font-bold text-white truncate">Blinding Lights</p>
+<span class="size-1.5 rounded-full bg-primary animate-pulse"></span>
+</div>
+<p class="text-xs text-gray-400 truncate">The Weeknd</p>
+</div>
+<div class="flex items-center gap-1">
+<button class="size-10 flex items-center justify-center rounded-full text-white hover:bg-white/10 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[28px]">skip_previous</span>
+</button>
+<button class="size-12 flex items-center justify-center rounded-full bg-white text-black hover:bg-gray-200 active:scale-95 transition-all shadow-lg shadow-white/10">
+<span class="material-symbols-outlined text-[28px] fill-1">pause</span>
+</button>
+<button class="size-10 flex items-center justify-center rounded-full text-white hover:bg-white/10 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[28px]">skip_next</span>
+</button>
+</div>
+</div>
+<!-- Bottom Navigation Placeholder (iOS Home Indicator Area) -->
+<div class="h-6 w-full glass-panel flex justify-center items-end pb-2">
+<div class="w-1/3 h-1 bg-white/20 rounded-full"></div>
+</div>
+</div>
+</div>
+</body></html>
