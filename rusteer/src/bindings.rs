@@ -1,6 +1,4 @@
 use std::path::PathBuf;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 use crate::rusteer::{self, Rusteer};
 
@@ -91,59 +89,95 @@ impl From<crate::error::DeezerError> for RusteerError {
     }
 }
 
+/// Stateless Rusteer service - each method receives ARL as parameter
 #[derive(uniffi::Object)]
-pub struct RusteerService {
-    inner: Mutex<Rusteer>,
-}
+pub struct RusteerService {}
 
 #[uniffi::export]
 impl RusteerService {
     #[uniffi::constructor]
-    pub async fn new(arl: String) -> Result<Arc<Self>, RusteerError> {
-        let rusteer = Rusteer::new(&arl).await?;
-        Ok(Arc::new(Self {
-            inner: Mutex::new(rusteer),
-        }))
+    pub fn new() -> Self {
+        Self {}
     }
 
-    pub async fn set_quality(&self, quality: DownloadQuality) {
-        let mut inner = self.inner.lock().await;
-        inner.set_quality(quality.into());
+    /// Verify if an ARL token is valid (for login)
+    /// This is a blocking call that internally uses Tokio runtime
+    pub fn verify_arl(&self, arl: String) -> Result<bool, RusteerError> {
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| RusteerError::DeezerError(format!("Failed to create runtime: {}", e)))?;
+
+        runtime.block_on(async {
+            match Rusteer::new(&arl).await {
+                Ok(_) => Ok(true),
+                Err(e) => {
+                    // Check if it's a bad credentials error
+                    if e.to_string().contains("Bad credentials") || e.to_string().contains("401") {
+                        Ok(false)
+                    } else {
+                        Err(e.into())
+                    }
+                }
+            }
+        })
     }
 
-    pub async fn download_track(
+    pub fn download_track(
         &self,
+        arl: String,
         track_id: String,
         output_dir: String,
+        quality: DownloadQuality,
     ) -> Result<DownloadResult, RusteerError> {
-        let inner = self.inner.lock().await;
-        let result = inner
-            .download_track_to(&track_id, PathBuf::from(output_dir))
-            .await?;
-        Ok(result.into())
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| RusteerError::DeezerError(format!("Failed to create runtime: {}", e)))?;
+
+        runtime.block_on(async {
+            let mut rusteer = Rusteer::new(&arl).await?;
+            rusteer.set_quality(quality.into());
+            let result = rusteer
+                .download_track_to(&track_id, PathBuf::from(output_dir))
+                .await?;
+            Ok(result.into())
+        })
     }
 
-    pub async fn download_album(
+    pub fn download_album(
         &self,
+        arl: String,
         album_id: String,
         output_dir: String,
+        quality: DownloadQuality,
     ) -> Result<BatchDownloadResult, RusteerError> {
-        let inner = self.inner.lock().await;
-        let result = inner
-            .download_album_to(&album_id, PathBuf::from(output_dir))
-            .await?;
-        Ok(result.into())
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| RusteerError::DeezerError(format!("Failed to create runtime: {}", e)))?;
+
+        runtime.block_on(async {
+            let mut rusteer = Rusteer::new(&arl).await?;
+            rusteer.set_quality(quality.into());
+            let result = rusteer
+                .download_album_to(&album_id, PathBuf::from(output_dir))
+                .await?;
+            Ok(result.into())
+        })
     }
 
-    pub async fn download_playlist(
+    pub fn download_playlist(
         &self,
+        arl: String,
         playlist_id: String,
         output_dir: String,
+        quality: DownloadQuality,
     ) -> Result<BatchDownloadResult, RusteerError> {
-        let inner = self.inner.lock().await;
-        let result = inner
-            .download_playlist_to(&playlist_id, PathBuf::from(output_dir))
-            .await?;
-        Ok(result.into())
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| RusteerError::DeezerError(format!("Failed to create runtime: {}", e)))?;
+
+        runtime.block_on(async {
+            let mut rusteer = Rusteer::new(&arl).await?;
+            rusteer.set_quality(quality.into());
+            let result = rusteer
+                .download_playlist_to(&playlist_id, PathBuf::from(output_dir))
+                .await?;
+            Ok(result.into())
+        })
     }
 }

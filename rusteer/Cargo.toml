@@ -11,6 +11,7 @@ crate-type = ["cdylib"]
 [dependencies]
 # HTTP client with cookie support
 reqwest = { version = "0.12", features = ["json", "cookies"] }
+openssl = { version = "0.10", features = ["vendored"] }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
