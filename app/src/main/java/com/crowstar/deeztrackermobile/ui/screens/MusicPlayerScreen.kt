@@ -4,6 +4,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -95,13 +98,15 @@ fun MusicPlayerScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 48.dp, horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+                .padding(top = 16.dp, bottom = 16.dp) // Optimized screen padding
+                .verticalScroll(rememberScrollState()), // Enable scrolling for large art
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Header
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp), 
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -139,20 +144,24 @@ fun MusicPlayerScreen(
                     Icon(Icons.Default.MoreHoriz, contentDescription = "Options", tint = Color.White)
                 }
             }
+            
+            Spacer(modifier = Modifier.height(24.dp)) // Optimized spacing
 
             // Album Art
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
+                    // Removed weight(1f) to force width-based sizing
+                    .fillMaxWidth()
+                    .aspectRatio(1f) // Square based on WIDTH
+                    .padding(horizontal = 8.dp), // Minimal safety padding
                 contentAlignment = Alignment.Center
             ) {
                 Box(
                     modifier = Modifier
-                        .aspectRatio(1f)
-                        .fillMaxWidth(0.9f)
+                        .fillMaxSize() // Fill the parent which is already square
                         .clip(RoundedCornerShape(24.dp))
                         .background(Color.DarkGray)
+                        .shadow(elevation = 24.dp, shape = RoundedCornerShape(24.dp))
                 ) {
                     if (track.albumArtUri != null) {
                         AsyncImage(
@@ -174,8 +183,14 @@ fun MusicPlayerScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(24.dp)) // Optimized spacing above title
+
             // Track Info & Controls
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp) // Added local padding
+            ) {
                 // Info
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
@@ -186,7 +201,7 @@ fun MusicPlayerScreen(
                         Text(
                             text = track.title,
                             color = Color.White,
-                            fontSize = 24.sp,
+                            fontSize = 28.sp, // Slightly larger title
                             fontWeight = FontWeight.Bold,
                             maxLines = 1
                         )
