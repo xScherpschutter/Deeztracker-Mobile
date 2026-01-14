@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,12 +26,14 @@ import coil.compose.AsyncImage
 import com.crowstar.deeztrackermobile.features.deezer.Album
 import com.crowstar.deeztrackermobile.features.deezer.Artist
 import com.crowstar.deeztrackermobile.features.deezer.Track
+import com.crowstar.deeztrackermobile.features.download.DownloadManager
+import com.crowstar.deeztrackermobile.features.download.DownloadState
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
-import kotlinx.coroutines.launch
 import com.crowstar.deeztrackermobile.ui.utils.formatDuration
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,9 +47,38 @@ fun ArtistScreen(
     val albums by viewModel.albums.collectAsState()
     val topTracks by viewModel.topTracks.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    
+    val context = LocalContext.current
+    val downloadManager = remember { DownloadManager.getInstance(context) }
+    val downloadState by downloadManager.downloadState.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(artistId) {
         viewModel.loadArtist(artistId)
+    }
+    
+    // Handle download state changes
+    LaunchedEffect(downloadState) {
+        when (val state = downloadState) {
+            is DownloadState.Completed -> {
+                val message = if (state.failedCount > 0) {
+                    "Downloaded ${state.successCount} tracks, ${state.failedCount} failed"
+                } else {
+                    "Downloaded: ${state.title}"
+                }
+                snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+                downloadManager.resetState()
+            }
+            is DownloadState.Error -> {
+                snackbarHostState.showSnackbar(
+                    "Download failed: ${state.message}",
+                    duration = SnackbarDuration.Short
+                )
+                downloadManager.resetState()
+            }
+            else -> {}
+        }
     }
 
     Scaffold(
@@ -61,6 +93,12 @@ fun ArtistScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent
                 )
+            )
+        },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(bottom = 100.dp)
             )
         },
         containerColor = BackgroundDark
@@ -135,9 +173,14 @@ fun ArtistScreen(
                     }
 
                     items(topTracks.size) { index ->
-                        TrackItem(
-                            track = topTracks[index],
-                            index = index
+                        val track = topTracks[index]
+                        ArtistTrackItem(
+                            track = track,
+                            index = index,
+                            isDownloading = downloadState is DownloadState.Downloading,
+                            onDownloadClick = {
+                                downloadManager.startTrackDownload(track.id, track.title)
+                            }
                         )
                     }
                 }
@@ -240,7 +283,12 @@ private fun AlbumCard(album: Album, onAlbumClick: (Long) -> Unit) {
 }
 
 @Composable
-private fun TrackItem(track: Track, index: Int) {
+private fun ArtistTrackItem(
+    track: Track,
+    index: Int,
+    isDownloading: Boolean,
+    onDownloadClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -295,12 +343,15 @@ private fun TrackItem(track: Track, index: Int) {
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // Download Button (placeholder for now)
-        IconButton(onClick = { /* TODO: Implement download */ }) {
+        // Download Button
+        IconButton(
+            onClick = onDownloadClick,
+            enabled = !isDownloading
+        ) {
             Icon(
                 Icons.Default.Download,
                 contentDescription = "Download",
-                tint = Primary
+                tint = if (isDownloading) TextGray else Primary
             )
         }
     }

@@ -37,9 +37,14 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -55,6 +60,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +73,8 @@ import com.crowstar.deeztrackermobile.features.deezer.Artist
 import com.crowstar.deeztrackermobile.features.deezer.DeezerRepository
 import com.crowstar.deeztrackermobile.features.deezer.Playlist
 import com.crowstar.deeztrackermobile.features.deezer.Track
+import com.crowstar.deeztrackermobile.features.download.DownloadManager
+import com.crowstar.deeztrackermobile.features.download.DownloadState
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
@@ -91,6 +99,11 @@ fun SearchScreen(
 
     val repository = remember { DeezerRepository() }
     val scope = rememberCoroutineScope()
+    
+    val context = LocalContext.current
+    val downloadManager = remember { DownloadManager.getInstance(context) }
+    val downloadState by downloadManager.downloadState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var artists by remember { mutableStateOf<List<Artist>>(emptyList()) }
@@ -102,6 +115,35 @@ fun SearchScreen(
     var isAppending by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
+    
+    // Handle download state changes
+    LaunchedEffect(downloadState) {
+        when (val state = downloadState) {
+            is DownloadState.Completed -> {
+                val message = if (state.failedCount > 0) {
+                    "Downloaded ${state.successCount} tracks, ${state.failedCount} failed"
+                } else {
+                    "Downloaded: ${state.title}"
+                }
+                snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+                downloadManager.resetState()
+            }
+            is DownloadState.Error -> {
+                snackbarHostState.showSnackbar(
+                    "Download failed: ${state.message}",
+                    duration = SnackbarDuration.Short
+                )
+                downloadManager.resetState()
+            }
+            is DownloadState.Downloading -> {
+                snackbarHostState.showSnackbar(
+                    "Downloading: ${state.title}",
+                    duration = SnackbarDuration.Indefinite
+                )
+            }
+            else -> {}
+        }
+    }
 
     fun performSearch(isNewSearch: Boolean = true) {
         if (query.isBlank()) return
@@ -180,182 +222,201 @@ fun SearchScreen(
             }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BackgroundDark)
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Header Section
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(BackgroundDark, Color.Transparent)
-                        )
-                    )
-                    .padding(top = 48.dp, bottom = 8.dp, start = 16.dp, end = 16.dp)
-            ) {
-                Column {
-                    // Title
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
-                    // Search Bar
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFF1A1A1A))
-                            .border(1.dp, Color.Transparent, RoundedCornerShape(16.dp)) // Placeholder for glow
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = null,
-                                tint = TextGray
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(bottom = 100.dp) // Avoid overlapping floating elements
+            )
+        },
+        containerColor = BackgroundDark
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(BackgroundDark)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Header Section
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(BackgroundDark, Color.Transparent)
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            BasicTextField(
-                                value = query,
-                                onValueChange = { query = it },
-                                modifier = Modifier.weight(1f),
-                                textStyle = TextStyle(
-                                    color = Color.White,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Medium
-                                ),
-                                singleLine = true,
-                                cursorBrush = SolidColor(Primary),
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                keyboardActions = KeyboardActions(onSearch = { performSearch(true) }),
-                                decorationBox = { innerTextField ->
-                                    if (query.isEmpty()) {
-                                        Text(
-                                            text = stringResource(R.string.search_hint),
-                                            color = TextGray,
-                                            fontSize = 18.sp
+                        )
+                        .padding(top = 48.dp, bottom = 8.dp, start = 16.dp, end = 16.dp)
+                ) {
+                    Column {
+                        // Title
+                        Text(
+                            text = stringResource(R.string.app_name),
+                            color = Color.White,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+
+                        // Search Bar
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color(0xFF1A1A1A))
+                                .border(1.dp, Color.Transparent, RoundedCornerShape(16.dp)) // Placeholder for glow
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = null,
+                                    tint = TextGray
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                BasicTextField(
+                                    value = query,
+                                    onValueChange = { query = it },
+                                    modifier = Modifier.weight(1f),
+                                    textStyle = TextStyle(
+                                        color = Color.White,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Medium
+                                    ),
+                                    singleLine = true,
+                                    cursorBrush = SolidColor(Primary),
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                    keyboardActions = KeyboardActions(onSearch = { performSearch(true) }),
+                                    decorationBox = { innerTextField ->
+                                        if (query.isEmpty()) {
+                                            Text(
+                                                text = stringResource(R.string.search_hint),
+                                                color = TextGray,
+                                                fontSize = 18.sp
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                )
+                                if (query.isNotEmpty()) {
+                                    IconButton(onClick = { query = "" }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Clear",
+                                            tint = TextGray
                                         )
                                     }
-                                    innerTextField()
                                 }
-                            )
-                            if (query.isNotEmpty()) {
-                                IconButton(onClick = { query = "" }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Clear",
-                                        tint = TextGray
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Tabs (Chips)
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(tabs.size) { index ->
+                                val isSelected = selectedTabIndex == index
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(50))
+                                        .background(
+                                            if (isSelected) Primary.copy(alpha = 0.1f) else SurfaceDark.copy(alpha = 0.5f)
+                                        )
+                                        .border(
+                                            1.dp,
+                                            if (isSelected) Primary.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.05f),
+                                            RoundedCornerShape(50)
+                                        )
+                                        .clickable { selectedTabIndex = index }
+                                        .padding(horizontal = 24.dp, vertical = 10.dp)
+                                ) {
+                                    Text(
+                                        text = tabs[index],
+                                        color = if (isSelected) Primary else TextGray,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 14.sp
                                     )
                                 }
                             }
                         }
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Tabs (Chips)
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                // Content List
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        items(tabs.size) { index ->
-                            val isSelected = selectedTabIndex == index
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(50))
-                                    .background(
-                                        if (isSelected) Primary.copy(alpha = 0.1f) else SurfaceDark.copy(alpha = 0.5f)
-                                    )
-                                    .border(
-                                        1.dp,
-                                        if (isSelected) Primary.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.05f),
-                                        RoundedCornerShape(50)
-                                    )
-                                    .clickable { selectedTabIndex = index }
-                                    .padding(horizontal = 24.dp, vertical = 10.dp)
-                            ) {
-                                Text(
-                                    text = tabs[index],
-                                    color = if (isSelected) Primary else TextGray,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    fontSize = 14.sp
-                                )
-                            }
-                        }
+                        CircularProgressIndicator(color = Primary)
                     }
-                }
-            }
-
-            // Content List
-            if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = Primary)
-                }
-            } else {
-                LazyColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    when (selectedTabIndex) {
-                        0 -> {
-                            if (tracks.isEmpty() && query.isNotEmpty()) {
-                                item { Text(stringResource(R.string.no_results), color = TextGray) }
+                } else {
+                    val isDownloading = downloadState is DownloadState.Downloading
+                    
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        when (selectedTabIndex) {
+                            0 -> {
+                                if (tracks.isEmpty() && query.isNotEmpty()) {
+                                    item { Text(stringResource(R.string.no_results), color = TextGray) }
+                                }
+                                items(tracks) { track ->
+                                    TrackItem(
+                                        track = track,
+                                        isDownloading = isDownloading,
+                                        onDownloadClick = {
+                                            downloadManager.startTrackDownload(track.id, track.title)
+                                        }
+                                    )
+                                }
                             }
-                            items(tracks) { track ->
-                                TrackItem(track)
+                            1 -> {
+                                if (artists.isEmpty() && query.isNotEmpty()) {
+                                    item { Text(stringResource(R.string.no_results), color = TextGray) }
+                                }
+                                items(artists) { artist ->
+                                    ArtistItem(artist, onClick = { onArtistClick(artist.id) })
+                                }
                             }
-                        }
-                        1 -> {
-                            if (artists.isEmpty() && query.isNotEmpty()) {
-                                item { Text(stringResource(R.string.no_results), color = TextGray) }
+                            2 -> {
+                                if (albums.isEmpty() && query.isNotEmpty()) {
+                                    item { Text(stringResource(R.string.no_results), color = TextGray) }
+                                }
+                                items(albums) { album ->
+                                    AlbumItem(album, onClick = { onAlbumClick(album.id) })
+                                }
                             }
-                            items(artists) { artist ->
-                                ArtistItem(artist, onClick = { onArtistClick(artist.id) })
-                            }
-                        }
-                        2 -> {
-                            if (albums.isEmpty() && query.isNotEmpty()) {
-                                item { Text(stringResource(R.string.no_results), color = TextGray) }
-                            }
-                            items(albums) { album ->
-                                AlbumItem(album, onClick = { onAlbumClick(album.id) })
-                            }
-                        }
-                        3 -> {
-                            if (playlists.isEmpty() && query.isNotEmpty()) {
-                                item { Text(stringResource(R.string.no_results), color = TextGray) }
-                            }
-                            items(playlists) { playlist ->
-                                PlaylistItem(playlist, onClick = { onPlaylistClick(playlist.id) })
+                            3 -> {
+                                if (playlists.isEmpty() && query.isNotEmpty()) {
+                                    item { Text(stringResource(R.string.no_results), color = TextGray) }
+                                }
+                                items(playlists) { playlist ->
+                                    PlaylistItem(playlist, onClick = { onPlaylistClick(playlist.id) })
+                                }
                             }
                         }
-                    }
-                    if (isAppending) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(color = Primary, modifier = Modifier.size(24.dp))
+                        if (isAppending) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = Primary, modifier = Modifier.size(24.dp))
+                                }
                             }
                         }
                     }
@@ -366,7 +427,11 @@ fun SearchScreen(
 }
 
 @Composable
-fun TrackItem(track: Track) {
+fun TrackItem(
+    track: Track,
+    isDownloading: Boolean = false,
+    onDownloadClick: () -> Unit = {}
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -416,7 +481,8 @@ fun TrackItem(track: Track) {
         }
         
         IconButton(
-            onClick = { /* Download */ },
+            onClick = onDownloadClick,
+            enabled = !isDownloading,
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
@@ -425,7 +491,7 @@ fun TrackItem(track: Track) {
             Icon(
                 imageVector = Icons.Default.Download,
                 contentDescription = "Download",
-                tint = TextGray,
+                tint = if (isDownloading) TextGray.copy(alpha = 0.5f) else Primary,
                 modifier = Modifier.size(20.dp)
             )
         }

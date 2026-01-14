@@ -14,17 +14,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.crowstar.deeztrackermobile.features.deezer.Playlist
 import com.crowstar.deeztrackermobile.features.deezer.Track
+import com.crowstar.deeztrackermobile.features.download.DownloadManager
+import com.crowstar.deeztrackermobile.features.download.DownloadState
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.utils.formatDuration
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,9 +40,38 @@ fun PlaylistScreen(
     val playlist by viewModel.playlist.collectAsState()
     val tracks by viewModel.tracks.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    
+    val context = LocalContext.current
+    val downloadManager = remember { DownloadManager.getInstance(context) }
+    val downloadState by downloadManager.downloadState.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(playlistId) {
         viewModel.loadPlaylist(playlistId)
+    }
+    
+    // Handle download state changes
+    LaunchedEffect(downloadState) {
+        when (val state = downloadState) {
+            is DownloadState.Completed -> {
+                val message = if (state.failedCount > 0) {
+                    "Downloaded ${state.successCount} tracks, ${state.failedCount} failed"
+                } else {
+                    "Downloaded: ${state.title}"
+                }
+                snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+                downloadManager.resetState()
+            }
+            is DownloadState.Error -> {
+                snackbarHostState.showSnackbar(
+                    "Download failed: ${state.message}",
+                    duration = SnackbarDuration.Short
+                )
+                downloadManager.resetState()
+            }
+            else -> {}
+        }
     }
 
     Scaffold(
@@ -53,6 +86,12 @@ fun PlaylistScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent
                 )
+            )
+        },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(bottom = 100.dp) // Avoid overlapping floating elements
             )
         },
         containerColor = BackgroundDark
@@ -82,24 +121,43 @@ fun PlaylistScreen(
                 // Download Playlist Button
                 item {
                     Spacer(modifier = Modifier.height(24.dp))
+                    val isDownloading = downloadState is DownloadState.Downloading
                     Button(
-                        onClick = { /* TODO: Implement playlist download */ },
+                        onClick = {
+                            if (!isDownloading) {
+                                playlist?.let { playlistData ->
+                                    downloadManager.startPlaylistDownload(playlistData.id, playlistData.title)
+                                }
+                            }
+                        },
+                        enabled = !isDownloading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
                             .height(48.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Primary
+                            containerColor = Primary,
+                            disabledContainerColor = Primary.copy(alpha = 0.5f)
                         ),
                         shape = RoundedCornerShape(24.dp)
                     ) {
-                        Icon(
-                            Icons.Default.Download,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Download Playlist", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        if (isDownloading && (downloadState as? DownloadState.Downloading)?.itemId == playlistId.toString()) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Downloading...", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        } else {
+                            Icon(
+                                Icons.Default.Download,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Download Playlist", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -129,9 +187,14 @@ fun PlaylistScreen(
 
                 // Tracks List
                 items(tracks.size) { index ->
+                    val track = tracks[index]
                     PlaylistTrackItem(
-                        track = tracks[index],
-                        index = index + 1
+                        track = track,
+                        index = index + 1,
+                        isDownloading = downloadState is DownloadState.Downloading,
+                        onDownloadClick = {
+                            downloadManager.startTrackDownload(track.id, track.title)
+                        }
                     )
                 }
 
@@ -198,7 +261,12 @@ private fun PlaylistHeader(playlist: Playlist) {
 }
 
 @Composable
-private fun PlaylistTrackItem(track: Track, index: Int) {
+private fun PlaylistTrackItem(
+    track: Track,
+    index: Int,
+    isDownloading: Boolean,
+    onDownloadClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -246,11 +314,14 @@ private fun PlaylistTrackItem(track: Track, index: Int) {
         )
 
         // Download Button
-        IconButton(onClick = { /* TODO: Implement track download */ }) {
+        IconButton(
+            onClick = onDownloadClick,
+            enabled = !isDownloading
+        ) {
             Icon(
                 Icons.Default.Download,
                 contentDescription = "Download track",
-                tint = Primary,
+                tint = if (isDownloading) TextGray else Primary,
                 modifier = Modifier.size(20.dp)
             )
         }
