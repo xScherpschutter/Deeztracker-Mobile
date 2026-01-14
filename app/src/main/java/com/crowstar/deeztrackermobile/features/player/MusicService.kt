@@ -11,6 +11,7 @@ import android.os.Bundle
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.AudioAttributes
+import android.media.audiofx.LoudnessEnhancer
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -36,6 +37,7 @@ class MusicService : MediaLibraryService() {
 
     private lateinit var player: ExoPlayer
     private lateinit var mediaLibrarySession: MediaLibrarySession
+    private var loudnessEnhancer: LoudnessEnhancer? = null
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
 
     companion object {
@@ -45,6 +47,8 @@ class MusicService : MediaLibraryService() {
         private const val KEY_LAST_TRACK_ID = "last_track_id"
         private const val KEY_LAST_POSITION = "last_position"
         private const val KEY_SHUFFLE_MODE = "shuffle_mode"
+        const val CMD_SET_VOLUME = "SET_VOLUME"
+        const val KEY_VOLUME = "volume"
     }
 
     override fun onCreate() {
@@ -85,6 +89,18 @@ class MusicService : MediaLibraryService() {
                 updatePlayerState()
                 savePlaybackState()
             }
+
+            override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                if (audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
+                    try {
+                        loudnessEnhancer?.release()
+                        loudnessEnhancer = LoudnessEnhancer(audioSessionId)
+                        loudnessEnhancer?.enabled = false
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
         })
 
         // Use MediaLibrarySession instead of generic MediaSession
@@ -112,6 +128,50 @@ class MusicService : MediaLibraryService() {
                 return Futures.immediateFuture(androidx.media3.session.LibraryResult.ofError(androidx.media3.session.LibraryResult.RESULT_ERROR_NOT_SUPPORTED))
             }
             // Add other overrides as necessary
+            override fun onConnect(
+                session: MediaSession,
+                controller: MediaSession.ControllerInfo
+            ): MediaSession.ConnectionResult {
+                val connectionResult = super.onConnect(session, controller)
+                val sessionCommands = connectionResult.availableSessionCommands
+                    .buildUpon()
+                    .add(androidx.media3.session.SessionCommand(CMD_SET_VOLUME, Bundle.EMPTY))
+                    .build()
+                return MediaSession.ConnectionResult.accept(sessionCommands, connectionResult.availablePlayerCommands)
+            }
+
+            override fun onCustomCommand(
+                session: MediaSession,
+                controller: MediaSession.ControllerInfo,
+                customCommand: androidx.media3.session.SessionCommand,
+                args: Bundle
+            ): ListenableFuture<androidx.media3.session.SessionResult> {
+                if (customCommand.customAction == CMD_SET_VOLUME) {
+                    val volume = args.getFloat(KEY_VOLUME, 1.0f)
+                    if (volume <= 1.0f) {
+                        player.volume = volume
+                        try {
+                            loudnessEnhancer?.enabled = false
+                        } catch (e: Exception) { e.printStackTrace() }
+                    } else {
+                        // Boost logic
+                        player.volume = 1.0f
+                        try {
+                            if (loudnessEnhancer == null && player.audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
+                                 loudnessEnhancer = LoudnessEnhancer(player.audioSessionId)
+                            }
+                            
+                            val boost = ((volume - 1.0f) * 4 * 1500).toInt()
+                            loudnessEnhancer?.setTargetGain(boost)
+                            loudnessEnhancer?.enabled = true
+                        } catch (e: Exception) { 
+                            e.printStackTrace()
+                        }
+                    }
+                    return Futures.immediateFuture(androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS))
+                }
+                return super.onCustomCommand(session, controller, customCommand, args)
+            }
         }).build()
     }
 
@@ -163,6 +223,7 @@ class MusicService : MediaLibraryService() {
         savePlaybackState()
         mediaLibrarySession.release()
         player.release()
+        loudnessEnhancer?.release()
         super.onDestroy()
     }
 
