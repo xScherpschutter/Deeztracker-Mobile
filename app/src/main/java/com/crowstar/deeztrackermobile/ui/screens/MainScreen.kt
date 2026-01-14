@@ -32,9 +32,12 @@ import com.crowstar.deeztrackermobile.R
 import com.crowstar.deeztrackermobile.ui.screens.MiniPlayer
 import com.crowstar.deeztrackermobile.ui.screens.MusicPlayerScreen
 import com.crowstar.deeztrackermobile.features.player.PlayerController
+import com.crowstar.deeztrackermobile.features.download.DownloadManager
+import com.crowstar.deeztrackermobile.features.download.DownloadState
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import kotlinx.coroutines.launch
 
 @Composable
 fun MainScreen(
@@ -45,8 +48,45 @@ fun MainScreen(
     val navController = rememberNavController()
     val context = LocalContext.current
     val playerController = remember { PlayerController.getInstance(context) }
-    // Ensure we observe state if needed at this level, or just pass controller
     val playerState by playerController.playerState.collectAsState()
+    
+    // Download Manager for centralized snackbars
+    val downloadManager = remember { DownloadManager.getInstance(context) }
+    val downloadState by downloadManager.downloadState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    // Handle download state changes
+    LaunchedEffect(downloadState) {
+        when (val state = downloadState) {
+            is DownloadState.Completed -> {
+                val message = if (state.failedCount > 0) {
+                    "Downloaded ${state.successCount} tracks, ${state.failedCount} failed"
+                } else {
+                    "Downloaded: ${state.title}"
+                }
+                snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+                downloadManager.resetState()
+            }
+            is DownloadState.Error -> {
+                snackbarHostState.showSnackbar(
+                    "Download failed: ${state.message}",
+                    duration = SnackbarDuration.Short
+                )
+                downloadManager.resetState()
+            }
+            is DownloadState.Downloading -> {
+                 // Optional: show indefinite snackbar or just UI indicator. 
+                 // User asked for snackbar feedback, but continuous might be annoying if blocking.
+                 // We'll show a short one or nothing if we have progress bars.
+                 // Actually, user screenshot showed a "Downloading..." toast/snackbar.
+                 // Let's rely on the indicators for progress, but maybe show a "Started..." snackbar?
+                 // Or keep the persistent one if desired.
+                 // The previous implementation used snackbar for Downloading state in SearchScreen
+                 // Let's skip it here to avoid blocking, as we have indicators.
+            }
+            else -> {}
+        }
+    }
     
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -77,7 +117,7 @@ fun MainScreen(
     ) {
         // Main Content Area
         // Add padding at the bottom so content isn't hidden by the floating bars ONLY if not in player
-        val contentPadding = if (currentRoute == "player") 0.dp else 140.dp
+        val contentPadding = if (currentRoute == "player") 0.dp else 110.dp
         Box(modifier = Modifier.fillMaxSize().padding(bottom = contentPadding)) {
             MainNavigation(
                 navController, 
@@ -88,6 +128,39 @@ fun MainScreen(
                 safePopBackStack = safePopBackStack
             )
         }
+        
+        // Calculate dynamic bottom padding for Snackbar
+        val isMiniPlayerVisible = playerState.currentTrack != null
+        val isBottomBarVisible = currentRoute in listOf("library", "search", "downloads", "settings")
+        
+        val finalSnackbarPadding = if (currentRoute == "player") {
+            16.dp 
+        } else {
+            var p = 0.dp
+            
+            if (isBottomBarVisible) {
+                // Navbar (64) + Spacer (12) + Padding (8) = 84dp used space
+                p += 82.dp 
+            } 
+            
+            if (isMiniPlayerVisible) {
+                // MiniPlayer height
+                p += 70.dp
+            }
+            
+            // Add base padding or buffer
+            if (p == 0.dp) 16.dp else p
+        }
+
+        // Centralized Snackbar
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = finalSnackbarPadding),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            SnackbarHost(hostState = snackbarHostState)
+        }
 
         // Floating UI Container (MiniPlayer + BottomBar)
         if (currentRoute != "player") {
@@ -95,7 +168,7 @@ fun MainScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 24.dp) // Margin from screen edges
+                    .padding(horizontal = 12.dp, vertical = 8.dp) // Margin from screen edges
             ) {
                 // Persistent Mini Player 
                 MiniPlayer(

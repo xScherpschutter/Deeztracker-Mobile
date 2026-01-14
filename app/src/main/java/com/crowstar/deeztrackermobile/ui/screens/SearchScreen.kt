@@ -100,10 +100,11 @@ fun SearchScreen(
     val repository = remember { DeezerRepository() }
     val scope = rememberCoroutineScope()
     
+
+
     val context = LocalContext.current
     val downloadManager = remember { DownloadManager.getInstance(context) }
     val downloadState by downloadManager.downloadState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var artists by remember { mutableStateOf<List<Artist>>(emptyList()) }
@@ -116,34 +117,7 @@ fun SearchScreen(
 
     val listState = rememberLazyListState()
     
-    // Handle download state changes
-    LaunchedEffect(downloadState) {
-        when (val state = downloadState) {
-            is DownloadState.Completed -> {
-                val message = if (state.failedCount > 0) {
-                    "Downloaded ${state.successCount} tracks, ${state.failedCount} failed"
-                } else {
-                    "Downloaded: ${state.title}"
-                }
-                snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
-                downloadManager.resetState()
-            }
-            is DownloadState.Error -> {
-                snackbarHostState.showSnackbar(
-                    "Download failed: ${state.message}",
-                    duration = SnackbarDuration.Short
-                )
-                downloadManager.resetState()
-            }
-            is DownloadState.Downloading -> {
-                snackbarHostState.showSnackbar(
-                    "Downloading: ${state.title}",
-                    duration = SnackbarDuration.Indefinite
-                )
-            }
-            else -> {}
-        }
-    }
+
 
     fun performSearch(isNewSearch: Boolean = true) {
         if (query.isBlank()) return
@@ -223,12 +197,7 @@ fun SearchScreen(
     }
 
     Scaffold(
-        snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.padding(bottom = 100.dp) // Avoid overlapping floating elements
-            )
-        },
+
         containerColor = BackgroundDark
     ) { paddingValues ->
         Box(
@@ -363,7 +332,7 @@ fun SearchScreen(
                     
                     LazyColumn(
                         state = listState,
-                        contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp, start = 16.dp, end = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
