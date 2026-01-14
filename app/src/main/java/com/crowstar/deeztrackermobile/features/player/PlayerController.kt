@@ -45,6 +45,7 @@ class PlayerController(private val context: Context) {
     private var mediaController: MediaController? = null
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var currentPlaylist: List<LocalTrack> = emptyList()
+    private var positionUpdateJob: kotlinx.coroutines.Job? = null
 
     init {
         initializeController()
@@ -71,6 +72,11 @@ class PlayerController(private val context: Context) {
                     }
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
                         updateState()
+                        if (isPlaying) {
+                            startPositionUpdates()
+                        } else {
+                            stopPositionUpdates()
+                        }
                     }
                     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                         updateState()
@@ -193,6 +199,25 @@ class PlayerController(private val context: Context) {
         }
     }
 
+
+    private fun startPositionUpdates() {
+        stopPositionUpdates()
+        positionUpdateJob = kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            try {
+                while (true) {
+                    updateState()
+                    kotlinx.coroutines.delay(100)
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Job was cancelled, exit gracefully
+            }
+        }
+    }
+
+    private fun stopPositionUpdates() {
+        positionUpdateJob?.cancel()
+        positionUpdateJob = null
+    }
 
     private fun updateState() {
         val player = mediaController ?: return
