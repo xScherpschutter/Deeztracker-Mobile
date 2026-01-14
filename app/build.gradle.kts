@@ -65,8 +65,8 @@ dependencies {
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
 
-    // Uniffi (placeholder - usually requires a plugin or specific setup)
-    // implementation("uniffi:uniffi:x.y.z") 
+    // Uniffi / JNA
+    implementation("net.java.dev.jna:jna:5.14.0@aar")
 
     // Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
