@@ -75,7 +75,10 @@ import com.crowstar.deeztrackermobile.ui.theme.TextWhite
 import kotlinx.coroutines.launch
 
 @Composable
-fun SearchScreen(onArtistClick: (Long) -> Unit = {}, onPlaylistClick: (Long) -> Unit = {}) {
+fun SearchScreen(
+    onArtistClick: (Long) -> Unit = {},
+    onPlaylistClick: (Long) -> Unit = {}
+) {
     var query by remember { mutableStateOf("") }
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf(
@@ -92,7 +95,7 @@ fun SearchScreen(onArtistClick: (Long) -> Unit = {}, onPlaylistClick: (Long) -> 
     var artists by remember { mutableStateOf<List<Artist>>(emptyList()) }
     var albums by remember { mutableStateOf<List<com.crowstar.deeztrackermobile.features.deezer.Album>>(emptyList()) }
     var playlists by remember { mutableStateOf<List<Playlist>>(emptyList()) }
-    
+
     var nextUrl by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     var isAppending by remember { mutableStateOf(false) }
@@ -194,6 +197,15 @@ fun SearchScreen(onArtistClick: (Long) -> Unit = {}, onPlaylistClick: (Long) -> 
                     .padding(top = 48.dp, bottom = 8.dp, start = 16.dp, end = 16.dp)
             ) {
                 Column {
+                    // Title
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        color = Color.White,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
                     // Search Bar
                     Box(
                         modifier = Modifier
@@ -349,101 +361,6 @@ fun SearchScreen(onArtistClick: (Long) -> Unit = {}, onPlaylistClick: (Long) -> 
                 }
             }
         }
-
-        // Bottom Navigation / Mini Player (Mockup)
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
-            Column {
-                // Mini Player (Mock)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF1E1E1E).copy(alpha = 0.9f)) // Glass-ish
-                        .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
-                        .padding(8.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color.DarkGray)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text("Starboy", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                Text("Playing on Device", color = Primary, fontSize = 12.sp)
-                            }
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = {}) { Icon(Icons.Default.SkipPrevious, null, tint = Color.White) }
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(20.dp))
-                            }
-                            IconButton(onClick = {}) { Icon(Icons.Default.SkipNext, null, tint = Color.White) }
-                        }
-                    }
-                }
-
-                // Bottom Nav
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF1E1E1E).copy(alpha = 0.95f))
-                        .border(1.dp, Color.Black.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalArrangement = Arrangement.SpaceAround,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        NavButton(Icons.Default.Search, stringResource(R.string.nav_search), true)
-                        NavButton(Icons.Default.LibraryMusic, stringResource(R.string.nav_library), false)
-                        NavButton(Icons.Default.Download, stringResource(R.string.nav_downloads), false)
-                        NavButton(Icons.Default.Settings, stringResource(R.string.nav_settings), false)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun NavButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, isSelected: Boolean) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = if (isSelected) Primary else TextGray
-        )
-        Text(
-            text = label,
-            fontSize = 10.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) Primary else TextGray
-        )
     }
 }
 

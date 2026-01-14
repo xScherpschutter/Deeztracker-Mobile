@@ -12,8 +12,8 @@ import com.crowstar.deeztrackermobile.features.rusteer.RustDeezerService
 import com.crowstar.deeztrackermobile.ui.screens.AlbumScreen
 import com.crowstar.deeztrackermobile.ui.screens.ArtistScreen
 import com.crowstar.deeztrackermobile.ui.screens.LoginScreen
+import com.crowstar.deeztrackermobile.ui.screens.MainScreen
 import com.crowstar.deeztrackermobile.ui.screens.PlaylistScreen
-import com.crowstar.deeztrackermobile.ui.screens.SearchScreen
 
 @Composable
 fun AppNavigation() {
@@ -22,19 +22,19 @@ fun AppNavigation() {
     
     // Check if user is already logged in
     val rustService = remember { RustDeezerService(context) }
-    val startDestination = if (rustService.isLoggedIn()) "search" else "login"
+    val startDestination = if (rustService.isLoggedIn()) "main" else "login"
     
     NavHost(navController = navController, startDestination = startDestination) {
         composable("login") {
             LoginScreen(onLoginSuccess = {
-                navController.navigate("search") {
+                navController.navigate("main") {
                     popUpTo("login") { inclusive = true }
                 }
             })
         }
         
-        composable("search") {
-            SearchScreen(
+        composable("main") {
+            MainScreen(
                 onArtistClick = { artistId ->
                     navController.navigate("artist/$artistId")
                 },
