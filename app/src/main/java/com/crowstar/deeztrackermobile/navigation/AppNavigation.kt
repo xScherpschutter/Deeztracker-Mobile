@@ -12,6 +12,7 @@ import com.crowstar.deeztrackermobile.features.rusteer.RustDeezerService
 import com.crowstar.deeztrackermobile.ui.screens.AlbumScreen
 import com.crowstar.deeztrackermobile.ui.screens.ArtistScreen
 import com.crowstar.deeztrackermobile.ui.screens.LoginScreen
+import com.crowstar.deeztrackermobile.ui.screens.PlaylistScreen
 import com.crowstar.deeztrackermobile.ui.screens.SearchScreen
 
 @Composable
@@ -36,6 +37,9 @@ fun AppNavigation() {
             SearchScreen(
                 onArtistClick = { artistId ->
                     navController.navigate("artist/$artistId")
+                },
+                onPlaylistClick = { playlistId ->
+                    navController.navigate("playlist/$playlistId")
                 }
             )
         }
@@ -61,6 +65,17 @@ fun AppNavigation() {
             val albumId = backStackEntry.arguments?.getLong("albumId") ?: return@composable
             AlbumScreen(
                 albumId = albumId,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+        
+        composable(
+            route = "playlist/{playlistId}",
+            arguments = listOf(navArgument("playlistId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val playlistId = backStackEntry.arguments?.getLong("playlistId") ?: return@composable
+            PlaylistScreen(
+                playlistId = playlistId,
                 onBackClick = { navController.popBackStack() }
             )
         }
