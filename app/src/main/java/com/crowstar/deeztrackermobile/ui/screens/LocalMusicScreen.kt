@@ -4,7 +4,9 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.IntentSenderRequest
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -41,6 +43,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import com.crowstar.deeztrackermobile.features.localmusic.LocalAlbum
 import com.crowstar.deeztrackermobile.features.localmusic.LocalArtist
+import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
@@ -83,10 +86,27 @@ fun LocalMusicScreen(
         context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Track"))
     }
 
-    var trackToDelete by remember { mutableStateOf<LocalTrack?>(null) }
+    val deleteIntentSender by viewModel.deleteIntentSender.collectAsState()
+    
+    val deleteLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            viewModel.onDeleteSuccess()
+        }
+        viewModel.resetDeleteIntentSender()
+    }
+
+    LaunchedEffect(deleteIntentSender) {
+        deleteIntentSender?.let { sender ->
+            val request = IntentSenderRequest.Builder(sender).build()
+            deleteLauncher.launch(request)
+        }
+    }
+
     var trackForPlaylist by remember { mutableStateOf<LocalTrack?>(null) }
+    var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
-    // TODO: Implement Delete Logic with ActivityResultLauncher for Android R+
 
     var hasPermission by remember {
         mutableStateOf(
@@ -118,6 +138,37 @@ fun LocalMusicScreen(
         } else {
             viewModel.loadMusic()
         }
+    }
+
+    val selectedPlaylist = remember(selectedPlaylistId, playlists) {
+        playlists.find { it.id == selectedPlaylistId }
+    }
+
+    if (selectedPlaylist != null) {
+        BackHandler {
+            selectedPlaylistId = null
+        }
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = BackgroundDark
+        ) {
+            Box(modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
+                LocalPlaylistDetailScreen(
+                    playlist = selectedPlaylist,
+                    allTracks = tracks,
+                    onBackClick = { selectedPlaylistId = null },
+                    onTrackClick = { track ->
+                        // Pass only playlist tracks if we want the player to play only from playlist
+                        // For now, keeping original behavior of passing all tracks, 
+                        // but ideally we should filter 'tracks' to match the playlist content if that's the desired player behavior.
+                        // Assuming specific requirement is to fix UI, preserving 'tracks' context.
+                         onTrackClick(track, tracks)
+                    },
+                    onRemoveTrack = { track -> viewModel.removeTrackFromPlaylist(selectedPlaylist, track) }
+                )
+            }
+        }
+        return
     }
 
     Scaffold(
@@ -254,6 +305,8 @@ fun LocalMusicScreen(
              // Optional: Player Bar placeholder could go here if needed
         }
     ) { padding ->
+
+
         if (trackForPlaylist != null) {
             com.crowstar.deeztrackermobile.ui.components.AddToPlaylistBottomSheet(
                 playlists = playlists,
@@ -351,7 +404,7 @@ fun LocalMusicScreen(
                         tracks = tracks, 
                         onTrackClick = onTrackClick,
                         onShare = { track -> shareTrack(track) },
-                        onDelete = { track -> trackToDelete = track },
+                        onDelete = { track -> viewModel.requestDeleteTrack(track) },
                         onAddToPlaylist = { track -> trackForPlaylist = track }
                     )
                     1 -> LocalAlbumsGrid(albums, onAlbumClick)
@@ -359,8 +412,7 @@ fun LocalMusicScreen(
                     3 -> LocalPlaylistsScreen(
                         playlists = playlists,
                         onPlaylistClick = { playlist -> 
-                            // TODO: Navigate to Playlist Detail 
-                            // For now just Log or Toast
+                            selectedPlaylistId = playlist.id
                         }
                     )
                 }
@@ -569,7 +621,8 @@ fun LocalTrackItem(
     onShare: () -> Unit,
     onDelete: () -> Unit,
     onAddToPlaylist: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    deleteLabel: String = "Delete"
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showDetails by remember { mutableStateOf(false) }
@@ -665,10 +718,6 @@ fun LocalTrackItem(
                 modifier = Modifier.background(SurfaceDark)
             ) {
                 DropdownMenuItem(
-                    text = { Text("Play", color = Color.White) }, // Placeholder
-                    onClick = { showMenu = false /* Play */ }
-                )
-                DropdownMenuItem(
                     text = { Text("Share", color = Color.White) },
                     onClick = { 
                         showMenu = false
@@ -690,7 +739,7 @@ fun LocalTrackItem(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Delete", color = Color.Red) },
+                    text = { Text(deleteLabel, color = Color.Red) },
                     onClick = { 
                         showMenu = false
                         onDelete()

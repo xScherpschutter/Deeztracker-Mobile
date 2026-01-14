@@ -11,6 +11,7 @@ import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylistRepositor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import android.content.IntentSender
 
 class LocalMusicViewModel(
     private val repository: LocalMusicRepository,
@@ -39,6 +40,9 @@ class LocalMusicViewModel(
     val loadedArtistTracks: StateFlow<List<LocalTrack>> = _loadedArtistTracks
 
     val playlists = playlistRepository.playlists // Expose playlists
+    
+    private val _deleteIntentSender = MutableStateFlow<IntentSender?>(null)
+    val deleteIntentSender: StateFlow<IntentSender?> = _deleteIntentSender
 
 
     // Master lists for filtering
@@ -143,5 +147,32 @@ class LocalMusicViewModel(
         viewModelScope.launch {
             playlistRepository.toggleFavorite(track.id)
         }
+    }
+
+
+    fun removeTrackFromPlaylist(playlist: LocalPlaylist, track: LocalTrack) {
+        viewModelScope.launch {
+            playlistRepository.removeTrackFromPlaylist(playlist.id, track.id)
+        }
+    }
+
+    fun requestDeleteTrack(track: LocalTrack) {
+        viewModelScope.launch {
+            val intentSender = repository.requestDeleteTrack(track.id)
+            if (intentSender != null) {
+                _deleteIntentSender.value = intentSender
+            } else {
+                // Deletion handled directly or failed, refresh list
+                loadMusic()
+            }
+        }
+    }
+
+    fun resetDeleteIntentSender() {
+        _deleteIntentSender.value = null
+    }
+
+    fun onDeleteSuccess() {
+        loadMusic()
     }
 }

@@ -2,7 +2,9 @@ package com.crowstar.deeztrackermobile.features.localmusic
 
 import android.content.ContentResolver
 import android.content.ContentUris
+import android.content.IntentSender
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -204,6 +206,34 @@ class LocalMusicRepository(private val contentResolver: ContentResolver) {
             it.album.contains(query, ignoreCase = true)
         }
     }
+
+    /**
+     * Request deletion of a track
+     * Returns an IntentSender to ask for user permission if needed (Android 10+), or null if deleted directly/failed.
+     */
+    suspend fun requestDeleteTrack(trackId: Long): IntentSender? = withContext(Dispatchers.IO) {
+        val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, trackId)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+ (API 30+)
+            val pendingIntent = MediaStore.createDeleteRequest(contentResolver, listOf(uri))
+            return@withContext pendingIntent.intentSender
+        } else {
+            // Android 10 and below
+            try {
+                contentResolver.delete(uri, null, null)
+                // If successful, return null (no intent needed)
+                return@withContext null
+            } catch (securityException: android.app.RecoverableSecurityException) {
+                // Android 10 specific scoped storage exception
+                return@withContext securityException.userAction.actionIntent.intentSender
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return@withContext null
+            }
+        }
+    }
+
 
     /**
      * Get album art URI for an album
