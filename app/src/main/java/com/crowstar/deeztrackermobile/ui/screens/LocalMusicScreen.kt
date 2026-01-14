@@ -54,6 +54,8 @@ import androidx.compose.ui.text.style.TextAlign
 fun LocalMusicScreen(
     onBackClick: () -> Unit,
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
+    onAlbumClick: (LocalAlbum) -> Unit,
+    onArtistClick: (LocalArtist) -> Unit,
     viewModel: LocalMusicViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
         factory = LocalMusicViewModelFactory(LocalContext.current)
     )
@@ -288,8 +290,8 @@ fun LocalMusicScreen(
                         onShare = { track -> shareTrack(track) },
                         onDelete = { track -> trackToDelete = track }
                     )
-                    1 -> LocalAlbumsGrid(albums) { /* Navigate to Album Details? */ }
-                    2 -> LocalArtistsGrid(artists) { /* Navigate to Artist Details? */ }
+                    1 -> LocalAlbumsGrid(albums, onAlbumClick)
+                    2 -> LocalArtistsGrid(artists, onArtistClick)
                 }
             }
         }
@@ -457,7 +459,7 @@ fun ArtistGridItem(artist: LocalArtist, onClick: () -> Unit) {
                 .size(96.dp)
                 .clip(CircleShape)
                 .background(SurfaceDark),
-            contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center
         ) {
             // Placeholder for artist image, or use a default icon
             Icon(

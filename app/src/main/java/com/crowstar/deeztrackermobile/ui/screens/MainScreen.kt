@@ -38,7 +38,9 @@ import com.crowstar.deeztrackermobile.ui.theme.TextGray
 fun MainScreen(
     onArtistClick: (Long) -> Unit,
     onPlaylistClick: (Long) -> Unit,
-    onAlbumClick: (Long) -> Unit
+    onAlbumClick: (Long) -> Unit,
+    onLocalAlbumClick: (Long) -> Unit,
+    onLocalArtistClick: (String) -> Unit
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
@@ -64,6 +66,8 @@ fun MainScreen(
                 onArtistClick, 
                 onPlaylistClick,
                 onAlbumClick,
+                onLocalAlbumClick,
+                onLocalArtistClick,
                 playerController = playerController
             )
         }
@@ -180,6 +184,8 @@ fun MainNavigation(
     onArtistClick: (Long) -> Unit,
     onPlaylistClick: (Long) -> Unit,
     onAlbumClick: (Long) -> Unit,
+    onLocalAlbumClick: (Long) -> Unit,
+    onLocalArtistClick: (String) -> Unit,
     playerController: PlayerController
 ) {
     NavHost(navController, startDestination = "library") {
@@ -196,7 +202,9 @@ fun MainNavigation(
                 onBackClick = { /* No back action */ },
                 onTrackClick = { track, playlist -> 
                     playerController.playTrack(track, playlist)
-                }
+                },
+                onAlbumClick = { album -> onLocalAlbumClick(album.id) },
+                onArtistClick = { artist -> onLocalArtistClick(artist.name) }
             ) 
         }
         

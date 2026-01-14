@@ -89,8 +89,8 @@ class PlayerController(private val context: Context) {
         }
     }
 
-    fun playTrack(track: LocalTrack, playlist: List<LocalTrack>) {
-        Log.d("DeezTracker", "PlayerController.playTrack called for: ${track.title}")
+    fun playTrack(track: LocalTrack, playlist: List<LocalTrack>, source: String = "Local Library") {
+        Log.d("DeezTracker", "PlayerController.playTrack called for: ${track.title} from $source")
         val player = mediaController
         if (player == null) {
             Log.e("DeezTracker", "MediaController is null, attempting re-init")
@@ -121,7 +121,7 @@ class PlayerController(private val context: Context) {
         player.prepare()
         player.play()
         
-        _playerState.update { it.copy(currentTrack = track, isPlaying = true) }
+        _playerState.update { it.copy(currentTrack = track, isPlaying = true, playingSource = source) }
     }
 
     fun togglePlayPause() {
