@@ -301,7 +301,14 @@ fun MainNavigation(
             ) 
         }
         
-        composable("downloads") { DownloadsScreen() }
+        composable("downloads") { 
+            DownloadsScreen(
+                onBackClick = safePopBackStack,
+                onTrackClick = { track, playlist ->
+                    playerController.playTrack(track, playlist, source = "Downloads")
+                }
+            ) 
+        }
         composable("settings") { SettingsScreen() }
         
         // Internal Dialog/Detail Routes
