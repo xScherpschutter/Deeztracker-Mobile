@@ -246,4 +246,12 @@ class LocalMusicRepository(private val contentResolver: ContentResolver) {
             null
         }
     }
+    /**
+     * Get tracks located in the specific download directory
+     * This uses in-memory filtering for simplicity as getAllTracks is already optimal.
+     */
+    suspend fun getDownloadedTracks(downloadPath: String): List<LocalTrack> = withContext(Dispatchers.IO) {
+        val allTracks = getAllTracks()
+        allTracks.filter { it.filePath.startsWith(downloadPath) }
+    }
 }
