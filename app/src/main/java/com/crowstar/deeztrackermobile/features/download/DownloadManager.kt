@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import uniffi.rusteer.DownloadQuality
+import android.media.MediaScannerConnection // Add Import
 import java.io.File
 
 /**
@@ -112,6 +113,7 @@ class DownloadManager private constructor(private val context: Context) {
                 )
                 
                 Log.d(TAG, "Track download completed: ${result.path}")
+                scanFile(result.path) // Scan the file
                 
             } catch (e: Exception) {
                 Log.e(TAG, "Track download failed: $title", e)
@@ -167,6 +169,11 @@ class DownloadManager private constructor(private val context: Context) {
                 
                 Log.d(TAG, "Album download completed: ${result.successful.size} succeeded, ${result.failed.size} failed")
                 
+                // Scan all successful files
+                result.successful.forEach { success ->
+                    scanFile(success.path)
+                }
+                
             } catch (e: Exception) {
                 Log.e(TAG, "Album download failed: $title", e)
                 _downloadState.value = DownloadState.Error(
@@ -221,6 +228,11 @@ class DownloadManager private constructor(private val context: Context) {
                 
                 Log.d(TAG, "Playlist download completed: ${result.successful.size} succeeded, ${result.failed.size} failed")
                 
+                // Scan all successful files
+                result.successful.forEach { success ->
+                    scanFile(success.path)
+                }
+                
             } catch (e: Exception) {
                 Log.e(TAG, "Playlist download failed: $title", e)
                 _downloadState.value = DownloadState.Error(
@@ -234,6 +246,24 @@ class DownloadManager private constructor(private val context: Context) {
         
         return true
     }
+    
+    /**
+     * Helper to scan a file into MediaStore so it appears in music apps immediately.
+     */
+    private fun scanFile(path: String) {
+        try {
+            MediaScannerConnection.scanFile(
+                context,
+                arrayOf(path),
+                null // Auto-detect mime type based on extension
+            ) { _, uri ->
+                Log.d(TAG, "Scanned $path -> $uri")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to scan file: $path", e)
+        }
+    }
+
     
     // Legacy suspend functions for backwards compatibility (deprecated)
     @Deprecated("Use startTrackDownload instead", ReplaceWith("startTrackDownload(trackId, title)"))
