@@ -63,6 +63,12 @@ class LocalPlaylistRepository(private val context: Context) {
         _playlists.value = current
     }
 
+    suspend fun deletePlaylist(playlistId: String) = withContext(Dispatchers.IO) {
+        val current = _playlists.value.filter { it.id != playlistId }
+        savePlaylistsToFile(current)
+        _playlists.value = current
+    }
+
     suspend fun addTrackToPlaylist(playlistId: String, trackId: Long) = withContext(Dispatchers.IO) {
         val current = _playlists.value.map { playlist ->
             if (playlist.id == playlistId) {

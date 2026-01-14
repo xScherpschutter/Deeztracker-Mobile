@@ -137,6 +137,12 @@ class LocalMusicViewModel(
         }
     }
 
+    fun deletePlaylist(playlist: LocalPlaylist) {
+        viewModelScope.launch {
+            playlistRepository.deletePlaylist(playlist.id)
+        }
+    }
+
     fun addTrackToPlaylist(playlist: LocalPlaylist, track: LocalTrack) {
         viewModelScope.launch {
             playlistRepository.addTrackToPlaylist(playlist.id, track.id)
