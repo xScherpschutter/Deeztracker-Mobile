@@ -3,7 +3,7 @@ package com.crowstar.deeztrackermobile.features.player
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -12,6 +12,8 @@ import androidx.media3.session.SessionToken
 import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
 import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylistRepository
 import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist
+import androidx.media3.session.SessionCommand
+import android.os.Bundle
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,7 +51,7 @@ class PlayerController(private val context: Context) {
         // Initialize Playlists and Observe Favorites
         kotlinx.coroutines.GlobalScope.launch {
             playlistRepository.loadPlaylists()
-            playlistRepository.playlists.collect { playlists ->
+            playlistRepository.playlists.collect { _ ->
                  checkFavoriteStatus()
             }
         }
@@ -57,14 +59,12 @@ class PlayerController(private val context: Context) {
 
 
     private fun initializeController() {
-        Log.d("DeezTracker", "Initializing MediaController")
         val sessionToken = SessionToken(context, ComponentName(context, MusicService::class.java))
         controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
         
         controllerFuture?.addListener({
             try {
                 mediaController = controllerFuture?.get()
-                Log.d("DeezTracker", "MediaController connected")
                 mediaController?.addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         updateState()
@@ -86,9 +86,9 @@ class PlayerController(private val context: Context) {
                 })
                 updateState()
             } catch (e: ExecutionException) {
-                Log.e("DeezTracker", "Failed to connect to MediaController", e)
+                e.printStackTrace()
             } catch (e: InterruptedException) {
-                Log.e("DeezTracker", "Failed to connect to MediaController", e)
+                e.printStackTrace()
             }
         }, MoreExecutors.directExecutor())
     }
@@ -112,10 +112,8 @@ class PlayerController(private val context: Context) {
     }
 
     fun playTrack(track: LocalTrack, playlist: List<LocalTrack>, source: String = "Local Library") {
-        Log.d("DeezTracker", "PlayerController.playTrack called for: ${track.title} from $source")
         val player = mediaController
         if (player == null) {
-            Log.e("DeezTracker", "MediaController is null, attempting re-init")
             initializeController()
             return // Or queue command
         }
@@ -123,7 +121,6 @@ class PlayerController(private val context: Context) {
         currentPlaylist = playlist
         
         val startIndex = playlist.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
-        Log.d("DeezTracker", "Starting playback at index: $startIndex")
         
         val mediaItems = playlist.map { localTrack ->
             MediaItem.Builder()
@@ -212,8 +209,19 @@ class PlayerController(private val context: Context) {
                 duration = player.duration.coerceAtLeast(0L),
                 currentPosition = player.currentPosition,
                 isShuffleEnabled = player.shuffleModeEnabled,
-                repeatMode = appRepeatMode
+                repeatMode = appRepeatMode,
+                volume = player.volume // Sync volume from player if changed elsewhere
             )
         }
+    }
+
+    fun setVolume(volume: Float) {
+        val player = mediaController ?: return
+        val command = SessionCommand(MusicService.CMD_SET_VOLUME, Bundle.EMPTY) // Command definition, extras usually empty
+        val args = Bundle().apply {
+             putFloat(MusicService.KEY_VOLUME, volume)
+        }
+        player.sendCustomCommand(command, args)
+        _playerState.update { it.copy(volume = volume) }
     }
 }
