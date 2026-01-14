@@ -303,8 +303,13 @@ fun MusicPlayerScreen(
                         )
                     }
 
-                    IconButton(onClick = { /* Repeat */ }) {
-                        Icon(Icons.Default.Repeat, contentDescription = "Repeat", tint = TextGray)
+                    IconButton(onClick = { playerController.toggleRepeatMode() }) {
+                        val (icon, tint) = when (playerState.repeatMode) {
+                            com.crowstar.deeztrackermobile.features.player.RepeatMode.ONE -> Icons.Default.RepeatOne to Primary
+                            com.crowstar.deeztrackermobile.features.player.RepeatMode.ALL -> Icons.Default.Repeat to Primary
+                            else -> Icons.Default.Repeat to TextGray
+                        }
+                        Icon(icon, contentDescription = "Repeat", tint = tint)
                     }
                 }
                 
