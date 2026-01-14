@@ -24,6 +24,7 @@ import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import com.crowstar.deeztrackermobile.ui.utils.formatDuration
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -254,10 +255,4 @@ private fun PlaylistTrackItem(track: Track, index: Int) {
             )
         }
     }
-}
-
-private fun formatDuration(seconds: Int): String {
-    val minutes = seconds / 60
-    val secs = seconds % 60
-    return "%d:%02d".format(minutes, secs)
 }
