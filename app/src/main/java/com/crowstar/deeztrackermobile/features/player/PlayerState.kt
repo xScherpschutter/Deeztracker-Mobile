@@ -10,7 +10,8 @@ data class PlayerState(
     val volume: Float = 1.0f,
     val isShuffleEnabled: Boolean = false,
     val repeatMode: RepeatMode = RepeatMode.OFF,
-    val playingSource: String = "Local Library" // Default
+    val playingSource: String = "Local Library",
+    val isCurrentTrackFavorite: Boolean = false
 )
 
 enum class RepeatMode {
