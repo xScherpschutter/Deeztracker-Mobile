@@ -10,9 +10,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,7 +29,8 @@ import com.crowstar.deeztrackermobile.ui.theme.TextGray
 @Composable
 fun LocalPlaylistsScreen(
     playlists: List<LocalPlaylist>,
-    onPlaylistClick: (LocalPlaylist) -> Unit
+    onPlaylistClick: (LocalPlaylist) -> Unit,
+    onDeletePlaylist: (LocalPlaylist) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -64,7 +65,8 @@ fun LocalPlaylistsScreen(
                 PlaylistCard(
                     playlist = favorites,
                     isFavorite = true,
-                    onClick = { onPlaylistClick(favorites) }
+                    onClick = { onPlaylistClick(favorites) },
+                    onDelete = {}
                 )
             }
         }
@@ -73,7 +75,8 @@ fun LocalPlaylistsScreen(
             PlaylistCard(
                 playlist = playlist,
                 isFavorite = false,
-                onClick = { onPlaylistClick(playlist) }
+                onClick = { onPlaylistClick(playlist) },
+                onDelete = { onDeletePlaylist(playlist) }
             )
         }
     }
@@ -83,8 +86,10 @@ fun LocalPlaylistsScreen(
 fun PlaylistCard(
     playlist: LocalPlaylist,
     isFavorite: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDelete: () -> Unit
 ) {
+    var showMenu by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -140,10 +145,35 @@ fun PlaylistCard(
             )
         }
         
-        Icon(
-            Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = TextGray
-        )
+        if (isFavorite) {
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = TextGray
+            )
+        } else {
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = "Options",
+                        tint = TextGray
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                    modifier = Modifier.background(SurfaceDark)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Delete", color = Color.Red) },
+                        onClick = {
+                            showMenu = false
+                            onDelete()
+                        }
+                    )
+                }
+            }
+        }
     }
 }

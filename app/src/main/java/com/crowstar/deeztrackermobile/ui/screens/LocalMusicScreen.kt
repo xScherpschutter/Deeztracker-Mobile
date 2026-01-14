@@ -413,6 +413,9 @@ fun LocalMusicScreen(
                         playlists = playlists,
                         onPlaylistClick = { playlist -> 
                             selectedPlaylistId = playlist.id
+                        },
+                        onDeletePlaylist = { playlist ->
+                            viewModel.deletePlaylist(playlist)
                         }
                     )
                 }
