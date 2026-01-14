@@ -37,7 +37,6 @@ import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocalMusicScreen(
     onBackClick: () -> Unit,
@@ -49,6 +48,22 @@ fun LocalMusicScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val context = LocalContext.current
     
+    // Search Query State
+    var searchQuery by remember { mutableStateOf("") }
+    
+    // Context Menu Actions
+    fun shareTrack(track: LocalTrack) {
+        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "audio/*"
+            putExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri.parse(track.filePath))
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Track"))
+    }
+
+    var trackToDelete by remember { mutableStateOf<LocalTrack?>(null) }
+    // TODO: Implement Delete Logic with ActivityResultLauncher for Android R+
+
     var hasPermission by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -93,7 +108,7 @@ fun LocalMusicScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp), // Reduce padding effectively
+                        .padding(horizontal = 8.dp), 
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -156,10 +171,30 @@ fun LocalMusicScreen(
                             tint = TextGray
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "Search local files...",
-                            color = TextGray,
-                            fontSize = 14.sp
+                        
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = searchQuery,
+                            onValueChange = { 
+                                searchQuery = it
+                                viewModel.searchTracks(it) 
+                            },
+                            singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                color = Color.White,
+                                fontSize = 14.sp
+                            ),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(Primary),
+                            modifier = Modifier.weight(1f),
+                            decorationBox = { innerTextField ->
+                                if (searchQuery.isEmpty()) {
+                                    Text(
+                                        text = "Search local files...",
+                                        color = TextGray,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                                innerTextField()
+                            }
                         )
                     }
                 }
@@ -251,7 +286,11 @@ fun LocalMusicScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(tracks) { track ->
-                        LocalTrackItem(track)
+                        LocalTrackItem(
+                            track = track,
+                            onShare = { shareTrack(track) },
+                            onDelete = { trackToDelete = track }
+                        )
                     }
                 }
             }
@@ -260,7 +299,14 @@ fun LocalMusicScreen(
 }
 
 @Composable
-fun LocalTrackItem(track: LocalTrack) {
+fun LocalTrackItem(
+    track: LocalTrack,
+    onShare: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    var showDetails by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -331,16 +377,81 @@ fun LocalTrackItem(track: LocalTrack) {
         Spacer(modifier = Modifier.width(8.dp))
 
         // Menu
-        IconButton(
-            onClick = { /* Menu */ },
-            modifier = Modifier.size(24.dp)
-        ) {
-            Icon(
-                Icons.Default.MoreVert,
-                contentDescription = "Options",
-                tint = TextGray
-            )
+        Box {
+            IconButton(
+                onClick = { showMenu = true },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    Icons.Default.MoreVert,
+                    contentDescription = "Options",
+                    tint = TextGray
+                )
+            }
+            
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false },
+                modifier = Modifier.background(SurfaceDark)
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Play", color = Color.White) }, // Placeholder
+                    onClick = { showMenu = false /* Play */ }
+                )
+                DropdownMenuItem(
+                    text = { Text("Share", color = Color.White) },
+                    onClick = { 
+                        showMenu = false
+                        onShare()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Details", color = Color.White) },
+                    onClick = { 
+                        showMenu = false
+                        showDetails = true
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Delete", color = Color.Red) },
+                    onClick = { 
+                        showMenu = false
+                        onDelete()
+                    }
+                )
+            }
         }
+    }
+
+    if (showDetails) {
+        AlertDialog(
+            onDismissRequest = { showDetails = false },
+            title = { Text(text = "Track Details", color = Color.White) },
+            text = {
+                Column {
+                    DetailRow("Path", track.filePath)
+                    DetailRow("Size", track.getFormattedSize())
+                    DetailRow("Format", track.mimeType)
+                    DetailRow("Bitrate", "Unknown") // Need extra metadata extraction for this
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDetails = false }) {
+                    Text("Close", color = Primary)
+                }
+            },
+            containerColor = BackgroundDark,
+            titleContentColor = Color.White,
+            textContentColor = TextGray
+        )
+    }
+}
+
+@Composable
+fun DetailRow(label: String, value: String) {
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(text = label, color = Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(text = value, color = Color.White, fontSize = 14.sp)
     }
 }
 
