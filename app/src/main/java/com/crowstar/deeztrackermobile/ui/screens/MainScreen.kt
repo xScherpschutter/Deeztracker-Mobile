@@ -55,8 +55,9 @@ fun MainScreen(
             .background(BackgroundDark)
     ) {
         // Main Content Area
-        // Add padding at the bottom so content isn't hidden by the floating bars
-        Box(modifier = Modifier.fillMaxSize().padding(bottom = 140.dp)) {
+        // Add padding at the bottom so content isn't hidden by the floating bars ONLY if not in player
+        val contentPadding = if (currentRoute == "player") 0.dp else 140.dp
+        Box(modifier = Modifier.fillMaxSize().padding(bottom = contentPadding)) {
             MainNavigation(
                 navController, 
                 onArtistClick, 
