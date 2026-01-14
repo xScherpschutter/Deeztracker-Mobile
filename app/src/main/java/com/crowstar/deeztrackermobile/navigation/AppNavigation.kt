@@ -43,12 +43,6 @@ fun AppNavigation() {
                 },
                 onAlbumClick = { albumId ->
                     navController.navigate("album/$albumId")
-                },
-                onLocalAlbumClick = { albumId ->
-                    navController.navigate("localAlbum/$albumId")
-                },
-                onLocalArtistClick = { artistName ->
-                    navController.navigate("localArtist/$artistName")
                 }
             )
         }
@@ -86,50 +80,6 @@ fun AppNavigation() {
             PlaylistScreen(
                 playlistId = playlistId,
                 onBackClick = { navController.popBackStack() }
-            )
-        }
-        
-        // Local Music Detail Routes
-         composable(
-            route = "localAlbum/{albumId}",
-            arguments = listOf(navArgument("albumId") { type = NavType.LongType })
-        ) { backStackEntry ->
-            val albumId = backStackEntry.arguments?.getLong("albumId") ?: return@composable
-            com.crowstar.deeztrackermobile.ui.screens.LocalAlbumDetailScreen(
-                albumId = albumId,
-                onBackClick = { navController.popBackStack() },
-                onTrackClick = { track, playlist ->
-                    // Get PlayerController instance
-                    val playerController = com.crowstar.deeztrackermobile.features.player.PlayerController.getInstance(context)
-                    playerController.playTrack(track, playlist, source = "Album: ${track.album}")
-                },
-                onPlayAlbum = { tracks ->
-                     if (tracks.isNotEmpty()) {
-                         val playerController = com.crowstar.deeztrackermobile.features.player.PlayerController.getInstance(context)
-                         playerController.playTrack(tracks.first(), tracks, source = "Album: ${tracks.first().album}")
-                     }
-                }
-            )
-        }
-
-        composable(
-            route = "localArtist/{artistName}",
-            arguments = listOf(navArgument("artistName") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val artistName = backStackEntry.arguments?.getString("artistName") ?: return@composable
-            com.crowstar.deeztrackermobile.ui.screens.LocalArtistDetailScreen(
-                artistName = artistName,
-                onBackClick = { navController.popBackStack() },
-                onTrackClick = { track, playlist ->
-                    val playerController = com.crowstar.deeztrackermobile.features.player.PlayerController.getInstance(context)
-                    playerController.playTrack(track, playlist, source = "Artist: ${track.artist}")
-                },
-                onPlayArtist = { tracks ->
-                    if (tracks.isNotEmpty()) {
-                        val playerController = com.crowstar.deeztrackermobile.features.player.PlayerController.getInstance(context)
-                        playerController.playTrack(tracks.first(), tracks, source = "Artist: $artistName")
-                    }
-                }
             )
         }
     }
