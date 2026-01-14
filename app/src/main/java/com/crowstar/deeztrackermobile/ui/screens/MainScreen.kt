@@ -120,14 +120,14 @@ fun MiniPlayer() {
 
 @Composable
 fun FloatingBottomNavigationBar(navController: NavHostController) {
-    val items = listOf("Search", "Library", "Downloads", "Settings")
+    val items = listOf("Library", "Search", "Downloads", "Settings")
     val icons = listOf(
-        Icons.Default.Search,
         Icons.Default.LibraryMusic,
+        Icons.Default.Search,
         Icons.Default.Download,
         Icons.Default.Settings
     )
-    val routes = listOf("search", "library", "downloads", "settings")
+    val routes = listOf("library", "search", "downloads", "settings")
     
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -205,7 +205,7 @@ fun MainNavigation(
     onArtistClick: (Long) -> Unit,
     onPlaylistClick: (Long) -> Unit
 ) {
-    NavHost(navController, startDestination = "search") {
+    NavHost(navController, startDestination = "library") {
         composable("search") {
             SearchScreen(
                 onArtistClick = onArtistClick,
