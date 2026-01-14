@@ -3,10 +3,14 @@ package com.crowstar.deeztrackermobile.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.crowstar.deeztrackermobile.features.rusteer.RustDeezerService
+import com.crowstar.deeztrackermobile.ui.screens.AlbumScreen
+import com.crowstar.deeztrackermobile.ui.screens.ArtistScreen
 import com.crowstar.deeztrackermobile.ui.screens.LoginScreen
 import com.crowstar.deeztrackermobile.ui.screens.SearchScreen
 
@@ -27,8 +31,38 @@ fun AppNavigation() {
                 }
             })
         }
+        
         composable("search") {
-            SearchScreen()
+            SearchScreen(
+                onArtistClick = { artistId ->
+                    navController.navigate("artist/$artistId")
+                }
+            )
+        }
+        
+        composable(
+            route = "artist/{artistId}",
+            arguments = listOf(navArgument("artistId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val artistId = backStackEntry.arguments?.getLong("artistId") ?: return@composable
+            ArtistScreen(
+                artistId = artistId,
+                onBackClick = { navController.popBackStack() },
+                onAlbumClick = { albumId ->
+                    navController.navigate("album/${albumId}")
+                }
+            )
+        }
+        
+        composable(
+            route = "album/{albumId}",
+            arguments = listOf(navArgument("albumId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val albumId = backStackEntry.arguments?.getLong("albumId") ?: return@composable
+            AlbumScreen(
+                albumId = albumId,
+                onBackClick = { navController.popBackStack() }
+            )
         }
     }
 }
