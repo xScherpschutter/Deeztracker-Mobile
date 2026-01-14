@@ -113,13 +113,7 @@ fun LocalMusicScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowBack,
-                                contentDescription = "Back",
-                                tint = Color.White
-                            )
-                        }
+                        /* Back button removed */
                         Text(
                             text = "Local Music",
                             fontSize = 24.sp,
