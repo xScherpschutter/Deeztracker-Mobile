@@ -52,34 +52,13 @@ fun ArtistScreen(
     val downloadManager = remember { DownloadManager.getInstance(context) }
     val downloadState by downloadManager.downloadState.collectAsState()
 
-    val snackbarHostState = remember { SnackbarHostState() }
+
 
     LaunchedEffect(artistId) {
         viewModel.loadArtist(artistId)
     }
     
-    // Handle download state changes
-    LaunchedEffect(downloadState) {
-        when (val state = downloadState) {
-            is DownloadState.Completed -> {
-                val message = if (state.failedCount > 0) {
-                    "Downloaded ${state.successCount} tracks, ${state.failedCount} failed"
-                } else {
-                    "Downloaded: ${state.title}"
-                }
-                snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
-                downloadManager.resetState()
-            }
-            is DownloadState.Error -> {
-                snackbarHostState.showSnackbar(
-                    "Download failed: ${state.message}",
-                    duration = SnackbarDuration.Short
-                )
-                downloadManager.resetState()
-            }
-            else -> {}
-        }
-    }
+
 
     Scaffold(
         topBar = {
@@ -95,12 +74,7 @@ fun ArtistScreen(
                 )
             )
         },
-        snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.padding(bottom = 100.dp)
-            )
-        },
+
         containerColor = BackgroundDark
     ) { padding ->
         if (isLoading) {
