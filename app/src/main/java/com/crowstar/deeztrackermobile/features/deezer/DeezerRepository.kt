@@ -50,6 +50,10 @@ class DeezerRepository {
         return if (next != null) api.getArtistAlbumsByUrl(next) else api.getArtistAlbums(id)
     }
 
+    suspend fun getArtistTopTracks(id: Long, limit: Int = 10): TrackListResponse {
+        return api.getArtistTopTracks(id, limit)
+    }
+
     suspend fun getAlbum(id: Long) = api.getAlbum(id)
     
     suspend fun getAlbumTracks(id: Long, next: String? = null): TrackListResponse {
