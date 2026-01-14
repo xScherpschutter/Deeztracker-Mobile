@@ -44,6 +44,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -64,7 +65,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
-    val rustService = remember { com.crowstar.deeztrackermobile.features.rusteer.RustDeezerService() }
+    val context = LocalContext.current
+    val rustService = remember { com.crowstar.deeztrackermobile.features.rusteer.RustDeezerService(context) }
 
     fun performLogin() {
         if (arl.isBlank()) return
