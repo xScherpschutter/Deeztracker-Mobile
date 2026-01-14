@@ -65,6 +65,7 @@ fun LocalMusicScreen(
     )
 ) {
     val tracks by viewModel.tracks.collectAsState()
+    val unfilteredTracks by viewModel.unfilteredTracks.collectAsState()
     val albums by viewModel.albums.collectAsState()
     val artists by viewModel.artists.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -155,7 +156,7 @@ fun LocalMusicScreen(
             Box(modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
                 LocalPlaylistDetailScreen(
                     playlist = selectedPlaylist,
-                    allTracks = tracks,
+                    allTracks = unfilteredTracks,
                     onBackClick = { selectedPlaylistId = null },
                     onTrackClick = { track ->
                         // Pass only playlist tracks if we want the player to play only from playlist

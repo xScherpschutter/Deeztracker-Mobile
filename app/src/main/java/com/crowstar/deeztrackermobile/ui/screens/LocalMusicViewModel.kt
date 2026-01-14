@@ -20,6 +20,10 @@ class LocalMusicViewModel(
     
     private val _tracks = MutableStateFlow<List<LocalTrack>>(emptyList())
     val tracks: StateFlow<List<LocalTrack>> = _tracks
+    
+    // Unfiltered tracks for playlist operations
+    private val _unfilteredTracks = MutableStateFlow<List<LocalTrack>>(emptyList())
+    val unfilteredTracks: StateFlow<List<LocalTrack>> = _unfilteredTracks
 
     private val _albums = MutableStateFlow<List<LocalAlbum>>(emptyList())
     val albums: StateFlow<List<LocalAlbum>> = _albums
@@ -68,6 +72,7 @@ class LocalMusicViewModel(
 
                 // Initial state = all data
                 _tracks.value = allTracks
+                _unfilteredTracks.value = allTracks
                 _albums.value = allAlbums
                 _artists.value = allArtists
             } catch (e: Exception) {
