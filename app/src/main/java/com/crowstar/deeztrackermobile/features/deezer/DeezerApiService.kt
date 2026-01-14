@@ -51,6 +51,12 @@ interface DeezerApiService {
         @Query("limit") limit: Int? = null
     ): AlbumSearchResponse // The response structure for artist albums is similar to search results
 
+    @GET("artist/{id}/top")
+    suspend fun getArtistTopTracks(
+        @Path("id") id: Long,
+        @Query("limit") limit: Int? = 10
+    ): TrackListResponse
+
     // --- Album ---
 
     @GET("album/{id}")
