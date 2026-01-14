@@ -35,6 +35,11 @@ class LocalMusicViewModel(
     private val _loadedArtistTracks = MutableStateFlow<List<LocalTrack>>(emptyList())
     val loadedArtistTracks: StateFlow<List<LocalTrack>> = _loadedArtistTracks
 
+    // Master lists for filtering
+    private var allTracks: List<LocalTrack> = emptyList()
+    private var allAlbums: List<LocalAlbum> = emptyList()
+    private var allArtists: List<LocalArtist> = emptyList()
+
     init {
         loadMusic()
     }
@@ -43,9 +48,15 @@ class LocalMusicViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                _tracks.value = repository.getAllTracks()
-                _albums.value = repository.getAllAlbums()
-                _artists.value = repository.getAllArtists()
+                // Load all data
+                allTracks = repository.getAllTracks()
+                allAlbums = repository.getAllAlbums()
+                allArtists = repository.getAllArtists()
+
+                // Initial state = all data
+                _tracks.value = allTracks
+                _albums.value = allAlbums
+                _artists.value = allArtists
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -74,10 +85,29 @@ class LocalMusicViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                _tracks.value = if (query.isBlank()) {
-                    repository.getAllTracks()
+                if (query.isBlank()) {
+                    // Reset to full lists
+                    _tracks.value = allTracks
+                    _albums.value = allAlbums
+                    _artists.value = allArtists
                 } else {
-                    repository.searchTracks(query)
+                    // Filter Tracks
+                    _tracks.value = allTracks.filter { 
+                        it.title.contains(query, ignoreCase = true) ||
+                        it.artist.contains(query, ignoreCase = true) ||
+                        it.album.contains(query, ignoreCase = true)
+                    }
+
+                    // Filter Albums
+                    _albums.value = allAlbums.filter { 
+                        it.title.contains(query, ignoreCase = true) ||
+                        it.artist.contains(query, ignoreCase = true)
+                    }
+
+                    // Filter Artists
+                    _artists.value = allArtists.filter { 
+                        it.name.contains(query, ignoreCase = true)
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
