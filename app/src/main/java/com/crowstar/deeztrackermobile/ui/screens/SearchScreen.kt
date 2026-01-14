@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Info // Add Import
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -89,6 +90,7 @@ fun SearchScreen(
     onAlbumClick: (Long) -> Unit = {}
 ) {
     var query by remember { mutableStateOf("") }
+    var hasSearched by remember { mutableStateOf(false) }
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf(
         stringResource(R.string.tab_tracks),
@@ -171,7 +173,7 @@ fun SearchScreen(
 
     // Trigger search when tab changes
     LaunchedEffect(selectedTabIndex) {
-        if (query.isNotEmpty()) {
+        if (query.isNotEmpty() && hasSearched) {
             performSearch(isNewSearch = true)
         }
     }
@@ -251,7 +253,11 @@ fun SearchScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 BasicTextField(
                                     value = query,
-                                    onValueChange = { query = it },
+                                    onValueChange = { 
+                                        query = it
+                                        if (it.isEmpty()) hasSearched = false // Reset only if cleared, or on any edit? User wants explicit search. So reset on edit.
+                                        hasSearched = false
+                                    },
                                     modifier = Modifier.weight(1f),
                                     textStyle = TextStyle(
                                         color = Color.White,
@@ -261,7 +267,10 @@ fun SearchScreen(
                                     singleLine = true,
                                     cursorBrush = SolidColor(Primary),
                                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                    keyboardActions = KeyboardActions(onSearch = { performSearch(true) }),
+                                    keyboardActions = KeyboardActions(onSearch = { 
+                                        hasSearched = true
+                                        performSearch(true) 
+                                    }),
                                     decorationBox = { innerTextField ->
                                         if (query.isEmpty()) {
                                             Text(
@@ -274,7 +283,10 @@ fun SearchScreen(
                                     }
                                 )
                                 if (query.isNotEmpty()) {
-                                    IconButton(onClick = { query = "" }) {
+                                    IconButton(onClick = { 
+                                        query = "" 
+                                        hasSearched = false
+                                    }) {
                                         Icon(
                                             imageVector = Icons.Default.Close,
                                             contentDescription = "Clear",
@@ -327,7 +339,7 @@ fun SearchScreen(
                     ) {
                         CircularProgressIndicator(color = Primary)
                     }
-                } else if (query.isEmpty()) {
+                } else if (query.isEmpty() || !hasSearched) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -354,9 +366,20 @@ fun SearchScreen(
                         }
                     }
                 } else {
-                    val isDownloading = downloadState is DownloadState.Downloading
+                    val isListEmpty = when (selectedTabIndex) {
+                        0 -> tracks.isEmpty()
+                        1 -> artists.isEmpty()
+                        2 -> albums.isEmpty()
+                        3 -> playlists.isEmpty()
+                        else -> true
+                    }
                     
-                    LazyColumn(
+                    if (isListEmpty) {
+                        NoResultsView(query)
+                    } else {
+                        val isDownloading = downloadState is DownloadState.Downloading
+                    
+                        LazyColumn(
                         state = listState,
                         contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp, start = 16.dp, end = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -364,9 +387,7 @@ fun SearchScreen(
                     ) {
                         when (selectedTabIndex) {
                             0 -> {
-                                if (tracks.isEmpty() && query.isNotEmpty()) {
-                                    item { Text(stringResource(R.string.no_results), color = TextGray) }
-                                }
+
                                 items(tracks) { track ->
                                     TrackItem(
                                         track = track,
@@ -378,25 +399,19 @@ fun SearchScreen(
                                 }
                             }
                             1 -> {
-                                if (artists.isEmpty() && query.isNotEmpty()) {
-                                    item { Text(stringResource(R.string.no_results), color = TextGray) }
-                                }
+
                                 items(artists) { artist ->
                                     ArtistItem(artist, onClick = { onArtistClick(artist.id) })
                                 }
                             }
                             2 -> {
-                                if (albums.isEmpty() && query.isNotEmpty()) {
-                                    item { Text(stringResource(R.string.no_results), color = TextGray) }
-                                }
+
                                 items(albums) { album ->
                                     AlbumItem(album, onClick = { onAlbumClick(album.id) })
                                 }
                             }
                             3 -> {
-                                if (playlists.isEmpty() && query.isNotEmpty()) {
-                                    item { Text(stringResource(R.string.no_results), color = TextGray) }
-                                }
+
                                 items(playlists) { playlist ->
                                     PlaylistItem(playlist, onClick = { onPlaylistClick(playlist.id) })
                                 }
@@ -415,6 +430,7 @@ fun SearchScreen(
                             }
                         }
                     }
+                }
                 }
             }
         }
@@ -608,6 +624,42 @@ fun PlaylistItem(playlist: Playlist, onClick: () -> Unit = {}) {
                 color = TextGray,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+fun NoResultsView(query: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = 80.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Info, // Ensure Icons.Default.Info is imported
+                contentDescription = null,
+                tint = Primary,
+                modifier = Modifier.size(80.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "No results found",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "We couldn't find anything for \"$query\"",
+                color = TextGray,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Normal
             )
         }
     }
