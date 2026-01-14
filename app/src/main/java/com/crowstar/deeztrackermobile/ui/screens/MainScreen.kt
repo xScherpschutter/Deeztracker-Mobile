@@ -26,6 +26,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.crowstar.deeztrackermobile.R
 import com.crowstar.deeztrackermobile.ui.screens.MiniPlayer
 import com.crowstar.deeztrackermobile.ui.screens.MusicPlayerScreen
@@ -38,9 +40,7 @@ import com.crowstar.deeztrackermobile.ui.theme.TextGray
 fun MainScreen(
     onArtistClick: (Long) -> Unit,
     onPlaylistClick: (Long) -> Unit,
-    onAlbumClick: (Long) -> Unit,
-    onLocalAlbumClick: (Long) -> Unit,
-    onLocalArtistClick: (String) -> Unit
+    onAlbumClick: (Long) -> Unit
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
@@ -66,8 +66,6 @@ fun MainScreen(
                 onArtistClick, 
                 onPlaylistClick,
                 onAlbumClick,
-                onLocalAlbumClick,
-                onLocalArtistClick,
                 playerController = playerController
             )
         }
@@ -86,10 +84,14 @@ fun MainScreen(
                     playerController = playerController
                 )
                 
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                // Floating Bottom Navigation Bar
-                FloatingBottomNavigationBar(navController)
+                // Show Bottom Navigation only on main tab destinations
+                val bottomNavRoutes = listOf("library", "search", "downloads", "settings")
+                if (currentRoute in bottomNavRoutes) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Floating Bottom Navigation Bar
+                    FloatingBottomNavigationBar(navController)
+                }
             }
         }
     }
@@ -125,7 +127,7 @@ fun FloatingBottomNavigationBar(navController: NavHostController) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             items.forEachIndexed { index, item ->
-                val isSelected = currentRoute == routes[index]
+                val isSelected = currentRoute == routes[index] // Simple check, might need better matching for sub-routes if we hide navbar
                 NavButton(
                     icon = icons[index],
                     label = item,
@@ -184,8 +186,6 @@ fun MainNavigation(
     onArtistClick: (Long) -> Unit,
     onPlaylistClick: (Long) -> Unit,
     onAlbumClick: (Long) -> Unit,
-    onLocalAlbumClick: (Long) -> Unit,
-    onLocalArtistClick: (String) -> Unit,
     playerController: PlayerController
 ) {
     NavHost(navController, startDestination = "library") {
@@ -203,13 +203,52 @@ fun MainNavigation(
                 onTrackClick = { track, playlist -> 
                     playerController.playTrack(track, playlist)
                 },
-                onAlbumClick = { album -> onLocalAlbumClick(album.id) },
-                onArtistClick = { artist -> onLocalArtistClick(artist.name) }
+                onAlbumClick = { album -> navController.navigate("localAlbum/${album.id}") },
+                onArtistClick = { artist -> navController.navigate("localArtist/${artist.name}") }
             ) 
         }
         
         composable("downloads") { DownloadsScreen() }
         composable("settings") { SettingsScreen() }
+        
+        // Internal Dialog/Detail Routes
+        composable(
+            route = "localAlbum/{albumId}",
+            arguments = listOf(navArgument("albumId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val albumId = backStackEntry.arguments?.getLong("albumId") ?: return@composable
+            LocalAlbumDetailScreen(
+                albumId = albumId,
+                onBackClick = { navController.popBackStack() },
+                onTrackClick = { track, playlist ->
+                    playerController.playTrack(track, playlist, source = "Album: ${track.album}")
+                },
+                onPlayAlbum = { tracks ->
+                     if (tracks.isNotEmpty()) {
+                         playerController.playTrack(tracks.first(), tracks, source = "Album: ${tracks.first().album}")
+                     }
+                }
+            )
+        }
+
+        composable(
+            route = "localArtist/{artistName}",
+            arguments = listOf(navArgument("artistName") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val artistName = backStackEntry.arguments?.getString("artistName") ?: return@composable
+           LocalArtistDetailScreen(
+                artistName = artistName,
+                onBackClick = { navController.popBackStack() },
+                onTrackClick = { track, playlist ->
+                    playerController.playTrack(track, playlist, source = "Artist: ${track.artist}")
+                },
+                onPlayArtist = { tracks ->
+                    if (tracks.isNotEmpty()) {
+                        playerController.playTrack(tracks.first(), tracks, source = "Artist: $artistName")
+                    }
+                }
+            )
+        }
         
         // Full Player Screen
         composable(
