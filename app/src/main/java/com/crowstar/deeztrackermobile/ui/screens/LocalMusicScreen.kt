@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.text.style.TextAlign
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocalMusicScreen(
     onBackClick: () -> Unit,
@@ -65,6 +66,7 @@ fun LocalMusicScreen(
     val artists by viewModel.artists.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val selectedView by viewModel.selectedView.collectAsState()
+    val playlists by viewModel.playlists.collectAsState()
     
     val context = LocalContext.current
     
@@ -82,6 +84,8 @@ fun LocalMusicScreen(
     }
 
     var trackToDelete by remember { mutableStateOf<LocalTrack?>(null) }
+    var trackForPlaylist by remember { mutableStateOf<LocalTrack?>(null) }
+    var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     // TODO: Implement Delete Logic with ActivityResultLauncher for Android R+
 
     var hasPermission by remember {
@@ -228,7 +232,7 @@ fun LocalMusicScreen(
                     },
                     divider = { }
                 ) {
-                    val tabs = listOf("Songs", "Albums", "Artists")
+                    val tabs = listOf("Songs", "Albums", "Artists", "Playlists")
                     tabs.forEachIndexed { index, title ->
                         Tab(
                             selected = selectedView == index,
@@ -250,6 +254,65 @@ fun LocalMusicScreen(
              // Optional: Player Bar placeholder could go here if needed
         }
     ) { padding ->
+        if (trackForPlaylist != null) {
+            com.crowstar.deeztrackermobile.ui.components.AddToPlaylistBottomSheet(
+                playlists = playlists,
+                onDismiss = { trackForPlaylist = null },
+                onPlaylistClick = { playlist ->
+                    trackForPlaylist?.let { track ->
+                       viewModel.addTrackToPlaylist(playlist, track)
+                    }
+                    trackForPlaylist = null
+                },
+                onCreateNewPlaylist = { showCreatePlaylistDialog = true }
+            )
+        }
+
+        if (showCreatePlaylistDialog) {
+             var newPlaylistName by remember { mutableStateOf("") }
+             AlertDialog(
+                 onDismissRequest = { showCreatePlaylistDialog = false },
+                 title = { Text("New Playlist", color = Color.White) },
+                 text = {
+                     OutlinedTextField(
+                         value = newPlaylistName,
+                         onValueChange = { newPlaylistName = it },
+                         label = { Text("Playlist Name") },
+                         singleLine = true,
+                         colors = TextFieldDefaults.outlinedTextFieldColors(
+                             focusedTextColor = Color.White,
+                             unfocusedTextColor = Color.White,
+                             focusedBorderColor = Primary,
+                             unfocusedBorderColor = TextGray,
+                             cursorColor = Primary
+                         )
+                     )
+                 },
+                 confirmButton = {
+                     Button(
+                         onClick = {
+                             if (newPlaylistName.isNotBlank()) {
+                                 viewModel.createPlaylist(newPlaylistName)
+                                 // Optionally wait and add the track immediately?
+                                 // For now just create and user can select it since the sheet is still open (or re-opens)
+                                 // Improving UX: close dialog, keep sheet open, updated list will show new playlist
+                                 showCreatePlaylistDialog = false
+                             }
+                         },
+                         colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                     ) {
+                         Text("Create")
+                     }
+                 },
+                 dismissButton = {
+                     TextButton(onClick = { showCreatePlaylistDialog = false }) {
+                         Text("Cancel", color = TextGray)
+                     }
+                 },
+                 containerColor = BackgroundDark
+             )
+        }
+
         if (!hasPermission) {
             Box(
                 modifier = Modifier
@@ -288,10 +351,18 @@ fun LocalMusicScreen(
                         tracks = tracks, 
                         onTrackClick = onTrackClick,
                         onShare = { track -> shareTrack(track) },
-                        onDelete = { track -> trackToDelete = track }
+                        onDelete = { track -> trackToDelete = track },
+                        onAddToPlaylist = { track -> trackForPlaylist = track }
                     )
                     1 -> LocalAlbumsGrid(albums, onAlbumClick)
                     2 -> LocalArtistsGrid(artists, onArtistClick)
+                    3 -> LocalPlaylistsScreen(
+                        playlists = playlists,
+                        onPlaylistClick = { playlist -> 
+                            // TODO: Navigate to Playlist Detail 
+                            // For now just Log or Toast
+                        }
+                    )
                 }
             }
         }
@@ -303,7 +374,8 @@ fun LocalTracksList(
     tracks: List<LocalTrack>,
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
     onShare: (LocalTrack) -> Unit,
-    onDelete: (LocalTrack) -> Unit
+    onDelete: (LocalTrack) -> Unit,
+    onAddToPlaylist: (LocalTrack) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -357,6 +429,7 @@ fun LocalTracksList(
                     track = track,
                     onShare = { onShare(track) },
                     onDelete = { onDelete(track) },
+                    onAddToPlaylist = { onAddToPlaylist(track) },
                     onClick = { onTrackClick(track, tracks) }
                 )
             }
@@ -495,6 +568,7 @@ fun LocalTrackItem(
     track: LocalTrack,
     onShare: () -> Unit,
     onDelete: () -> Unit,
+    onAddToPlaylist: () -> Unit,
     onClick: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -599,6 +673,13 @@ fun LocalTrackItem(
                     onClick = { 
                         showMenu = false
                         onShare()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Add to playlist", color = Color.White) },
+                    onClick = {
+                        showMenu = false
+                        onAddToPlaylist()
                     }
                 )
                 DropdownMenuItem(

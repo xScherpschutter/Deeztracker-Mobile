@@ -10,12 +10,15 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
+import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylistRepository
+import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.ExecutionException
 
@@ -32,6 +35,8 @@ class PlayerController(private val context: Context) {
         }
     }
 
+    val playlistRepository = LocalPlaylistRepository(context)
+
     private val _playerState = MutableStateFlow(PlayerState())
     val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
 
@@ -41,7 +46,15 @@ class PlayerController(private val context: Context) {
 
     init {
         initializeController()
+        // Initialize Playlists and Observe Favorites
+        kotlinx.coroutines.GlobalScope.launch {
+            playlistRepository.loadPlaylists()
+            playlistRepository.playlists.collect { playlists ->
+                 checkFavoriteStatus()
+            }
+        }
     }
+
 
     private fun initializeController() {
         Log.d("DeezTracker", "Initializing MediaController")
@@ -86,7 +99,16 @@ class PlayerController(private val context: Context) {
         if (index in currentPlaylist.indices) {
             val track = currentPlaylist[index]
             _playerState.update { it.copy(currentTrack = track) }
+            checkFavoriteStatus()
         }
+    }
+
+    private fun checkFavoriteStatus() {
+         val track = _playerState.value.currentTrack ?: return
+         kotlinx.coroutines.GlobalScope.launch {
+             val isFav = playlistRepository.isFavorite(track.id)
+             _playerState.update { it.copy(isCurrentTrackFavorite = isFav) }
+         }
     }
 
     fun playTrack(track: LocalTrack, playlist: List<LocalTrack>, source: String = "Local Library") {
@@ -160,7 +182,20 @@ class PlayerController(private val context: Context) {
         }
         player.repeatMode = newMode
         updateState()
+        player.repeatMode = newMode
+        updateState()
     }
+
+    fun toggleFavorite() {
+        val track = _playerState.value.currentTrack ?: return
+        kotlinx.coroutines.GlobalScope.launch {
+            playlistRepository.toggleFavorite(track.id)
+            // checkFavoriteStatus called via flow collection, but we can update optimistically
+            val isFav = playlistRepository.isFavorite(track.id)
+            _playerState.update { it.copy(isCurrentTrackFavorite = isFav) }
+        }
+    }
+
 
     private fun updateState() {
         val player = mediaController ?: return

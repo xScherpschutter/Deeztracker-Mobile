@@ -9,7 +9,9 @@ class LocalMusicViewModelFactory(private val context: Context) : ViewModelProvid
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LocalMusicViewModel::class.java)) {
             val repository = LocalMusicRepository(context.contentResolver)
-            return LocalMusicViewModel(repository) as T
+            // Use singleton repository from PlayerController to ensure sync
+            val playlistRepository = com.crowstar.deeztrackermobile.features.player.PlayerController.getInstance(context).playlistRepository
+            return LocalMusicViewModel(repository, playlistRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

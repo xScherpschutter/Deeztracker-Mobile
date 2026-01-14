@@ -6,12 +6,15 @@ import com.crowstar.deeztrackermobile.features.localmusic.LocalAlbum
 import com.crowstar.deeztrackermobile.features.localmusic.LocalArtist
 import com.crowstar.deeztrackermobile.features.localmusic.LocalMusicRepository
 import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
+import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist
+import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylistRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class LocalMusicViewModel(
-    private val repository: LocalMusicRepository
+    private val repository: LocalMusicRepository,
+    private val playlistRepository: LocalPlaylistRepository // Inject Playlist Repo
 ) : ViewModel() {
     
     private val _tracks = MutableStateFlow<List<LocalTrack>>(emptyList())
@@ -35,6 +38,9 @@ class LocalMusicViewModel(
     private val _loadedArtistTracks = MutableStateFlow<List<LocalTrack>>(emptyList())
     val loadedArtistTracks: StateFlow<List<LocalTrack>> = _loadedArtistTracks
 
+    val playlists = playlistRepository.playlists // Expose playlists
+
+
     // Master lists for filtering
     private var allTracks: List<LocalTrack> = emptyList()
     private var allAlbums: List<LocalAlbum> = emptyList()
@@ -48,6 +54,9 @@ class LocalMusicViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                // Initialize Playlists
+                playlistRepository.loadPlaylists()
+
                 // Load all data
                 allTracks = repository.getAllTracks()
                 allAlbums = repository.getAllAlbums()
@@ -114,6 +123,25 @@ class LocalMusicViewModel(
             } finally {
                 _isLoading.value = false
             }
+        }
+    }
+
+    // Playlist Operations
+    fun createPlaylist(name: String) {
+        viewModelScope.launch {
+            playlistRepository.createPlaylist(name)
+        }
+    }
+
+    fun addTrackToPlaylist(playlist: LocalPlaylist, track: LocalTrack) {
+        viewModelScope.launch {
+            playlistRepository.addTrackToPlaylist(playlist.id, track.id)
+        }
+    }
+
+    fun toggleFavorite(track: LocalTrack) {
+        viewModelScope.launch {
+            playlistRepository.toggleFavorite(track.id)
         }
     }
 }
