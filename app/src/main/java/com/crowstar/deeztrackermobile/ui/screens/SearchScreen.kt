@@ -77,7 +77,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun SearchScreen(
     onArtistClick: (Long) -> Unit = {},
-    onPlaylistClick: (Long) -> Unit = {}
+    onPlaylistClick: (Long) -> Unit = {},
+    onAlbumClick: (Long) -> Unit = {}
 ) {
     var query by remember { mutableStateOf("") }
     var selectedTabIndex by remember { mutableIntStateOf(0) }
@@ -334,7 +335,7 @@ fun SearchScreen(
                                 item { Text(stringResource(R.string.no_results), color = TextGray) }
                             }
                             items(albums) { album ->
-                                AlbumItem(album)
+                                AlbumItem(album, onClick = { onAlbumClick(album.id) })
                             }
                         }
                         3 -> {
@@ -472,12 +473,12 @@ fun ArtistItem(artist: Artist, onClick: () -> Unit = {}) {
 }
 
 @Composable
-fun AlbumItem(album: com.crowstar.deeztrackermobile.features.deezer.Album) {
+fun AlbumItem(album: com.crowstar.deeztrackermobile.features.deezer.Album, onClick: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .clickable { /* Handle click */ }
+            .clickable(onClick = onClick)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
