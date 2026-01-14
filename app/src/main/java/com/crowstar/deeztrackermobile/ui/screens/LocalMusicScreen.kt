@@ -146,7 +146,7 @@ fun LocalMusicScreen(
     }
 
     if (selectedPlaylist != null) {
-        BackHandler {
+        BackHandler(enabled = selectedPlaylistId != null) {
             selectedPlaylistId = null
         }
         Surface(

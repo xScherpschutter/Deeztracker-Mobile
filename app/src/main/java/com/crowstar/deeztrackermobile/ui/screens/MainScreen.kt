@@ -50,6 +50,24 @@ fun MainScreen(
     
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    
+    // Navigation guard to prevent double-clicks causing invalid state
+    var isNavigating by remember { mutableStateOf(false) }
+    
+    // Safe popBackStack that prevents rapid successive calls
+    val safePopBackStack: () -> Unit = remember(navController) {
+        {
+            if (!isNavigating && navController.previousBackStackEntry != null) {
+                isNavigating = true
+                navController.popBackStack()
+            }
+        }
+    }
+    
+    // Reset navigation guard when route changes
+    LaunchedEffect(currentRoute) {
+        isNavigating = false
+    }
 
     // We use a Box to overlay the floating UI on top of the content
     Box(
@@ -66,7 +84,8 @@ fun MainScreen(
                 onArtistClick, 
                 onPlaylistClick,
                 onAlbumClick,
-                playerController = playerController
+                playerController = playerController,
+                safePopBackStack = safePopBackStack
             )
         }
 
@@ -186,7 +205,8 @@ fun MainNavigation(
     onArtistClick: (Long) -> Unit,
     onPlaylistClick: (Long) -> Unit,
     onAlbumClick: (Long) -> Unit,
-    playerController: PlayerController
+    playerController: PlayerController,
+    safePopBackStack: () -> Unit
 ) {
     NavHost(navController, startDestination = "library") {
         composable("search") { 
@@ -219,7 +239,7 @@ fun MainNavigation(
             val albumId = backStackEntry.arguments?.getLong("albumId") ?: return@composable
             LocalAlbumDetailScreen(
                 albumId = albumId,
-                onBackClick = { navController.popBackStack() },
+                onBackClick = safePopBackStack,
                 onTrackClick = { track, playlist ->
                     playerController.playTrack(track, playlist, source = "Album: ${track.album}")
                 },
@@ -238,7 +258,7 @@ fun MainNavigation(
             val artistName = backStackEntry.arguments?.getString("artistName") ?: return@composable
            LocalArtistDetailScreen(
                 artistName = artistName,
-                onBackClick = { navController.popBackStack() },
+                onBackClick = safePopBackStack,
                 onTrackClick = { track, playlist ->
                     playerController.playTrack(track, playlist, source = "Artist: ${track.artist}")
                 },
@@ -257,7 +277,7 @@ fun MainNavigation(
             exitTransition = { androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) }
         ) { 
             MusicPlayerScreen(
-                onCollapse = { navController.popBackStack() },
+                onCollapse = safePopBackStack,
                 playerController = playerController
             ) 
         }

@@ -44,6 +44,7 @@ import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import kotlinx.coroutines.launch
+import com.crowstar.deeztrackermobile.ui.utils.formatTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -427,11 +428,4 @@ fun MusicPlayerScreen(
              )
         }
     }
-}
-
-fun formatTime(ms: Long): String {
-    val totalSeconds = ms / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
 }
