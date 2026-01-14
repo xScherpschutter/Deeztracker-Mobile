@@ -36,6 +36,19 @@ import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import com.crowstar.deeztrackermobile.features.localmusic.LocalAlbum
+import com.crowstar.deeztrackermobile.features.localmusic.LocalArtist
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.ui.text.style.TextAlign
+
 
 @Composable
 fun LocalMusicScreen(
@@ -46,7 +59,11 @@ fun LocalMusicScreen(
     )
 ) {
     val tracks by viewModel.tracks.collectAsState()
+    val albums by viewModel.albums.collectAsState()
+    val artists by viewModel.artists.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val selectedView by viewModel.selectedView.collectAsState()
+    
     val context = LocalContext.current
     
     // Search Query State
@@ -193,6 +210,37 @@ fun LocalMusicScreen(
                         )
                     }
                 }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Tabs
+                TabRow(
+                    selectedTabIndex = selectedView,
+                    containerColor = BackgroundDark,
+                    contentColor = Primary,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.Indicator(
+                            Modifier.tabIndicatorOffset(tabPositions[selectedView]),
+                            color = Primary
+                        )
+                    },
+                    divider = { }
+                ) {
+                    val tabs = listOf("Songs", "Albums", "Artists")
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedView == index,
+                            onClick = { viewModel.setSelectedView(index) },
+                            text = { 
+                                Text(
+                                    text = title, 
+                                    color = if (selectedView == index) Primary else TextGray,
+                                    fontWeight = if (selectedView == index) FontWeight.Bold else FontWeight.Medium
+                                ) 
+                            }
+                        )
+                    }
+                }
             }
         },
         containerColor = BackgroundDark,
@@ -231,66 +279,212 @@ fun LocalMusicScreen(
                 CircularProgressIndicator(color = Primary)
             }
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                // Stats Bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "${tracks.size} Tracks",
-                        color = TextGray,
-                        fontSize = 12.sp
+            // View Switching Logic
+            Box(modifier = Modifier.padding(padding)) {
+                when (selectedView) {
+                    0 -> LocalTracksList(
+                        tracks = tracks, 
+                        onTrackClick = onTrackClick,
+                        onShare = { track -> shareTrack(track) },
+                        onDelete = { track -> trackToDelete = track }
                     )
-                    
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Simple visual bar represenation
-                        Box(
-                            modifier = Modifier
-                                .width(100.dp)
-                                .height(4.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(SurfaceDark)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth(0.4f) // Static 40% for demo
-                                    .fillMaxHeight()
-                                    .background(Primary)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        val totalSize = tracks.sumOf { it.size }
-                        val sizeGb = totalSize / (1024.0 * 1024.0 * 1024.0)
-                        Text(
-                            text = "%.1f GB Used".format(sizeGb),
-                            color = TextGray,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(tracks) { track ->
-                        LocalTrackItem(
-                            track = track,
-                            onShare = { shareTrack(track) },
-                            onDelete = { trackToDelete = track },
-                            onClick = { onTrackClick(track, tracks) }
-                        )
-                    }
+                    1 -> LocalAlbumsGrid(albums) { /* Navigate to Album Details? */ }
+                    2 -> LocalArtistsGrid(artists) { /* Navigate to Artist Details? */ }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun LocalTracksList(
+    tracks: List<LocalTrack>,
+    onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
+    onShare: (LocalTrack) -> Unit,
+    onDelete: (LocalTrack) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Stats Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "${tracks.size} Tracks",
+                color = TextGray,
+                fontSize = 12.sp
+            )
+            
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Simple visual bar represenation
+                Box(
+                    modifier = Modifier
+                        .width(100.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(SurfaceDark)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.4f) // Static 40% for demo
+                            .fillMaxHeight()
+                            .background(Primary)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                val totalSize = tracks.sumOf { it.size }
+                val sizeGb = totalSize / (1024.0 * 1024.0 * 1024.0)
+                Text(
+                    text = "%.1f GB Used".format(sizeGb),
+                    color = TextGray,
+                    fontSize = 12.sp
+                )
+            }
+        }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(tracks) { track ->
+                LocalTrackItem(
+                    track = track,
+                    onShare = { onShare(track) },
+                    onDelete = { onDelete(track) },
+                    onClick = { onTrackClick(track, tracks) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun LocalAlbumsGrid(albums: List<LocalAlbum>, onAlbumClick: (LocalAlbum) -> Unit) {
+    // Placeholder for Albums Grid
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        items(albums) { album ->
+            AlbumGridItem(album = album, onClick = { onAlbumClick(album) })
+        }
+    }
+}
+
+@Composable
+fun AlbumGridItem(album: LocalAlbum, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(8.dp))
+                .background(SurfaceDark),
+            contentAlignment = Alignment.Center
+        ) {
+            if (album.albumArtUri != null) {
+                AsyncImage(
+                    model = album.albumArtUri,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    Icons.Default.MusicNote,
+                    contentDescription = null,
+                    tint = TextGray.copy(alpha = 0.5f),
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = album.title,
+            color = Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Text(
+            text = album.artist,
+            color = TextGray,
+            fontSize = 12.sp,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+fun LocalArtistsGrid(artists: List<LocalArtist>, onArtistClick: (LocalArtist) -> Unit) {
+    // Placeholder for Artists Grid
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        items(artists) { artist ->
+            ArtistGridItem(artist = artist, onClick = { onArtistClick(artist) })
+        }
+    }
+}
+
+@Composable
+fun ArtistGridItem(artist: LocalArtist, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .clip(CircleShape)
+                .background(SurfaceDark),
+            contentAlignment = Alignment.Center
+        ) {
+            // Placeholder for artist image, or use a default icon
+            Icon(
+                Icons.Default.Person,
+                contentDescription = null,
+                tint = TextGray.copy(alpha = 0.5f),
+                modifier = Modifier.size(48.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = artist.name,
+            color = Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Text(
+            text = "${artist.numberOfTracks} songs",
+            color = TextGray,
+            fontSize = 12.sp,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 

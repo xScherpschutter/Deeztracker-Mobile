@@ -3,6 +3,7 @@ package com.crowstar.deeztrackermobile.ui.screens
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.crowstar.deeztrackermobile.features.localmusic.LocalAlbum
+import com.crowstar.deeztrackermobile.features.localmusic.LocalArtist
 import com.crowstar.deeztrackermobile.features.localmusic.LocalMusicRepository
 import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,10 +20,13 @@ class LocalMusicViewModel(
     private val _albums = MutableStateFlow<List<LocalAlbum>>(emptyList())
     val albums: StateFlow<List<LocalAlbum>> = _albums
 
+    private val _artists = MutableStateFlow<List<LocalArtist>>(emptyList())
+    val artists: StateFlow<List<LocalArtist>> = _artists
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _selectedView = MutableStateFlow(0) // 0 = Tracks, 1 = Albums
+    private val _selectedView = MutableStateFlow(0) // 0 = Tracks, 1 = Albums, 2 = Artists
     val selectedView: StateFlow<Int> = _selectedView
 
     init {
@@ -35,6 +39,7 @@ class LocalMusicViewModel(
             try {
                 _tracks.value = repository.getAllTracks()
                 _albums.value = repository.getAllAlbums()
+                _artists.value = repository.getAllArtists()
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
