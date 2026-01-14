@@ -45,6 +45,9 @@ fun MainScreen(
     // Ensure we observe state if needed at this level, or just pass controller
     val playerState by playerController.playerState.collectAsState()
     
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
     // We use a Box to overlay the floating UI on top of the content
     Box(
         modifier = Modifier
@@ -63,22 +66,24 @@ fun MainScreen(
         }
 
         // Floating UI Container (MiniPlayer + BottomBar)
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 24.dp) // Margin from screen edges
-        ) {
-            // Persistent Mini Player 
-            MiniPlayer(
-                onClick = { navController.navigate("player") },
-                playerController = playerController
-            )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // Floating Bottom Navigation Bar
-            FloatingBottomNavigationBar(navController)
+        if (currentRoute != "player") {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 24.dp) // Margin from screen edges
+            ) {
+                // Persistent Mini Player 
+                MiniPlayer(
+                    onClick = { navController.navigate("player") },
+                    playerController = playerController
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Floating Bottom Navigation Bar
+                FloatingBottomNavigationBar(navController)
+            }
         }
     }
 }
