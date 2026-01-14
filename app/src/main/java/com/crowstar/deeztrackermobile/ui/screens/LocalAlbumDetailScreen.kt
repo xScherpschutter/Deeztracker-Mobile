@@ -28,6 +28,7 @@ import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import androidx.compose.ui.text.style.TextAlign
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -149,12 +150,15 @@ fun LocalTrackItemSimple(track: LocalTrack, onClick: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val trackNumber = track.track?.rem(1000) ?: 0
         Text(
-            text = "${track.track ?: 0}",
+            text = if (trackNumber > 0) "$trackNumber" else "",
             color = TextGray,
             fontSize = 14.sp,
-            modifier = Modifier.width(32.dp)
+            modifier = Modifier.width(32.dp),
+            textAlign = TextAlign.End
         )
+        Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(text = track.title, color = Color.White, fontSize = 16.sp, maxLines = 1)
             Text(text = track.artist, color = TextGray, fontSize = 12.sp, maxLines = 1)
