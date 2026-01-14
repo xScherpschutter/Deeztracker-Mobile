@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,6 +27,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.crowstar.deeztrackermobile.R
+import com.crowstar.deeztrackermobile.ui.screens.MiniPlayer
+import com.crowstar.deeztrackermobile.ui.screens.MusicPlayerScreen
+import com.crowstar.deeztrackermobile.features.player.PlayerController
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
@@ -36,6 +40,10 @@ fun MainScreen(
     onPlaylistClick: (Long) -> Unit
 ) {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val playerController = remember { PlayerController.getInstance(context) }
+    // Ensure we observe state if needed at this level, or just pass controller
+    val playerState by playerController.playerState.collectAsState()
     
     // We use a Box to overlay the floating UI on top of the content
     Box(
@@ -46,7 +54,12 @@ fun MainScreen(
         // Main Content Area
         // Add padding at the bottom so content isn't hidden by the floating bars
         Box(modifier = Modifier.fillMaxSize().padding(bottom = 140.dp)) {
-            MainNavigation(navController, onArtistClick, onPlaylistClick)
+            MainNavigation(
+                navController, 
+                onArtistClick, 
+                onPlaylistClick,
+                playerController = playerController
+            )
         }
 
         // Floating UI Container (MiniPlayer + BottomBar)
@@ -57,7 +70,10 @@ fun MainScreen(
                 .padding(horizontal = 12.dp, vertical = 24.dp) // Margin from screen edges
         ) {
             // Persistent Mini Player 
-            MiniPlayer()
+            MiniPlayer(
+                onClick = { navController.navigate("player") },
+                playerController = playerController
+            )
             
             Spacer(modifier = Modifier.height(12.dp))
             
@@ -67,56 +83,7 @@ fun MainScreen(
     }
 }
 
-@Composable
-fun MiniPlayer() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF1E1E1E).copy(alpha = 0.95f)) 
-            .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
-            .padding(12.dp)
-            .clickable { /* Expand Player */ }
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Album Art Placeholder
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.DarkGray)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text("Starboy", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Text("Playing on Device", color = Primary, fontSize = 12.sp)
-                }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = {}) { Icon(Icons.Default.SkipPrevious, contentDescription = "Prev", tint = Color.White) }
-                
-                // Play Button
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                        .clickable { /* Toggle Play */ },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.Black, modifier = Modifier.size(20.dp))
-                }
-                
-                IconButton(onClick = {}) { Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = Color.White) }
-            }
-        }
-    }
-}
+
 
 @Composable
 fun FloatingBottomNavigationBar(navController: NavHostController) {
@@ -203,23 +170,39 @@ fun NavButton(
 fun MainNavigation(
     navController: NavHostController,
     onArtistClick: (Long) -> Unit,
-    onPlaylistClick: (Long) -> Unit
+    onPlaylistClick: (Long) -> Unit,
+    playerController: PlayerController
 ) {
     NavHost(navController, startDestination = "library") {
-        composable("search") {
+        composable("search") { 
             SearchScreen(
                 onArtistClick = onArtistClick,
                 onPlaylistClick = onPlaylistClick
             )
         }
-        composable("library") {
-            LocalMusicScreen(onBackClick = { /* No back action in main tab */ })
+        
+        composable("library") { 
+            LocalMusicScreen(
+                onBackClick = { /* No back action */ },
+                onTrackClick = { track, playlist -> 
+                    playerController.playTrack(track, playlist)
+                }
+            ) 
         }
-        composable("downloads") {
-            DownloadsScreen()
-        }
-        composable("settings") {
-            SettingsScreen()
+        
+        composable("downloads") { DownloadsScreen() }
+        composable("settings") { SettingsScreen() }
+        
+        // Full Player Screen
+        composable(
+            "player",
+            enterTransition = { androidx.compose.animation.slideInVertically(initialOffsetY = { it }) },
+            exitTransition = { androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) }
+        ) { 
+            MusicPlayerScreen(
+                onCollapse = { navController.popBackStack() },
+                playerController = playerController
+            ) 
         }
     }
 }
