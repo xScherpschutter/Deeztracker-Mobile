@@ -40,6 +40,7 @@ import com.crowstar.deeztrackermobile.ui.theme.TextGray
 @Composable
 fun LocalMusicScreen(
     onBackClick: () -> Unit,
+    onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
     viewModel: LocalMusicViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
         factory = LocalMusicViewModelFactory(LocalContext.current)
     )
@@ -289,7 +290,8 @@ fun LocalMusicScreen(
                         LocalTrackItem(
                             track = track,
                             onShare = { shareTrack(track) },
-                            onDelete = { trackToDelete = track }
+                            onDelete = { trackToDelete = track },
+                            onClick = { onTrackClick(track, tracks) }
                         )
                     }
                 }
@@ -302,7 +304,8 @@ fun LocalMusicScreen(
 fun LocalTrackItem(
     track: LocalTrack,
     onShare: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onClick: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showDetails by remember { mutableStateOf(false) }
@@ -310,7 +313,10 @@ fun LocalTrackItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* TODO: Play track */ }
+            .clickable { 
+                android.util.Log.d("DeezTracker", "LocalTrackItem clicked: ${track.title}")
+                onClick() 
+            }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
