@@ -64,6 +64,9 @@ class PlayerController(private val context: Context) {
                         // Sync current track from playlist if possible
                         syncCurrentTrack()
                     }
+                    override fun onRepeatModeChanged(repeatMode: Int) {
+                        updateState()
+                    }
                     override fun onEvents(player: Player, events: Player.Events) {
                         updateState()
                     }
@@ -147,15 +150,34 @@ class PlayerController(private val context: Context) {
         updateState()
     }
 
+    fun toggleRepeatMode() {
+        val player = mediaController ?: return
+        val newMode = when (player.repeatMode) {
+            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+            Player.REPEAT_MODE_ONE -> Player.REPEAT_MODE_OFF
+            else -> Player.REPEAT_MODE_OFF
+        }
+        player.repeatMode = newMode
+        updateState()
+    }
+
     private fun updateState() {
         val player = mediaController ?: return
         
+        val appRepeatMode = when (player.repeatMode) {
+            Player.REPEAT_MODE_ONE -> RepeatMode.ONE
+            Player.REPEAT_MODE_ALL -> RepeatMode.ALL
+            else -> RepeatMode.OFF
+        }
+
         _playerState.update { 
             it.copy(
                 isPlaying = player.isPlaying,
                 duration = player.duration.coerceAtLeast(0L),
                 currentPosition = player.currentPosition,
-                isShuffleEnabled = player.shuffleModeEnabled
+                isShuffleEnabled = player.shuffleModeEnabled,
+                repeatMode = appRepeatMode
             )
         }
     }
