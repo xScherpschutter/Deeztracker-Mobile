@@ -135,6 +135,48 @@ class LocalMusicRepository(private val contentResolver: ContentResolver) {
         albums
     }
 
+     /**
+     * Get all artists from local music
+     */
+    suspend fun getAllArtists(): List<LocalArtist> = withContext(Dispatchers.IO) {
+        val artists = mutableListOf<LocalArtist>()
+        
+        val projection = arrayOf(
+            MediaStore.Audio.Artists._ID,
+            MediaStore.Audio.Artists.ARTIST,
+            MediaStore.Audio.Artists.NUMBER_OF_TRACKS,
+            MediaStore.Audio.Artists.NUMBER_OF_ALBUMS
+        )
+
+        val sortOrder = "${MediaStore.Audio.Artists.ARTIST} ASC"
+
+        contentResolver.query(
+            MediaStore.Audio.Artists.EXTERNAL_CONTENT_URI,
+            projection,
+            null,
+            null,
+            sortOrder
+        )?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Artists._ID)
+            val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Artists.ARTIST)
+            val numberOfTracksColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Artists.NUMBER_OF_TRACKS)
+            val numberOfAlbumsColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Artists.NUMBER_OF_ALBUMS)
+
+            while (cursor.moveToNext()) {
+                artists.add(
+                    LocalArtist(
+                        id = cursor.getLong(idColumn),
+                        name = cursor.getString(artistColumn) ?: "Unknown Artist",
+                        numberOfTracks = cursor.getInt(numberOfTracksColumn),
+                        numberOfAlbums = cursor.getInt(numberOfAlbumsColumn)
+                    )
+                )
+            }
+        }
+
+        artists
+    }
+
     /**
      * Get tracks for a specific album
      */

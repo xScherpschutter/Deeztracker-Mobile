@@ -51,3 +51,13 @@ data class LocalAlbum(
     val trackCount: Int,
     val albumArtUri: String?
 )
+
+/**
+ * Represents an artist from local music
+ */
+data class LocalArtist(
+    val id: Long,
+    val name: String,
+    val numberOfTracks: Int,
+    val numberOfAlbums: Int
+)
