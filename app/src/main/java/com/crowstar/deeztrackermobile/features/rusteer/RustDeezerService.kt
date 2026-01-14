@@ -5,6 +5,9 @@ import android.content.SharedPreferences
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import uniffi.rusteer.BatchDownloadResult
+import uniffi.rusteer.DownloadQuality
+import uniffi.rusteer.DownloadResult
 import uniffi.rusteer.RusteerService
 
 class RustDeezerService(context: Context) {
@@ -15,6 +18,7 @@ class RustDeezerService(context: Context) {
     )
     
     companion object {
+        private const val TAG = "RustDeezerService"
         private const val KEY_ARL = "arl_token"
     }
 
@@ -38,18 +42,18 @@ class RustDeezerService(context: Context) {
     suspend fun login(arl: String): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                Log.d("RustDeezerService", "Verifying ARL: ${arl.take(10)}...")
+                Log.d(TAG, "Verifying ARL: ${arl.take(10)}...")
                 val isValid = service.verifyArl(arl)
                 if (isValid) {
                     // Save ARL to SharedPreferences
                     prefs.edit().putString(KEY_ARL, arl).apply()
-                    Log.d("RustDeezerService", "ARL is valid and saved, login successful")
+                    Log.d(TAG, "ARL is valid and saved, login successful")
                 } else {
-                    Log.w("RustDeezerService", "ARL is invalid")
+                    Log.w(TAG, "ARL is invalid")
                 }
                 isValid
             } catch (e: Exception) {
-                Log.e("RustDeezerService", "Login verification failed", e)
+                Log.e(TAG, "Login verification failed", e)
                 false
             }
         }
@@ -67,6 +71,92 @@ class RustDeezerService(context: Context) {
      */
     fun logout() {
         clearArl()
-        Log.d("RustDeezerService", "User logged out, ARL cleared")
+        Log.d(TAG, "User logged out, ARL cleared")
+    }
+    
+    // ==================== DOWNLOAD METHODS ====================
+    
+    /**
+     * Download a single track.
+     * 
+     * @param trackId The Deezer track ID
+     * @param outputDir Directory where the track will be saved
+     * @param quality Download quality (FLAC, MP3_320, MP3_128)
+     * @return DownloadResult containing path, quality, size, title, and artist
+     * @throws Exception if download fails or ARL is not set
+     */
+    suspend fun downloadTrack(
+        trackId: String,
+        outputDir: String,
+        quality: DownloadQuality
+    ): DownloadResult = withContext(Dispatchers.IO) {
+        val arl = getSavedArl() ?: throw IllegalStateException("Not logged in - ARL not set")
+        
+        Log.d(TAG, "Downloading track $trackId to $outputDir with quality $quality")
+        
+        try {
+            val result = service.downloadTrack(arl, trackId, outputDir, quality)
+            Log.d(TAG, "Track downloaded successfully: ${result.title} - ${result.artist}")
+            result
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to download track $trackId", e)
+            throw e
+        }
+    }
+    
+    /**
+     * Download an entire album.
+     * 
+     * @param albumId The Deezer album ID
+     * @param outputDir Directory where the album will be saved
+     * @param quality Download quality (FLAC, MP3_320, MP3_128)
+     * @return BatchDownloadResult containing successful downloads and failures
+     * @throws Exception if download fails or ARL is not set
+     */
+    suspend fun downloadAlbum(
+        albumId: String,
+        outputDir: String,
+        quality: DownloadQuality
+    ): BatchDownloadResult = withContext(Dispatchers.IO) {
+        val arl = getSavedArl() ?: throw IllegalStateException("Not logged in - ARL not set")
+        
+        Log.d(TAG, "Downloading album $albumId to $outputDir with quality $quality")
+        
+        try {
+            val result = service.downloadAlbum(arl, albumId, outputDir, quality)
+            Log.d(TAG, "Album download complete: ${result.successful.size} succeeded, ${result.failed.size} failed")
+            result
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to download album $albumId", e)
+            throw e
+        }
+    }
+    
+    /**
+     * Download an entire playlist.
+     * 
+     * @param playlistId The Deezer playlist ID
+     * @param outputDir Directory where the playlist will be saved
+     * @param quality Download quality (FLAC, MP3_320, MP3_128)
+     * @return BatchDownloadResult containing successful downloads and failures
+     * @throws Exception if download fails or ARL is not set
+     */
+    suspend fun downloadPlaylist(
+        playlistId: String,
+        outputDir: String,
+        quality: DownloadQuality
+    ): BatchDownloadResult = withContext(Dispatchers.IO) {
+        val arl = getSavedArl() ?: throw IllegalStateException("Not logged in - ARL not set")
+        
+        Log.d(TAG, "Downloading playlist $playlistId to $outputDir with quality $quality")
+        
+        try {
+            val result = service.downloadPlaylist(arl, playlistId, outputDir, quality)
+            Log.d(TAG, "Playlist download complete: ${result.successful.size} succeeded, ${result.failed.size} failed")
+            result
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to download playlist $playlistId", e)
+            throw e
+        }
     }
 }
