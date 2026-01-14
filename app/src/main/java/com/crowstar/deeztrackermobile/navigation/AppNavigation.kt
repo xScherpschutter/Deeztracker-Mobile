@@ -40,6 +40,9 @@ fun AppNavigation() {
                 },
                 onPlaylistClick = { playlistId ->
                     navController.navigate("playlist/$playlistId")
+                },
+                onAlbumClick = { albumId ->
+                    navController.navigate("album/$albumId")
                 }
             )
         }

@@ -37,7 +37,8 @@ import com.crowstar.deeztrackermobile.ui.theme.TextGray
 @Composable
 fun MainScreen(
     onArtistClick: (Long) -> Unit,
-    onPlaylistClick: (Long) -> Unit
+    onPlaylistClick: (Long) -> Unit,
+    onAlbumClick: (Long) -> Unit
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
@@ -62,6 +63,7 @@ fun MainScreen(
                 navController, 
                 onArtistClick, 
                 onPlaylistClick,
+                onAlbumClick,
                 playerController = playerController
             )
         }
@@ -177,13 +179,15 @@ fun MainNavigation(
     navController: NavHostController,
     onArtistClick: (Long) -> Unit,
     onPlaylistClick: (Long) -> Unit,
+    onAlbumClick: (Long) -> Unit,
     playerController: PlayerController
 ) {
     NavHost(navController, startDestination = "library") {
         composable("search") { 
             SearchScreen(
                 onArtistClick = onArtistClick,
-                onPlaylistClick = onPlaylistClick
+                onPlaylistClick = onPlaylistClick,
+                onAlbumClick = onAlbumClick
             )
         }
         
