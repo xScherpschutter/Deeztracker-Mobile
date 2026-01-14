@@ -75,7 +75,7 @@ import com.crowstar.deeztrackermobile.ui.theme.TextWhite
 import kotlinx.coroutines.launch
 
 @Composable
-fun SearchScreen() {
+fun SearchScreen(onArtistClick: (Long) -> Unit = {}) {
     var query by remember { mutableStateOf("") }
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf(
@@ -314,7 +314,7 @@ fun SearchScreen() {
                                 item { Text(stringResource(R.string.no_results), color = TextGray) }
                             }
                             items(artists) { artist ->
-                                ArtistItem(artist)
+                                ArtistItem(artist, onClick = { onArtistClick(artist.id) })
                             }
                         }
                         2 -> {
@@ -515,12 +515,12 @@ fun TrackItem(track: Track) {
 }
 
 @Composable
-fun ArtistItem(artist: Artist) {
+fun ArtistItem(artist: Artist, onClick: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .clickable { /* Handle click */ }
+            .clickable(onClick = onClick)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
