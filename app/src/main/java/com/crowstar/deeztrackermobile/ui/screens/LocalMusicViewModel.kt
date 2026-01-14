@@ -29,6 +29,12 @@ class LocalMusicViewModel(
     private val _selectedView = MutableStateFlow(0) // 0 = Tracks, 1 = Albums, 2 = Artists
     val selectedView: StateFlow<Int> = _selectedView
 
+    private val _loadedAlbumTracks = MutableStateFlow<List<LocalTrack>>(emptyList())
+    val loadedAlbumTracks: StateFlow<List<LocalTrack>> = _loadedAlbumTracks
+
+    private val _loadedArtistTracks = MutableStateFlow<List<LocalTrack>>(emptyList())
+    val loadedArtistTracks: StateFlow<List<LocalTrack>> = _loadedArtistTracks
+
     init {
         loadMusic()
     }
@@ -46,6 +52,18 @@ class LocalMusicViewModel(
                 _isLoading.value = false
             }
         }
+    }
+
+    fun loadTracksForAlbum(albumId: Long) {
+         viewModelScope.launch {
+             _loadedAlbumTracks.value = repository.getTracksForAlbum(albumId)
+         }
+    }
+
+    fun loadTracksForArtist(artistName: String) {
+         viewModelScope.launch {
+             _loadedArtistTracks.value = repository.getTracksForArtist(artistName)
+         }
     }
 
     fun setSelectedView(index: Int) {

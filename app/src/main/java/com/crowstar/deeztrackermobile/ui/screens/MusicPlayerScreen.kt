@@ -128,7 +128,7 @@ fun MusicPlayerScreen(
                         letterSpacing = 1.sp
                     )
                     Text(
-                        text = "Local Library",
+                        text = playerState.playingSource,
                         color = Color.White.copy(alpha = 0.9f),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold

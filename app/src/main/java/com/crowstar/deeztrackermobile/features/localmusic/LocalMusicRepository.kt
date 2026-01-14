@@ -186,6 +186,14 @@ class LocalMusicRepository(private val contentResolver: ContentResolver) {
     }
 
     /**
+     * Get tracks for a specific artist
+     */
+    suspend fun getTracksForArtist(artistName: String): List<LocalTrack> = withContext(Dispatchers.IO) {
+        val tracks = getAllTracks()
+        tracks.filter { it.artist == artistName }
+    }
+
+    /**
      * Search tracks by query (title, artist, or album)
      */
     suspend fun searchTracks(query: String): List<LocalTrack> = withContext(Dispatchers.IO) {
