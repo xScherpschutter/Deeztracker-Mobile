@@ -31,9 +31,9 @@
     
     <!-- Login Screen -->
     <string name="app_title">Deeztracker</string>
-    <string name="app_subtitle">PREMIUM AUDIO CORE</string>
+    <string name="app_subtitle">MUSIC PLAYER AND DOWNLOADER</string>
     <string name="login_welcome">Welcome Back</string>
-    <string name="login_instruction">Enter your ARL token to sync your library.</string>
+    <string name="login_instruction">Enter your ARL token to download tracks.</string>
     <string name="login_label_arl">ARL Token</string>
     <string name="login_paste">Paste</string>
     <string name="login_action">Log In</string>
