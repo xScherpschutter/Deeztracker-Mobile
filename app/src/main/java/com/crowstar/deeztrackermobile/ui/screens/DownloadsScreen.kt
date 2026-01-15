@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -37,7 +36,6 @@ import com.crowstar.deeztrackermobile.ui.utils.formatTime
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadsScreen(
-    onBackClick: () -> Unit,
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
     viewModel: DownloadsViewModel = viewModel(
         factory = DownloadsViewModelFactory(LocalContext.current)
@@ -109,11 +107,7 @@ fun DownloadsScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Downloads", color = Color.White, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
-                    }
-                },
+
                 actions = {
                     IconButton(onClick = { viewModel.loadDownloadedMusic() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = Color.White)
