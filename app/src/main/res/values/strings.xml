@@ -132,4 +132,9 @@
     <string name="intent_share_track">Share Track</string>
     <string name="desc_download_track">Download track</string>
     <string name="action_download_album">Download Album</string>
+    <string name="action_downloading">Downloading...</string>
+    <string name="action_download_playlist">Download Playlist</string>
+    <string name="action_play_playlist">Play Playlist</string>
+    <string name="action_queue">QUEUE</string>
+    <string name="action_date_added">DATE ADDED</string>
 </resources>

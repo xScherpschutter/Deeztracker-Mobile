@@ -132,4 +132,9 @@
     <string name="intent_share_track">Compartir Pista</string>
     <string name="desc_download_track">Descargar pista</string>
     <string name="action_download_album">Descargar Álbum</string>
+    <string name="action_downloading">Descargando...</string>
+    <string name="action_download_playlist">Descargar Playlist</string>
+    <string name="action_play_playlist">Reproducir Playlist</string>
+    <string name="action_queue">COLA</string>
+    <string name="action_date_added">FECHA AGREGADA</string>
 </resources>

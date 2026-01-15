@@ -28,6 +28,8 @@ import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.utils.formatDuration
+import androidx.compose.ui.res.stringResource
+import com.crowstar.deeztrackermobile.R
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,7 +62,7 @@ fun PlaylistScreen(
                 title = { Text("") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, stringResource(R.string.action_back), tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -123,7 +125,7 @@ fun PlaylistScreen(
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Downloading...", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.action_downloading), fontSize = 16.sp, fontWeight = FontWeight.Medium)
                         } else {
                             Icon(
                                 Icons.Default.Download,
@@ -131,7 +133,7 @@ fun PlaylistScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Download Playlist", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.action_download_playlist), fontSize = 16.sp, fontWeight = FontWeight.Medium)
                         }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
@@ -146,13 +148,13 @@ fun PlaylistScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "QUEUE",
+                            text = stringResource(R.string.action_queue),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextGray
                         )
                         Text(
-                            text = "DATE ADDED",
+                            text = stringResource(R.string.action_date_added),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextGray
