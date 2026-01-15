@@ -43,6 +43,9 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -83,6 +86,7 @@ import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.theme.TextWhite
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     onArtistClick: (Long) -> Unit = {},
@@ -199,7 +203,12 @@ fun SearchScreen(
     }
 
     Scaffold(
-
+        topBar = {
+            TopAppBar(
+                title = { Text("Search", color = Color.White, fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundDark)
+            )
+        },
         containerColor = BackgroundDark
     ) { paddingValues ->
         Box(
@@ -218,17 +227,11 @@ fun SearchScreen(
                                 colors = listOf(BackgroundDark, Color.Transparent)
                             )
                         )
-                        .padding(top = 48.dp, bottom = 8.dp, start = 16.dp, end = 16.dp)
+                        .padding(top = 16.dp, bottom = 8.dp, start = 16.dp, end = 16.dp)
                 ) {
                     Column {
-                        // Title
-                        Text(
-                            text = stringResource(R.string.app_name),
-                            color = Color.White,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
+                        // Title Removed
+
 
                         // Search Bar
                         Box(
