@@ -7,38 +7,65 @@ data class LrcLine(
 
 object LrcParser {
     
-    private val LRC_REGEX = Regex("\\[(\\d+):(\\d+(\\.\\d+)?)\\](.*)")
+    // Matches [mm:ss.xx] or [mm:ss]
+    private val TIMESTAMP_REGEX = Regex("\\[(\\d+):(\\d+(?:\\.\\d+)?)\\]")
 
     fun parse(lrcContent: String): List<LrcLine> {
-        val lines = mutableListOf<LrcLine>()
-        
-        lrcContent.lines().forEach { line ->
-            val match = LRC_REGEX.find(line)
-            if (match != null) {
-                val min = match.groupValues[1].toLongOrNull() ?: 0L
-                val sec = match.groupValues[2].toDoubleOrNull() ?: 0.0
-                val text = match.groupValues[4].trim()
+        if (lrcContent.isBlank()) return emptyList()
+
+        // Debug log to see what we are parsing
+        val preview = if (lrcContent.length > 200) lrcContent.take(200) + "..." else lrcContent
+        android.util.Log.d("LrcParser", "Parsing content: $preview")
+
+        // Sanitize: Handle literal \n text that sometimes comes from APIs
+        val cleanContent = lrcContent.replace("\\n", "\n")
+
+        val lines = ArrayList<LrcLine>()
+        var foundSyncedLine = false
+
+        cleanContent.lines().forEach { line ->
+            val trimmedLine = line.trim()
+            if (trimmedLine.isEmpty()) return@forEach
+
+            // Find all timestamps in the line (handles multiple timestamps like [00:12][00:24]chorus)
+            val matches = TIMESTAMP_REGEX.findAll(trimmedLine).toList()
+            
+            if (matches.isNotEmpty()) {
+                foundSyncedLine = true
+                // The text is everything after the last timestamp
+                val text = trimmedLine.substring(matches.last().range.last + 1).trim()
                 
-                val timeMs = ((min * 60 + sec) * 1000).toLong()
-                
-                // Only add if text is not empty? Or keep empty lines for instrumental breaks?
-                // Keeping it usually good practice.
-                lines.add(LrcLine(timeMs, text))
+                for (match in matches) {
+                    val min = match.groupValues[1].toLongOrNull() ?: 0L
+                    val secStr = match.groupValues[2]
+                    val sec = secStr.toDoubleOrNull() ?: 0.0
+                    
+                    val timeMs = ((min * 60 + sec) * 1000).toLong()
+                    lines.add(LrcLine(timeMs, text))
+                }
             }
         }
+
+        // Fallback: If no timestamps were found, treat as plain lyrics
+        if (!foundSyncedLine && lines.isEmpty()) {
+            android.util.Log.d("LrcParser", "No timestamps found. Falling back to plain lyrics.")
+            lrcContent.lines().forEach { line ->
+                if (line.isNotBlank()) {
+                    // Use MAX_VALUE so they are never "active" for auto-scroll
+                    lines.add(LrcLine(Long.MAX_VALUE, line.trim()))
+                }
+            }
+        }
+
         return lines.sortedBy { it.timeMs }
     }
 
     fun getActiveLineIndex(lyrics: List<LrcLine>, positionMs: Long): Int {
         if (lyrics.isEmpty()) return -1
         
-        // Find the last line that starts before or at current position
-        // indexOfLast is O(N), for large lyrics binary search might be better but N is usually small (<100)
-        // so linear scan is fine, or even `binarySearch`.
-        
-        // Using binary search approach for efficiency (standard for time-based lookups)
-        // We want the element where timeMs <= positionMs and next element timeMs > positionMs
-        
+        // If plain lyrics (MAX_VALUE), never highlight
+        if (lyrics[0].timeMs == Long.MAX_VALUE) return -1
+
         var low = 0
         var high = lyrics.size - 1
         var result = -1
