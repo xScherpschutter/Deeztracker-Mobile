@@ -193,51 +193,29 @@ fun LocalMusicScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Search Bar
-                Surface(
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { 
+                        searchQuery = it
+                        viewModel.searchTracks(it) 
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .height(48.dp),
+                        .padding(horizontal = 16.dp),
+                    placeholder = { Text("Search local files...", color = TextGray) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextGray) },
                     shape = RoundedCornerShape(12.dp),
-                    color = SurfaceDark
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = null,
-                            tint = TextGray
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        
-                        androidx.compose.foundation.text.BasicTextField(
-                            value = searchQuery,
-                            onValueChange = { 
-                                searchQuery = it
-                                viewModel.searchTracks(it) 
-                            },
-                            singleLine = true,
-                            textStyle = androidx.compose.ui.text.TextStyle(
-                                color = Color.White,
-                                fontSize = 14.sp
-                            ),
-                            cursorBrush = androidx.compose.ui.graphics.SolidColor(Primary),
-                            modifier = Modifier.weight(1f),
-                            decorationBox = { innerTextField ->
-                                if (searchQuery.isEmpty()) {
-                                    Text(
-                                        text = "Search local files...",
-                                        color = TextGray,
-                                        fontSize = 14.sp
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        )
-                    }
-                }
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = SurfaceDark,
+                        unfocusedContainerColor = SurfaceDark,
+                        focusedBorderColor = Primary,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        cursorColor = Primary
+                    ),
+                    singleLine = true
+                )
                 
                 Spacer(modifier = Modifier.height(16.dp))
 

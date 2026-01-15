@@ -41,6 +41,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -234,71 +236,44 @@ fun SearchScreen(
 
 
                         // Search Bar
-                        Box(
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = { 
+                                query = it
+                                if (it.isEmpty()) hasSearched = false
+                                hasSearched = false
+                            },
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color(0xFF1A1A1A))
-                                .border(1.dp, Color.Transparent, RoundedCornerShape(16.dp)) // Placeholder for glow
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = null,
-                                    tint = TextGray
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                BasicTextField(
-                                    value = query,
-                                    onValueChange = { 
-                                        query = it
-                                        if (it.isEmpty()) hasSearched = false // Reset only if cleared, or on any edit? User wants explicit search. So reset on edit.
-                                        hasSearched = false
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    textStyle = TextStyle(
-                                        color = Color.White,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Medium
-                                    ),
-                                    singleLine = true,
-                                    cursorBrush = SolidColor(Primary),
-                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                    keyboardActions = KeyboardActions(onSearch = { 
-                                        hasSearched = true
-                                        performSearch(true) 
-                                    }),
-                                    decorationBox = { innerTextField ->
-                                        if (query.isEmpty()) {
-                                            Text(
-                                                text = stringResource(R.string.search_hint),
-                                                color = TextGray,
-                                                fontSize = 18.sp
-                                            )
-                                        }
-                                        innerTextField()
-                                    }
-                                )
+                                .fillMaxWidth(),
+                            placeholder = { Text(stringResource(R.string.search_hint), color = TextGray) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextGray) },
+                            trailingIcon = {
                                 if (query.isNotEmpty()) {
                                     IconButton(onClick = { 
                                         query = "" 
                                         hasSearched = false
                                     }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Clear",
-                                            tint = TextGray
-                                        )
+                                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextGray)
                                     }
                                 }
-                            }
-                        }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = SurfaceDark,
+                                unfocusedContainerColor = SurfaceDark,
+                                focusedBorderColor = Primary,
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                cursorColor = Primary
+                            ),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { 
+                                hasSearched = true
+                                performSearch(true) 
+                            })
+                        )
 
                         Spacer(modifier = Modifier.height(16.dp))
 
