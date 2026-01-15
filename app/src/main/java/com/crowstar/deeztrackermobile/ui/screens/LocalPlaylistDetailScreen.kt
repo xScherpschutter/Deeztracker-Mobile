@@ -18,6 +18,8 @@ import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist
 import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import androidx.compose.ui.res.stringResource
+import com.crowstar.deeztrackermobile.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +37,7 @@ fun LocalPlaylistDetailScreen(
     val playlistTracks = playlist.trackIds.mapNotNull { id -> 
         allTracks.find { it.id == id }
     }
-
+    
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp)
     ) {
@@ -45,7 +47,7 @@ fun LocalPlaylistDetailScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBackClick) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = Color.White)
             }
             Spacer(modifier = Modifier.width(8.dp))
             Column {
@@ -56,7 +58,7 @@ fun LocalPlaylistDetailScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${playlistTracks.size} tracks",
+                    text = stringResource(R.string.stats_playlist_tracks_format, playlistTracks.size),
                     color = TextGray,
                     fontSize = 14.sp
                 )
@@ -65,7 +67,7 @@ fun LocalPlaylistDetailScreen(
 
         if (playlistTracks.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No tracks in this playlist", color = TextGray)
+                Text(stringResource(R.string.playlist_empty), color = TextGray)
             }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -76,7 +78,7 @@ fun LocalPlaylistDetailScreen(
                         onShare = { },
                         onDelete = { onRemoveTrack(track) },
                         onAddToPlaylist = { },
-                        deleteLabel = "Remove"
+                        deleteLabel = stringResource(R.string.action_remove)
                     )
                 }
             }

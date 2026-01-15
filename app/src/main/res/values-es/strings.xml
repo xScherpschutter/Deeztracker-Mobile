@@ -1,0 +1,135 @@
+<resources>
+    <string name="app_name">Deeztracker Mobile</string>
+
+    <!-- Login Screen -->
+    <string name="login_title">Iniciar sesión en Deezer</string>
+    <string name="login_arl_hint">Introduce tu ARL</string>
+    <string name="login_button">Ingresar</string>
+
+    <!-- Search Screen -->
+    <string name="search_hint">Buscar canciones, artistas...</string>
+    <string name="tab_tracks">Canciones</string>
+    <string name="tab_artists">Artistas</string>
+    <string name="tab_playlists">Playlists</string>
+    <string name="no_results">Sin resultados</string>
+    <string name="tab_albums">Álbumes</string>
+
+    <!-- Search Screen Items -->
+    <string name="unknown_track">Pista desconocida</string>
+    <string name="unknown_artist">Artista desconocido</string>
+    <string name="unknown_album">Álbum desconocido</string>
+    <string name="unknown_playlist">Playlist desconocida</string>
+    <string name="label_song">Canción</string>
+    <string name="label_fans">Fans</string>
+    <string name="label_tracks">Pistas</string>
+
+    <!-- Navigation -->
+    <string name="nav_search">Buscar</string>
+    <string name="nav_library">Biblioteca</string>
+    <string name="nav_downloads">Descargas</string>
+    <string name="nav_settings">Ajustes</string>
+
+    <!-- Login Screen V2 -->
+    <string name="app_title">Deeztracker</string>
+    <string name="app_subtitle">NÚCLEO DE AUDIO PREMIUM</string>
+    <string name="login_welcome">Bienvenido</string>
+    <string name="login_instruction">Introduce tu token ARL para sincronizar.</string>
+    <string name="login_label_arl">Token ARL</string>
+    <string name="login_paste">Pegar</string>
+    <string name="login_action">Entrar</string>
+    <string name="login_help">¿Cómo obtengo mi ARL?</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_audio_header">AUDIO</string>
+    <string name="settings_audio_quality_title">Calidad de Audio</string>
+    <string name="settings_quality_128">MP3 128kbps (Gratis)</string>
+    <string name="settings_quality_320">MP3 320kbps (Premium)</string>
+    <string name="settings_quality_flac">FLAC (HiFi)</string>
+    <string name="settings_premium_warning">La alta calidad (320kbps/FLAC) requiere cuenta Premium. Por defecto es 128kbps.</string>
+    <string name="settings_general_header">GENERAL</string>
+    <string name="settings_language_title">Idioma</string>
+    <string name="settings_logout">Cerrar Sesión</string>
+    
+    <!-- General / Common -->
+    <string name="action_refresh">Actualizar</string>
+    <string name="action_close">Cerrar</string>
+    <string name="action_share">Compartir</string>
+    <string name="action_details">Detalles</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_create">Crear</string>
+    <string name="action_add_to_playlist">Añadir a playlist</string>
+    
+    <!-- Main Screen -->
+    <string name="bottom_nav_library">Biblioteca</string>
+    <string name="bottom_nav_search">Buscar</string>
+    <string name="bottom_nav_downloads">Descargas</string>
+    <string name="bottom_nav_settings">Ajustes</string>
+
+    <!-- Downloads Screen -->
+    <string name="downloads_title">Descargas</string>
+    <string name="downloads_search_hint">Buscar descargas...</string>
+    <string name="downloads_empty">No hay descargas disponibles</string>
+    <string name="details_title">Detalles de la pista</string>
+    <string name="details_title_label">Título:</string>
+    <string name="details_artist_label">Artista:</string>
+    <string name="details_album_label">Álbum:</string>
+    <string name="details_duration_label">Duración:</string>
+    <string name="details_size_label">Tamaño:</string>
+    <string name="details_path_label">Ruta:</string>
+    <string name="details_format_label">Formato</string>
+    <string name="details_bitrate_label">Bitrate</string>
+
+    <!-- Local Music Screen -->
+    <string name="local_music_title">Música Local</string>
+    <string name="local_search_hint">Buscar archivos locales...</string>
+    <string name="view_songs">Canciones</string>
+    <string name="view_albums">Álbumes</string>
+    <string name="view_artists">Artistas</string>
+    <string name="view_playlists">Playlists</string>
+    <string name="stats_tracks_format">%d Pistas</string>
+    <string name="stats_storage_format">%.1f GB Usados</string>
+    <string name="permission_required">Se requiere permiso para acceder a música local</string>
+    <string name="permission_grant">Conceder Permiso</string>
+    <string name="new_playlist_title">Nueva Playlist</string>
+    <string name="new_playlist_name">Nombre de Playlist</string>
+    <string name="artist_songs_count_format">%d canciones</string>
+    
+    <!-- Search Screen -->
+    <string name="search_title">Buscar</string>
+    <string name="search_no_results_desc">No pudimos encontrar nada para \"%s\"</string>
+    
+    <!-- Errors -->
+    <string name="login_error_failed">Fallo al iniciar sesión. Verifica tu ARL.</string>
+
+    <!-- Player Screen -->
+    <string name="player_playing_from">REPRODUCIENDO DE</string>
+    <string name="player_collapse">Colapsar</string>
+    <string name="player_options">Opciones</string>
+    <string name="player_like">Me gusta</string>
+    <string name="player_shuffle">Aleatorio</string>
+    <string name="player_previous">Anterior</string>
+    <string name="player_next">Siguiente</string>
+    <string name="player_play_pause">Reproducir/Pausar</string>
+    <string name="player_repeat">Repetir</string>
+    <string name="player_lyrics">Letras</string>
+    <string name="player_queue">Cola</string>
+    <string name="player_hifi">HI-FI</string> 
+    
+    <!-- Details Screens -->
+    <string name="action_play_album">Reproducir Álbum</string>
+    <string name="action_play_artist">Reproducir Artista</string>
+    <string name="action_remove">Quitar</string>
+    <string name="action_back">Atrás</string>
+    
+    <!-- Playlist Details -->
+    <string name="playlist_empty">No hay pistas en esta playlist</string>
+    <string name="stats_playlists_format">%d Playlists</string>
+    <string name="stats_playlist_tracks_format">%d pistas</string>
+
+    <!-- Intents & Accessibility -->
+    <string name="intent_share_track">Compartir Pista</string>
+    <string name="desc_download_track">Descargar pista</string>
+    <string name="action_download_album">Descargar Álbum</string>
+</resources>

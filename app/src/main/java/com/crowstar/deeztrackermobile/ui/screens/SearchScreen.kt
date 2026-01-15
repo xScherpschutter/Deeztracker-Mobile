@@ -30,7 +30,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Info // Add Import
+import androidx.compose.material.icons.filled.Info 
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -207,7 +207,7 @@ fun SearchScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Search", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.search_title), color = Color.White, fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundDark)
             )
         },
@@ -253,7 +253,7 @@ fun SearchScreen(
                                         query = "" 
                                         hasSearched = false
                                     }) {
-                                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextGray)
+                                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close), tint = TextGray)
                                     }
                                 }
                             },
@@ -336,7 +336,7 @@ fun SearchScreen(
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "Search tracks, artists, playlists...",
+                                text = stringResource(R.string.search_hint),
                                 color = Color.Gray.copy(alpha = 0.5f),
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Medium
@@ -627,14 +627,14 @@ fun NoResultsView(query: String) {
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "No results found",
+                text = stringResource(R.string.no_results),
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "We couldn't find anything for \"$query\"",
+                text = stringResource(R.string.search_no_results_desc, query),
                 color = TextGray,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Normal

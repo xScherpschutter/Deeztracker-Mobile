@@ -76,14 +76,6 @@ fun MainScreen(
                 downloadManager.resetState()
             }
             is DownloadState.Downloading -> {
-                 // Optional: show indefinite snackbar or just UI indicator. 
-                 // User asked for snackbar feedback, but continuous might be annoying if blocking.
-                 // We'll show a short one or nothing if we have progress bars.
-                 // Actually, user screenshot showed a "Downloading..." toast/snackbar.
-                 // Let's rely on the indicators for progress, but maybe show a "Started..." snackbar?
-                 // Or keep the persistent one if desired.
-                 // The previous implementation used snackbar for Downloading state in SearchScreen
-                 // Let's skip it here to avoid blocking, as we have indicators.
             }
             else -> {}
         }
@@ -195,7 +187,12 @@ fun MainScreen(
 
 @Composable
 fun FloatingBottomNavigationBar(navController: NavHostController) {
-    val items = listOf("Library", "Search", "Downloads", "Settings")
+    val items = listOf(
+        stringResource(R.string.bottom_nav_library),
+        stringResource(R.string.bottom_nav_search),
+        stringResource(R.string.bottom_nav_downloads),
+        stringResource(R.string.bottom_nav_settings)
+    )
     val icons = listOf(
         Icons.Default.LibraryMusic,
         Icons.Default.Search,

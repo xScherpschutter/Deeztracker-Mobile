@@ -32,7 +32,7 @@ class PlayerController(private val context: Context) {
 
         fun getInstance(context: Context): PlayerController {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: PlayerController(context).also { INSTANCE = it }
+                INSTANCE ?: PlayerController(context.applicationContext).also { INSTANCE = it }
             }
         }
     }

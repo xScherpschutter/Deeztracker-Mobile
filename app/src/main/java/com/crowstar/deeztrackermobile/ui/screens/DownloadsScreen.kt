@@ -32,6 +32,8 @@ import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.utils.formatTime
+import com.crowstar.deeztrackermobile.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +57,10 @@ fun DownloadsScreen(
             putExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri.parse(track.filePath))
             addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Track"))
+        if (shareIntent.resolveActivity(context.packageManager) != null) {
+            val chooserTitle = context.getString(R.string.intent_share_track)
+            context.startActivity(android.content.Intent.createChooser(shareIntent, chooserTitle))
+        }
     }
 
     val deleteIntentSender by viewModel.deleteIntentSender.collectAsState()
@@ -83,20 +88,20 @@ fun DownloadsScreen(
     if (trackDetails != null) {
         AlertDialog(
             onDismissRequest = { trackDetails = null },
-            title = { Text("Track Details", color = Color.White) },
+            title = { Text(stringResource(R.string.details_title), color = Color.White) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Title: ${trackDetails?.title}", color = TextGray)
-                    Text("Artist: ${trackDetails?.artist}", color = TextGray)
-                    Text("Album: ${trackDetails?.album}", color = TextGray)
-                    Text("Duration: ${formatTime(trackDetails?.duration ?: 0)}", color = TextGray)
-                    Text("Size: ${Formatter.formatFileSize(context, trackDetails?.size ?: 0)}", color = TextGray)
-                    Text("Path: ${trackDetails?.filePath}", color = TextGray)
+                    Text("${stringResource(R.string.details_title_label)} ${trackDetails?.title}", color = TextGray)
+                    Text("${stringResource(R.string.details_artist_label)} ${trackDetails?.artist}", color = TextGray)
+                    Text("${stringResource(R.string.details_album_label)} ${trackDetails?.album}", color = TextGray)
+                    Text("${stringResource(R.string.details_duration_label)} ${formatTime(trackDetails?.duration ?: 0)}", color = TextGray)
+                    Text("${stringResource(R.string.details_size_label)} ${Formatter.formatFileSize(context, trackDetails?.size ?: 0)}", color = TextGray)
+                    Text("${stringResource(R.string.details_path_label)} ${trackDetails?.filePath}", color = TextGray)
                 }
             },
             confirmButton = {
                 TextButton(onClick = { trackDetails = null }) {
-                    Text("Close", color = Primary)
+                    Text(stringResource(R.string.action_close), color = Primary)
                 }
             },
             containerColor = SurfaceDark
@@ -106,11 +111,11 @@ fun DownloadsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Downloads", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.downloads_title), color = Color.White, fontWeight = FontWeight.Bold) },
 
                 actions = {
                     IconButton(onClick = { viewModel.loadDownloadedMusic() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = Color.White)
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh), tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundDark)
@@ -134,7 +139,7 @@ fun DownloadsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp, top = 8.dp),
-                placeholder = { Text("Search downloads...", color = TextGray) },
+                placeholder = { Text(stringResource(R.string.downloads_search_hint), color = TextGray) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextGray) },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -159,7 +164,7 @@ fun DownloadsScreen(
                         Icon(Icons.Default.Search, contentDescription = null, tint = TextGray, modifier = Modifier.size(64.dp))
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = if(searchQuery.isNotEmpty()) "No results found" else "No downloads available", 
+                            text = if(searchQuery.isNotEmpty()) stringResource(R.string.no_results) else stringResource(R.string.downloads_empty), 
                             color = TextGray
                         )
                     }
@@ -236,7 +241,7 @@ fun DownloadedTrackItem(
         // Menu
         Box {
             IconButton(onClick = { showMenu = true }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = TextGray)
+                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.player_options), tint = TextGray)
             }
             DropdownMenu(
                 expanded = showMenu,
@@ -244,21 +249,21 @@ fun DownloadedTrackItem(
                 modifier = Modifier.background(SurfaceDark)
             ) {
                 DropdownMenuItem(
-                    text = { Text("Details", color = Color.White) },
+                    text = { Text(stringResource(R.string.action_details), color = Color.White) },
                     onClick = { 
                         showMenu = false 
                          onDetails()
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Share", color = Color.White) },
+                    text = { Text(stringResource(R.string.action_share), color = Color.White) },
                     onClick = { 
                         showMenu = false
                         onShare()
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Delete", color = Color.Red) },
+                    text = { Text(stringResource(R.string.action_delete), color = Color.Red) },
                     onClick = { 
                         showMenu = false
                         onDelete()

@@ -28,6 +28,8 @@ import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.utils.formatDuration
+import androidx.compose.ui.res.stringResource
+import com.crowstar.deeztrackermobile.R
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,23 +47,21 @@ fun AlbumScreen(
     val downloadManager = remember { DownloadManager.getInstance(context) }
     val downloadState by downloadManager.downloadState.collectAsState()
 
-
-
     LaunchedEffect(albumId) {
         viewModel.loadAlbum(albumId)
     }
-    
     // Handle download state changes
-
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, stringResource(R.string.action_back), tint = Color.White)
                     }
+                },
+                actions = {
+                    val isDownloading = downloadState is DownloadState.Downloading
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent
