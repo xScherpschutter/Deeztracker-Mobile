@@ -18,9 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.crowstar.deeztrackermobile.R
 import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
@@ -45,23 +48,16 @@ fun AddToPlaylistBottomSheet(
                 .padding(bottom = 32.dp)
         ) {
             // Header
-            Row(
+            Text(
+                text = stringResource(R.string.action_add_to_playlist),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onDismiss) {
-                   // Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
-                }
-                Text(
-                    text = "Add to playlist",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+            )
             
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -77,7 +73,7 @@ fun AddToPlaylistBottomSheet(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, tint = TextGray)
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("New Playlist", color = TextGray, fontSize = 16.sp)
+                Text(stringResource(R.string.new_playlist_title), color = TextGray, fontSize = 16.sp)
             }
             
             Spacer(modifier = Modifier.height(24.dp))
@@ -167,7 +163,7 @@ fun PlaylistItem(
                 color = Color.White
             )
             Text(
-                text = "${playlist.trackIds.size} songs",
+                text = stringResource(R.string.artist_songs_count_format, playlist.trackIds.size),
                 fontSize = 12.sp,
                 color = TextGray
             )
