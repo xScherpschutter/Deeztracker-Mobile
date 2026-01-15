@@ -18,11 +18,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import com.crowstar.deeztrackermobile.R
 import uniffi.rusteer.DownloadQuality
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,6 +35,7 @@ fun SettingsScreen(
 ) {
     val audioQuality by viewModel.audioQuality.collectAsState()
     val language by viewModel.language.collectAsState()
+    val context = LocalContext.current
 
     var showQualityDropdown by remember { mutableStateOf(false) }
     var showLanguageDropdown by remember { mutableStateOf(false) }
@@ -42,7 +45,7 @@ fun SettingsScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        "Settings", 
+                stringResource(R.string.settings_title), 
                         color = Color.White, 
                         fontWeight = FontWeight.Bold
                     ) 
@@ -61,7 +64,7 @@ fun SettingsScreen(
             
             // Audio Quality Setting
             Text(
-                text = "AUDIO",
+                text = stringResource(R.string.settings_audio_header),
                 color = Primary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
@@ -69,7 +72,7 @@ fun SettingsScreen(
             )
 
             SettingItem(
-                title = "Audio Quality",
+                title = stringResource(R.string.settings_audio_quality_title),
                 value = audioQuality.name,
                 onClick = { showQualityDropdown = true }
             ) {
@@ -102,7 +105,7 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "High quality (320kbps/FLAC) requires a Premium account. Default is 128kbps.",
+                    text = stringResource(R.string.settings_premium_warning),
                     color = TextGray,
                     fontSize = 12.sp,
                     lineHeight = 16.sp
@@ -113,7 +116,7 @@ fun SettingsScreen(
 
             // Language Setting
             Text(
-                text = "GENERAL",
+                text = stringResource(R.string.settings_general_header),
                 color = Primary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
@@ -121,7 +124,7 @@ fun SettingsScreen(
             )
 
             SettingItem(
-                title = "Language",
+                title = stringResource(R.string.settings_language_title),
                 value = language,
                 onClick = { showLanguageDropdown = true }
             ) {
@@ -136,6 +139,7 @@ fun SettingsScreen(
                             onClick = {
                                 viewModel.setLanguage(lang)
                                 showLanguageDropdown = false
+                                (context as? android.app.Activity)?.recreate()
                             }
                         )
                     }
@@ -160,7 +164,7 @@ fun SettingsScreen(
             ) {
                 Icon(Icons.Default.Logout, contentDescription = null, tint = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Log Out", color = Color.White, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.settings_logout), color = Color.White, fontWeight = FontWeight.Bold)
             }
             
             Spacer(modifier = Modifier.height(16.dp))

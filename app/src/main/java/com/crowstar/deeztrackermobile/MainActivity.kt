@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.crowstar.deeztrackermobile.features.player.PlayerController
 import com.crowstar.deeztrackermobile.navigation.AppNavigation
+import com.crowstar.deeztrackermobile.ui.utils.LocaleHelper
 import com.crowstar.deeztrackermobile.ui.theme.DeeztrackerMobileTheme
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import kotlinx.coroutines.delay
@@ -35,6 +36,10 @@ class MainActivity : ComponentActivity() {
     private var showVolumeSlider by mutableStateOf(false)
     // We'll use a timestamp to auto-hide
     private var lastVolumeChangeTime by mutableStateOf(0L)
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.onAttach(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

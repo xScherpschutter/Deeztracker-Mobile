@@ -25,6 +25,8 @@ import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import androidx.compose.ui.res.stringResource
+import com.crowstar.deeztrackermobile.R
 
 @Composable
 fun LocalPlaylistsScreen(
@@ -50,7 +52,7 @@ fun LocalPlaylistsScreen(
                      modifier = Modifier.size(48.dp)
                  )
                  Text(
-                     "${playlists.size} Playlists",
+                     stringResource(R.string.stats_playlists_format, playlists.size),
                      color = TextGray,
                      fontSize = 12.sp,
                      fontWeight = FontWeight.Bold
@@ -58,120 +60,53 @@ fun LocalPlaylistsScreen(
             }
         }
         
-        // Favorites First
-        val favorites = playlists.find { it.id == "favorites" }
-        if (favorites != null) {
-            item {
-                PlaylistCard(
-                    playlist = favorites,
-                    isFavorite = true,
-                    onClick = { onPlaylistClick(favorites) },
-                    onDelete = {}
-                )
-            }
-        }
-
-        items(playlists.filter { it.id != "favorites" }) { playlist ->
-            PlaylistCard(
-                playlist = playlist,
-                isFavorite = false,
-                onClick = { onPlaylistClick(playlist) },
-                onDelete = { onDeletePlaylist(playlist) }
-            )
-        }
-    }
-}
-
-@Composable
-fun PlaylistCard(
-    playlist: LocalPlaylist,
-    isFavorite: Boolean,
-    onClick: () -> Unit,
-    onDelete: () -> Unit
-) {
-    var showMenu by remember { mutableStateOf(false) }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceDark)
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-         Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(
-                    if (isFavorite) Brush.linearGradient(
-                        colors = listOf(Color(0xFFFF2D55), Color(0xFFFF5E7D)) // Red/Pink for Favorites (from prototype)
-                    ) else Brush.linearGradient(
-                        colors = listOf(Color(0xFF424242), Color(0xFF616161))
+        items(playlists) { playlist ->
+            var showMenu by remember { mutableStateOf(false) }
+            
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(SurfaceDark)
+                    .clickable { onPlaylistClick(playlist) }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = playlist.name,
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
                     )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-              if (isFavorite) {
-                  Icon(
-                      Icons.Default.Favorite, 
-                      contentDescription = null, 
-                      tint = Color.White,
-                      modifier = Modifier.size(28.dp)
-                  )
-              } else {
-                   Icon(
-                      Icons.Default.MusicNote, 
-                      contentDescription = null, 
-                      tint = Color.White.copy(alpha=0.5f),
-                      modifier = Modifier.size(28.dp)
-                  )
-              }
-        }
-        
-        Spacer(modifier = Modifier.width(16.dp))
-        
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = playlist.name,
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "${playlist.trackIds.size} tracks",
-                color = TextGray,
-                fontSize = 14.sp
-            )
-        }
-        
-        if (isFavorite) {
-            Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = TextGray
-            )
-        } else {
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(
-                        Icons.Default.MoreVert,
-                        contentDescription = "Options",
-                        tint = TextGray
+                    Text(
+                        text = stringResource(R.string.stats_playlist_tracks_format, playlist.trackIds.size),
+                        color = TextGray,
+                        fontSize = 14.sp
                     )
                 }
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    modifier = Modifier.background(SurfaceDark)
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Delete", color = Color.Red) },
-                        onClick = {
-                            showMenu = false
-                            onDelete()
-                        }
-                    )
+
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = stringResource(R.string.player_options),
+                            tint = TextGray
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        modifier = Modifier.background(SurfaceDark)
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_delete), color = Color.Red) },
+                            onClick = {
+                                showMenu = false
+                                onDeletePlaylist(playlist)
+                            }
+                        )
+                    }
                 }
             }
         }

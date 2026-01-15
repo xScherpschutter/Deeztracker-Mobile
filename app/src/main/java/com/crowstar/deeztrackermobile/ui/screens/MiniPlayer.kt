@@ -29,6 +29,8 @@ import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import androidx.compose.ui.res.stringResource
+import com.crowstar.deeztrackermobile.R
 
 @Composable
 fun MiniPlayer(
@@ -100,11 +102,15 @@ fun MiniPlayer(
                         )
                     }
 
+
+
+//...
+
                     // Controls
                     IconButton(onClick = { playerController.togglePlayPause() }) {
                         Icon(
                             if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = "Play/Pause",
+                            contentDescription = stringResource(R.string.player_play_pause),
                             tint = Color.White
                         )
                     }
@@ -112,7 +118,7 @@ fun MiniPlayer(
                     IconButton(onClick = { playerController.next() }) {
                         Icon(
                             Icons.Default.SkipNext,
-                            contentDescription = "Next",
+                            contentDescription = stringResource(R.string.player_next),
                             tint = Color.White
                         )
                     }

@@ -28,6 +28,8 @@ import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import androidx.compose.ui.text.style.TextAlign
 import android.net.Uri
+import androidx.compose.ui.res.stringResource
+import com.crowstar.deeztrackermobile.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +57,7 @@ fun LocalArtistDetailScreen(
                 title = {},
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, stringResource(R.string.action_back), tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -64,40 +66,26 @@ fun LocalArtistDetailScreen(
         containerColor = BackgroundDark
     ) { padding ->
         LazyColumn(
-             modifier = Modifier
+            modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(padding),
+            contentPadding = PaddingValues(16.dp)
         ) {
-            // Header
             item {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                     Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .clip(CircleShape)
-                            .background(SurfaceDark),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = null,
-                            tint = TextGray,
-                            modifier = Modifier.size(64.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = artistName,
                         color = Color.White,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 1
+                        maxLines = 1,
+                        textAlign = TextAlign.Center
                     )
                     Text(
-                        text = "${tracks.size} tracks",
+                        text = stringResource(R.string.stats_playlist_tracks_format, tracks.size),
                         color = TextGray,
                         fontSize = 14.sp
                     )
@@ -109,7 +97,7 @@ fun LocalArtistDetailScreen(
                     ) {
                          Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
                          Spacer(modifier = Modifier.width(8.dp))
-                         Text("Play Artist", color = Color.White)
+                         Text(stringResource(R.string.action_play_artist), color = Color.White)
                     }
                      Spacer(modifier = Modifier.height(24.dp))
                 }

@@ -45,6 +45,8 @@ import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import kotlinx.coroutines.launch
 import com.crowstar.deeztrackermobile.ui.utils.formatTime
+import androidx.compose.ui.res.stringResource
+import com.crowstar.deeztrackermobile.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -124,12 +126,12 @@ fun MusicPlayerScreen(
                         .size(40.dp)
                         .background(Color.White.copy(alpha = 0.05f), CircleShape)
                 ) {
-                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Collapse", tint = Color.White)
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.player_collapse), tint = Color.White)
                 }
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "PLAYING FROM",
+                        text = stringResource(R.string.player_playing_from),
                         color = TextGray,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
@@ -150,7 +152,7 @@ fun MusicPlayerScreen(
                             .size(40.dp)
                             .background(Color.White.copy(alpha = 0.05f), CircleShape)
                     ) {
-                        Icon(Icons.Default.MoreHoriz, contentDescription = "Options", tint = Color.White)
+                        Icon(Icons.Default.MoreHoriz, contentDescription = stringResource(R.string.player_options), tint = Color.White)
                     }
                     
                     DropdownMenu(
@@ -159,7 +161,7 @@ fun MusicPlayerScreen(
                         modifier = Modifier.background(Color(0xFF1E1E1E))
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Add to playlist", color = Color.White) },
+                            text = { Text(stringResource(R.string.action_add_to_playlist), color = Color.White) }, // Used common action string
                             onClick = {
                                 showMenu = false
                                 showAddToPlaylist = true
@@ -231,7 +233,7 @@ fun MusicPlayerScreen(
                 IconButton(onClick = { playerController.toggleFavorite() }) {
                     Icon(
                         if(playerState.isCurrentTrackFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, 
-                        contentDescription = "Like", 
+                        contentDescription = stringResource(R.string.player_like), 
                         tint = Primary
                     )
                 }
@@ -285,7 +287,7 @@ fun MusicPlayerScreen(
                 IconButton(onClick = { playerController.setShuffle(!playerState.isShuffleEnabled) }) {
                     Icon(
                         Icons.Default.Shuffle, 
-                        contentDescription = "Shuffle", 
+                        contentDescription = stringResource(R.string.player_shuffle), 
                         tint = if(playerState.isShuffleEnabled) Primary else TextGray
                     )
                 }
@@ -293,7 +295,7 @@ fun MusicPlayerScreen(
                 IconButton(onClick = { playerController.previous() }, modifier = Modifier.size(48.dp)) {
                     Icon(
                         Icons.Default.SkipPrevious, 
-                        contentDescription = "Previous", 
+                        contentDescription = stringResource(R.string.player_previous), 
                         tint = Color.White,
                         modifier = Modifier.size(32.dp)
                     )
@@ -313,7 +315,7 @@ fun MusicPlayerScreen(
                 ) {
                     Icon(
                         if(playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = "Play/Pause",
+                        contentDescription = stringResource(R.string.player_play_pause),
                         tint = Color.White,
                         modifier = Modifier.size(32.dp)
                     )
@@ -322,7 +324,7 @@ fun MusicPlayerScreen(
                 IconButton(onClick = { playerController.next() }, modifier = Modifier.size(48.dp)) {
                     Icon(
                         Icons.Default.SkipNext, 
-                        contentDescription = "Next", 
+                        contentDescription = stringResource(R.string.player_next), 
                         tint = Color.White,
                         modifier = Modifier.size(32.dp)
                     )
@@ -334,7 +336,7 @@ fun MusicPlayerScreen(
                         com.crowstar.deeztrackermobile.features.player.RepeatMode.ALL -> Icons.Default.Repeat to Primary
                         else -> Icons.Default.Repeat to TextGray
                     }
-                    Icon(icon, contentDescription = "Repeat", tint = tint)
+                    Icon(icon, contentDescription = stringResource(R.string.player_repeat), tint = tint)
                 }
             }
             
@@ -353,17 +355,17 @@ fun MusicPlayerScreen(
             ) {
                 Icon(
                     Icons.Default.Menu,
-                    contentDescription = "Lyrics",
+                    contentDescription = stringResource(R.string.player_lyrics),
                     tint = TextGray
                 )
                 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("HI-FI", color = Primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.player_hifi), color = Primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
                 
                 Icon(
                     Icons.Default.List,
-                    contentDescription = "Queue",
+                    contentDescription = stringResource(R.string.player_queue),
                     tint = TextGray
                 )
             }
@@ -388,12 +390,12 @@ fun MusicPlayerScreen(
              var newPlaylistName by remember { mutableStateOf("") }
              AlertDialog(
                  onDismissRequest = { showCreatePlaylistDialog = false },
-                 title = { Text("New Playlist", color = Color.White) },
+                 title = { Text(stringResource(R.string.new_playlist_title), color = Color.White) }, // Reusing strings from LocalMusicScreen.kt additions
                  text = {
                      OutlinedTextField(
                          value = newPlaylistName,
                          onValueChange = { newPlaylistName = it },
-                         label = { Text("Playlist Name") },
+                         label = { Text(stringResource(R.string.new_playlist_name)) },
                          singleLine = true,
                          colors = TextFieldDefaults.outlinedTextFieldColors(
                              focusedTextColor = Color.White,
@@ -416,12 +418,12 @@ fun MusicPlayerScreen(
                          },
                          colors = ButtonDefaults.buttonColors(containerColor = Primary)
                      ) {
-                         Text("Create")
+                         Text(stringResource(R.string.action_create))
                      }
                  },
                  dismissButton = {
                      TextButton(onClick = { showCreatePlaylistDialog = false }) {
-                         Text("Cancel", color = TextGray)
+                         Text(stringResource(R.string.action_cancel), color = TextGray)
                      }
                  },
                  containerColor = com.crowstar.deeztrackermobile.ui.theme.BackgroundDark

@@ -38,6 +38,8 @@ import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import androidx.compose.ui.res.stringResource
+import com.crowstar.deeztrackermobile.R
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -84,8 +86,13 @@ fun LocalMusicScreen(
             putExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri.parse(track.filePath))
             addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Track"))
+        if (shareIntent.resolveActivity(context.packageManager) != null) {
+            val chooserTitle = context.getString(R.string.intent_share_track)
+            context.startActivity(android.content.Intent.createChooser(shareIntent, chooserTitle))
+        }
     }
+
+
 
     val deleteIntentSender by viewModel.deleteIntentSender.collectAsState()
     
@@ -181,10 +188,10 @@ fun LocalMusicScreen(
             ) {
                 // Header Row
                 TopAppBar(
-                    title = { Text("Local Music", color = Color.White, fontWeight = FontWeight.Bold) },
+                    title = { Text(stringResource(R.string.local_music_title), color = Color.White, fontWeight = FontWeight.Bold) },
                     actions = {
                         IconButton(onClick = { viewModel.loadMusic() }) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Scan", tint = Color.White)
+                            Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh), tint = Color.White)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundDark)
@@ -202,7 +209,7 @@ fun LocalMusicScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                    placeholder = { Text("Search local files...", color = TextGray) },
+                    placeholder = { Text(stringResource(R.string.local_search_hint), color = TextGray) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextGray) },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -232,7 +239,12 @@ fun LocalMusicScreen(
                     },
                     divider = { }
                 ) {
-                    val tabs = listOf("Songs", "Albums", "Artists", "Playlists")
+                    val tabs = listOf(
+                        stringResource(R.string.view_songs),
+                        stringResource(R.string.view_albums),
+                        stringResource(R.string.view_artists),
+                        stringResource(R.string.view_playlists)
+                    )
                     tabs.forEachIndexed { index, title ->
                         Tab(
                             selected = selectedView == index,
@@ -241,7 +253,7 @@ fun LocalMusicScreen(
                                 Text(
                                     text = title, 
                                     color = if (selectedView == index) Primary else TextGray,
-                                    fontWeight = if (selectedView == index) FontWeight.Bold else FontWeight.Medium
+                                    fontWeight = FontWeight.Bold
                                 ) 
                             }
                         )
@@ -274,12 +286,12 @@ fun LocalMusicScreen(
              var newPlaylistName by remember { mutableStateOf("") }
              AlertDialog(
                  onDismissRequest = { showCreatePlaylistDialog = false },
-                 title = { Text("New Playlist", color = Color.White) },
+                 title = { Text(stringResource(R.string.new_playlist_title), color = Color.White) },
                  text = {
                      OutlinedTextField(
                          value = newPlaylistName,
                          onValueChange = { newPlaylistName = it },
-                         label = { Text("Playlist Name") },
+                         label = { Text(stringResource(R.string.new_playlist_name)) },
                          singleLine = true,
                          colors = TextFieldDefaults.outlinedTextFieldColors(
                              focusedTextColor = Color.White,
@@ -303,12 +315,12 @@ fun LocalMusicScreen(
                          },
                          colors = ButtonDefaults.buttonColors(containerColor = Primary)
                      ) {
-                         Text("Create")
+                         Text(stringResource(R.string.action_create))
                      }
                  },
                  dismissButton = {
                      TextButton(onClick = { showCreatePlaylistDialog = false }) {
-                         Text("Cancel", color = TextGray)
+                         Text(stringResource(R.string.action_cancel), color = TextGray)
                      }
                  },
                  containerColor = BackgroundDark
@@ -323,7 +335,7 @@ fun LocalMusicScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Permission required to access local music", color = TextGray)
+                    Text(stringResource(R.string.permission_required), color = TextGray)
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(onClick = {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -332,7 +344,7 @@ fun LocalMusicScreen(
                             permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
                         }
                     }) {
-                        Text("Grant Permission")
+                        Text(stringResource(R.string.permission_grant))
                     }
                 }
             }
@@ -393,7 +405,7 @@ fun LocalTracksList(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "${tracks.size} Tracks",
+                text = stringResource(R.string.stats_tracks_format, tracks.size),
                 color = TextGray,
                 fontSize = 12.sp
             )
@@ -418,7 +430,7 @@ fun LocalTracksList(
                 val totalSize = tracks.sumOf { it.size }
                 val sizeGb = totalSize / (1024.0 * 1024.0 * 1024.0)
                 Text(
-                    text = "%.1f GB Used".format(sizeGb),
+                    text = stringResource(R.string.stats_storage_format, sizeGb),
                     color = TextGray,
                     fontSize = 12.sp
                 )
@@ -557,7 +569,7 @@ fun ArtistGridItem(artist: LocalArtist, onClick: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
         Text(
-            text = "${artist.numberOfTracks} songs",
+            text = stringResource(R.string.artist_songs_count_format, artist.numberOfTracks),
             color = TextGray,
             fontSize = 12.sp,
             maxLines = 1,
@@ -574,7 +586,7 @@ fun LocalTrackItem(
     onDelete: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onClick: () -> Unit,
-    deleteLabel: String = "Delete"
+    deleteLabel: String = stringResource(R.string.action_delete)
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showDetails by remember { mutableStateOf(false) }
@@ -659,7 +671,7 @@ fun LocalTrackItem(
             ) {
                 Icon(
                     Icons.Default.MoreVert,
-                    contentDescription = "Options",
+                    contentDescription = stringResource(R.string.player_options),
                     tint = TextGray
                 )
             }
@@ -670,28 +682,28 @@ fun LocalTrackItem(
                 modifier = Modifier.background(SurfaceDark)
             ) {
                 DropdownMenuItem(
-                    text = { Text("Share", color = Color.White) },
+                    text = { Text(stringResource(R.string.action_share), color = Color.White) },
                     onClick = { 
                         showMenu = false
                         onShare()
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Add to playlist", color = Color.White) },
+                    text = { Text(stringResource(R.string.action_add_to_playlist), color = Color.White) },
                     onClick = {
                         showMenu = false
                         onAddToPlaylist()
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Details", color = Color.White) },
+                    text = { Text(stringResource(R.string.action_details), color = Color.White) },
                     onClick = { 
                         showMenu = false
                         showDetails = true
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text(deleteLabel, color = Color.Red) },
+                    text = { Text(deleteLabel, color = Color.Red) }, // deleteLabel is passed as prop, assuming caller handles localization or default is localized? Wait, caller is line 438: deleteLabel default is "Delete".
                     onClick = { 
                         showMenu = false
                         onDelete()
@@ -704,18 +716,18 @@ fun LocalTrackItem(
     if (showDetails) {
         AlertDialog(
             onDismissRequest = { showDetails = false },
-            title = { Text(text = "Track Details", color = Color.White) },
+            title = { Text(text = stringResource(R.string.details_title), color = Color.White) },
             text = {
                 Column {
-                    DetailRow("Path", track.filePath)
-                    DetailRow("Size", track.getFormattedSize())
-                    DetailRow("Format", track.mimeType)
-                    DetailRow("Bitrate", "Unknown") // Need extra metadata extraction for this
+                    DetailRow(stringResource(R.string.details_path_label), track.filePath)
+                    DetailRow(stringResource(R.string.details_size_label), track.getFormattedSize())
+                    DetailRow(stringResource(R.string.details_format_label), track.mimeType)
+                    DetailRow(stringResource(R.string.details_bitrate_label), "Unknown") 
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showDetails = false }) {
-                    Text("Close", color = Primary)
+                    Text(stringResource(R.string.action_close), color = Primary)
                 }
             },
             containerColor = BackgroundDark,

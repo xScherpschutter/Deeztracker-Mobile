@@ -78,7 +78,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             if (success) {
                 onLoginSuccess()
             } else {
-                errorMessage = "Login failed. Check your ARL or native library."
+                errorMessage = context.getString(R.string.login_error_failed)
             }
         }
     }

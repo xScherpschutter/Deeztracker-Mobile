@@ -28,6 +28,8 @@ import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import androidx.compose.ui.res.stringResource
+import com.crowstar.deeztrackermobile.R
 import androidx.compose.ui.text.style.TextAlign
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,7 +66,7 @@ fun LocalAlbumDetailScreen(
                 title = {},
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, stringResource(R.string.action_back), tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -73,51 +75,40 @@ fun LocalAlbumDetailScreen(
         containerColor = BackgroundDark
     ) { padding ->
         LazyColumn(
-             modifier = Modifier
+            modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(padding),
+            contentPadding = PaddingValues(16.dp)
         ) {
-            // Header
             item {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                     Box(
-                        modifier = Modifier
-                            .size(200.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(SurfaceDark),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (album.albumArtUri != null) {
-                            AsyncImage(
-                                model = album.albumArtUri,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.MusicNote,
-                                contentDescription = null,
-                                tint = TextGray,
-                                modifier = Modifier.size(64.dp)
-                            )
-                        }
+                    if (album?.albumArtUri != null) {
+                         AsyncImage(
+                             model = album.albumArtUri,
+                             contentDescription = null,
+                             modifier = Modifier.size(200.dp).clip(RoundedCornerShape(8.dp)),
+                             contentScale = ContentScale.Crop
+                         )
+                         Spacer(modifier = Modifier.height(16.dp))
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
+                    
                     Text(
-                        text = album.title,
+                        text = album?.title ?: "",
                         color = Color.White,
-                        fontSize = 20.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 1
+                        maxLines = 1,
+                        textAlign = TextAlign.Center
                     )
                     Text(
-                        text = album.artist,
+                        text = album?.artist ?: "",
                         color = TextGray,
-                        fontSize = 16.sp
+                        fontSize = 16.sp,
+                        maxLines = 1,
+                        textAlign = TextAlign.Center
                     )
                      Spacer(modifier = Modifier.height(24.dp))
                     Button(
@@ -127,7 +118,7 @@ fun LocalAlbumDetailScreen(
                     ) {
                          Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
                          Spacer(modifier = Modifier.width(8.dp))
-                         Text("Play Album", color = Color.White)
+                         Text(stringResource(R.string.action_play_album), color = Color.White)
                     }
                      Spacer(modifier = Modifier.height(24.dp))
                 }
