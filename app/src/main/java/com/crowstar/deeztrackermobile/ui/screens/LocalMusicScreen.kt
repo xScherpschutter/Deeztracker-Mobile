@@ -178,47 +178,17 @@ fun LocalMusicScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(BackgroundDark)
-                    .padding(top = 16.dp, bottom = 8.dp)
             ) {
                 // Header Row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp), 
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        /* Back button removed */
-                        Text(
-                            text = "Local Music",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                    
-                    Button(
-                        onClick = { viewModel.loadMusic() },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = SurfaceDark
-                        ),
-                        shape = RoundedCornerShape(20.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Scan",
-                            tint = Primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Scan",
-                            color = Primary,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
+                TopAppBar(
+                    title = { Text("Local Music", color = Color.White, fontWeight = FontWeight.Bold) },
+                    actions = {
+                        IconButton(onClick = { viewModel.loadMusic() }) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Scan", tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundDark)
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
