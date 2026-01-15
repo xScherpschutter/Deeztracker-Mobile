@@ -137,4 +137,8 @@
     <string name="action_play_playlist">Play Playlist</string>
     <string name="action_queue">QUEUE</string>
     <string name="action_date_added">DATE ADDED</string>
+
+    <!-- Lyrics -->
+    <string name="lyrics_title">Lyrics</string>
+    <string name="lyrics_not_available">No lyrics available</string>
 </resources>

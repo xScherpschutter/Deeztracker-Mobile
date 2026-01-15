@@ -137,4 +137,8 @@
     <string name="action_play_playlist">Reproducir Playlist</string>
     <string name="action_queue">COLA</string>
     <string name="action_date_added">FECHA AGREGADA</string>
+
+    <!-- Lyrics -->
+    <string name="lyrics_title">Letra</string>
+    <string name="lyrics_not_available">Letra no disponible</string>
 </resources>

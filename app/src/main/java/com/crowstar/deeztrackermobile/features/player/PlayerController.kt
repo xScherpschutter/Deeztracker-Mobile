@@ -38,6 +38,7 @@ class PlayerController(private val context: Context) {
     }
 
     val playlistRepository = LocalPlaylistRepository(context)
+    private val lyricsRepository = com.crowstar.deeztrackermobile.features.lyrics.LyricsRepository(context)
 
     private val _playerState = MutableStateFlow(PlayerState())
     val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
@@ -46,6 +47,7 @@ class PlayerController(private val context: Context) {
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var currentPlaylist: List<LocalTrack> = emptyList()
     private var positionUpdateJob: kotlinx.coroutines.Job? = null
+    private var lyricsJob: kotlinx.coroutines.Job? = null
 
     init {
         initializeController()
@@ -81,7 +83,7 @@ class PlayerController(private val context: Context) {
                     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                         updateState()
                         // Sync current track from playlist if possible
-                        syncCurrentTrack()
+                        syncCurrentTrack(mediaItem)
                     }
                     override fun onRepeatModeChanged(repeatMode: Int) {
                         updateState()
@@ -99,13 +101,37 @@ class PlayerController(private val context: Context) {
         }, MoreExecutors.directExecutor())
     }
 
-    private fun syncCurrentTrack() {
+    private fun syncCurrentTrack(targetMediaItem: MediaItem? = null) {
         val player = mediaController ?: return
-        val index = player.currentMediaItemIndex
-        if (index in currentPlaylist.indices) {
-            val track = currentPlaylist[index]
-            _playerState.update { it.copy(currentTrack = track) }
-            checkFavoriteStatus()
+        val itemToSync = targetMediaItem ?: player.currentMediaItem ?: return
+        val mediaId = itemToSync.mediaId.toLongOrNull() ?: return
+        
+        val track = currentPlaylist.find { it.id == mediaId }
+        
+        if (track != null) {
+            // Only update and fetch if the track has actually changed or lyrics are missing
+            if (_playerState.value.currentTrack?.id != track.id || _playerState.value.lyrics.isEmpty()) {
+                 _playerState.update { it.copy(currentTrack = track) }
+                 checkFavoriteStatus()
+                 fetchLyrics(track)
+            }
+        }
+    }
+
+    private fun fetchLyrics(track: LocalTrack) {
+        lyricsJob?.cancel()
+        _playerState.update { it.copy(lyrics = emptyList(), currentLyricIndex = -1) }
+        
+        lyricsJob = kotlinx.coroutines.GlobalScope.launch {
+            val lrcContent = lyricsRepository.getLyrics(track)
+            if (lrcContent != null) {
+                val parsedLyrics = com.crowstar.deeztrackermobile.features.lyrics.LrcParser.parse(lrcContent)
+                _playerState.update { it.copy(lyrics = parsedLyrics) }
+                // Force state update to calculate initial index immediately
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    updateState()
+                }
+            }
         }
     }
 
@@ -132,6 +158,7 @@ class PlayerController(private val context: Context) {
         val mediaItems = playlist.map { localTrack ->
             MediaItem.Builder()
                 .setUri(Uri.fromFile(File(localTrack.filePath)))
+                .setMediaId(localTrack.id.toString())
                 .setMediaMetadata(
                     MediaMetadata.Builder()
                         .setTitle(localTrack.title)
@@ -147,6 +174,8 @@ class PlayerController(private val context: Context) {
         player.prepare()
         player.play()
         
+        // Initial fetch for the starting track
+        fetchLyrics(track)
         _playerState.update { it.copy(currentTrack = track, isPlaying = true, playingSource = resolvedSource) }
     }
 
@@ -229,14 +258,20 @@ class PlayerController(private val context: Context) {
             else -> RepeatMode.OFF
         }
 
+            
+        val currentPos = player.currentPosition
+        val lyrics = _playerState.value.lyrics
+        val lyricIndex = com.crowstar.deeztrackermobile.features.lyrics.LrcParser.getActiveLineIndex(lyrics, currentPos)
+
         _playerState.update { 
             it.copy(
                 isPlaying = player.isPlaying,
                 duration = player.duration.coerceAtLeast(0L),
-                currentPosition = player.currentPosition,
+                currentPosition = currentPos,
                 isShuffleEnabled = player.shuffleModeEnabled,
                 repeatMode = appRepeatMode,
-                volume = player.volume // Sync volume from player if changed elsewhere
+                volume = player.volume, // Sync volume from player if changed elsewhere
+                currentLyricIndex = lyricIndex
             )
         }
     }
