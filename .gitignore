@@ -34,15 +34,15 @@ proguard/
 # Android Studio captures folder
 captures/
 
-# IntelliJ
+# IDE - IntelliJ/Android Studio
 *.iml
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/gradle.xml
-.idea/assetWizardSettings.xml
-.idea/dictionaries
-.idea/libraries
-.idea/caches
+.idea/
+
+# IDE - VSCode
+.vscode/
+
+# Kotlin
+.kotlin/
 
 # Keystore files
 *.jks
@@ -66,8 +66,13 @@ fastlane/Preview.html
 fastlane/screenshots
 fastlane/test_output
 
-# Bundletool
+# Bundletool and Release outputs
 *.apks
+*.apk.idsig
+output.json
+mapping.txt
+seeds.txt
+unused.txt
 
 # OS-specific
 .DS_Store
