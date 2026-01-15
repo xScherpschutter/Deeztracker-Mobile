@@ -45,8 +45,18 @@ class DownloadManager private constructor(private val context: Context) {
     private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
     
-    // Default quality - can be changed later via Settings
-    var currentQuality: DownloadQuality = DownloadQuality.MP3_128
+    private val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+
+    // Dynamic quality from Settings
+    val currentQuality: DownloadQuality
+        get() {
+            val saved = prefs.getString("audio_quality", "MP3_128")
+            return when (saved) {
+                "MP3_320" -> DownloadQuality.MP3_320
+                "FLAC" -> DownloadQuality.FLAC
+                else -> DownloadQuality.MP3_128
+            }
+        }
     
     /**
      * Get the base download directory.

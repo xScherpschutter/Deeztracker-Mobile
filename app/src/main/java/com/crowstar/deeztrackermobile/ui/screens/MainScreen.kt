@@ -43,7 +43,8 @@ import kotlinx.coroutines.launch
 fun MainScreen(
     onArtistClick: (Long) -> Unit,
     onPlaylistClick: (Long) -> Unit,
-    onAlbumClick: (Long) -> Unit
+    onAlbumClick: (Long) -> Unit,
+    onLogout: () -> Unit
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
@@ -124,6 +125,7 @@ fun MainScreen(
                 onArtistClick, 
                 onPlaylistClick,
                 onAlbumClick,
+                onLogout = onLogout,
                 playerController = playerController,
                 safePopBackStack = safePopBackStack
             )
@@ -278,6 +280,7 @@ fun MainNavigation(
     onArtistClick: (Long) -> Unit,
     onPlaylistClick: (Long) -> Unit,
     onAlbumClick: (Long) -> Unit,
+    onLogout: () -> Unit,
     playerController: PlayerController,
     safePopBackStack: () -> Unit
 ) {
@@ -308,7 +311,7 @@ fun MainNavigation(
                 }
             ) 
         }
-        composable("settings") { SettingsScreen() }
+        composable("settings") { SettingsScreen(onLogout = onLogout) }
         
         // Internal Dialog/Detail Routes
         composable(
