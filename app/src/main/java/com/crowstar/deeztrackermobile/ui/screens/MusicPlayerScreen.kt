@@ -48,7 +48,11 @@ import com.crowstar.deeztrackermobile.ui.utils.formatTime
 import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.R
 
-@OptIn(ExperimentalMaterial3Api::class)
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun MusicPlayerScreen(
     onCollapse: () -> Unit,
@@ -62,6 +66,9 @@ fun MusicPlayerScreen(
     var showAddToPlaylist by remember { mutableStateOf(false) }
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+
+    // Pager State
+    val pagerState = rememberPagerState(pageCount = { 2 })
 
     // Background Layer
     Box(modifier = Modifier.fillMaxSize()) {
@@ -105,243 +112,293 @@ fun MusicPlayerScreen(
                 .background(Color.Black.copy(alpha = 0.6f))
         )
 
-        // Main Content
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 16.dp, bottom = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp), 
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onCollapse,
+        // Main Content Pager
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+             if (page == 0) {
+                 // Player Page
+                 Column(
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(Color.White.copy(alpha = 0.05f), CircleShape)
+                        .fillMaxSize()
+                        .padding(top = 16.dp, bottom = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.player_collapse), tint = Color.White)
-                }
-
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = stringResource(R.string.player_playing_from),
-                        color = TextGray,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                    Text(
-                        text = playerState.playingSource,
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Box {
-                    IconButton(
-                        onClick = { showMenu = true },
+                    // Header
+                    Row(
                         modifier = Modifier
-                            .size(40.dp)
-                            .background(Color.White.copy(alpha = 0.05f), CircleShape)
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp), 
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.MoreHoriz, contentDescription = stringResource(R.string.player_options), tint = Color.White)
+                        IconButton(
+                            onClick = onCollapse,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(Color.White.copy(alpha = 0.05f), CircleShape)
+                        ) {
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.player_collapse), tint = Color.White)
+                        }
+
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = stringResource(R.string.player_playing_from),
+                                color = TextGray,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = playerState.playingSource,
+                                color = Color.White.copy(alpha = 0.9f),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Box {
+                            IconButton(
+                                onClick = { showMenu = true },
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(Color.White.copy(alpha = 0.05f), CircleShape)
+                            ) {
+                                Icon(Icons.Default.MoreHoriz, contentDescription = stringResource(R.string.player_options), tint = Color.White)
+                            }
+                            
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false },
+                                modifier = Modifier.background(Color(0xFF1E1E1E))
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.action_add_to_playlist), color = Color.White) }, // Used common action string
+                                    onClick = {
+                                        showMenu = false
+                                        showAddToPlaylist = true
+                                    }
+                                )
+                            }
+                        }
                     }
                     
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        modifier = Modifier.background(Color(0xFF1E1E1E))
+                    // Album Art
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_add_to_playlist), color = Color.White) }, // Used common action string
-                            onClick = {
-                                showMenu = false
-                                showAddToPlaylist = true
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.85f)
+                                .aspectRatio(1f)
+                                .shadow(16.dp, RoundedCornerShape(24.dp))
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Color.DarkGray)
+                        ) {
+                            if (track.albumArtUri != null) {
+                                AsyncImage(
+                                    model = track.albumArtUri,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Audiotrack,
+                                    contentDescription = null,
+                                    tint = TextGray,
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .align(Alignment.Center)
+                                )
                             }
-                        )
+                        }
                     }
-                }
-            }
-            
-            // Album Art
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.85f)
-                        .aspectRatio(1f)
-                        .shadow(16.dp, RoundedCornerShape(24.dp))
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(Color.DarkGray)
-                ) {
-                    if (track.albumArtUri != null) {
-                        AsyncImage(
-                            model = track.albumArtUri,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+
+                    // Track Info
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = track.title,
+                                color = Color.White,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = track.artist,
+                                color = TextGray,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1
+                            )
+                        }
+                        IconButton(onClick = { playerController.toggleFavorite() }) {
+                            Icon(
+                                if(playerState.isCurrentTrackFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, 
+                                contentDescription = stringResource(R.string.player_like), 
+                                tint = Primary
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Progress
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
+                    ) {
+                        Slider(
+                            value = if (playerState.duration > 0) playerState.currentPosition.toFloat() / playerState.duration else 0f,
+                            onValueChange = { 
+                                 playerController.seekTo((it * playerState.duration).toLong())
+                            },
+                            colors = SliderDefaults.colors(
+                                thumbColor = Color.White,
+                                activeTrackColor = Primary,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.1f)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
                         )
-                    } else {
-                        Icon(
-                            Icons.Default.Audiotrack,
-                            contentDescription = null,
-                            tint = TextGray,
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = formatTime(playerState.currentPosition),
+                                color = TextGray,
+                                fontSize = 12.sp
+                            )
+                            Text(
+                                text = formatTime(playerState.duration),
+                                color = TextGray,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Controls
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { playerController.setShuffle(!playerState.isShuffleEnabled) }) {
+                            Icon(
+                                Icons.Default.Shuffle, 
+                                contentDescription = stringResource(R.string.player_shuffle), 
+                                tint = if(playerState.isShuffleEnabled) Primary else TextGray
+                            )
+                        }
+                        
+                        IconButton(onClick = { playerController.previous() }, modifier = Modifier.size(48.dp)) {
+                            Icon(
+                                Icons.Default.SkipPrevious, 
+                                contentDescription = stringResource(R.string.player_previous), 
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+
+                        Box(
                             modifier = Modifier
                                 .size(64.dp)
-                                .align(Alignment.Center)
-                        )
-                    }
-                }
-            }
-
-            // Track Info
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = track.title,
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = track.artist,
-                        color = TextGray,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1
-                    )
-                }
-                IconButton(onClick = { playerController.toggleFavorite() }) {
-                    Icon(
-                        if(playerState.isCurrentTrackFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, 
-                        contentDescription = stringResource(R.string.player_like), 
-                        tint = Primary
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Progress
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-            ) {
-                Slider(
-                    value = if (playerState.duration > 0) playerState.currentPosition.toFloat() / playerState.duration else 0f,
-                    onValueChange = { 
-                         playerController.seekTo((it * playerState.duration).toLong())
-                    },
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color.White,
-                        activeTrackColor = Primary,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.1f)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = formatTime(playerState.currentPosition),
-                        color = TextGray,
-                        fontSize = 12.sp
-                    )
-                    Text(
-                        text = formatTime(playerState.duration),
-                        color = TextGray,
-                        fontSize = 12.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Controls
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { playerController.setShuffle(!playerState.isShuffleEnabled) }) {
-                    Icon(
-                        Icons.Default.Shuffle, 
-                        contentDescription = stringResource(R.string.player_shuffle), 
-                        tint = if(playerState.isShuffleEnabled) Primary else TextGray
-                    )
-                }
-                
-                IconButton(onClick = { playerController.previous() }, modifier = Modifier.size(48.dp)) {
-                    Icon(
-                        Icons.Default.SkipPrevious, 
-                        contentDescription = stringResource(R.string.player_previous), 
-                        tint = Color.White,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(Primary, Color(0xFF0066CC))
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Primary, Color(0xFF0066CC))
+                                    )
+                                )
+                                .clickable { playerController.togglePlayPause() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                if(playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = stringResource(R.string.player_play_pause),
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
                             )
-                        )
-                        .clickable { playerController.togglePlayPause() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        if(playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = stringResource(R.string.player_play_pause),
-                        tint = Color.White,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
+                        }
 
-                IconButton(onClick = { playerController.next() }, modifier = Modifier.size(48.dp)) {
-                    Icon(
-                        Icons.Default.SkipNext, 
-                        contentDescription = stringResource(R.string.player_next), 
-                        tint = Color.White,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
+                        IconButton(onClick = { playerController.next() }, modifier = Modifier.size(48.dp)) {
+                            Icon(
+                                Icons.Default.SkipNext, 
+                                contentDescription = stringResource(R.string.player_next), 
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
 
-                IconButton(onClick = { playerController.toggleRepeatMode() }) {
-                    val (icon, tint) = when (playerState.repeatMode) {
-                        com.crowstar.deeztrackermobile.features.player.RepeatMode.ONE -> Icons.Default.RepeatOne to Primary
-                        com.crowstar.deeztrackermobile.features.player.RepeatMode.ALL -> Icons.Default.Repeat to Primary
-                        else -> Icons.Default.Repeat to TextGray
+                        IconButton(onClick = { playerController.toggleRepeatMode() }) {
+                            val (icon, tint) = when (playerState.repeatMode) {
+                                com.crowstar.deeztrackermobile.features.player.RepeatMode.ONE -> Icons.Default.RepeatOne to Primary
+                                com.crowstar.deeztrackermobile.features.player.RepeatMode.ALL -> Icons.Default.Repeat to Primary
+                                else -> Icons.Default.Repeat to TextGray
+                            }
+                            Icon(icon, contentDescription = stringResource(R.string.player_repeat), tint = tint)
+                        }
                     }
-                    Icon(icon, contentDescription = stringResource(R.string.player_repeat), tint = tint)
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
+             } else {
+                 // Lyrics Page
+                 Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 16.dp, bottom = 16.dp)
+                 ) {
+                     // Centered Header for Lyrics Page
+                     Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
+                            .height(48.dp) // Match button size/height roughly
+                    ) {
+                         IconButton(
+                            onClick = onCollapse,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(Color.White.copy(alpha = 0.05f), CircleShape)
+                                .align(Alignment.CenterStart)
+                        ) {
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.player_collapse), tint = Color.White)
+                        }
+                        
+                        Text(
+                            text = stringResource(R.string.lyrics_title),
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                     }
+                     
+                     LyricsScreen(
+                         lyrics = playerState.lyrics,
+                         currentIndex = playerState.currentLyricIndex,
+                         onLineClick = { position ->
+                             playerController.seekTo(position)
+                         }
+                     )
+                 }
+             }
         }
+        
+        // Page Indicators (Optional but good for UX)
+        // Leaving out for now as user just asked for swipe, and minimalistic is key.
+
         
         // Playlist Sheet
         if (showAddToPlaylist) {
