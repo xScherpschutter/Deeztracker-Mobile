@@ -116,11 +116,10 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                     .clip(RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.GraphicEq,
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_login_logo),
                     contentDescription = null,
-                    tint = Primary,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(56.dp)
                 )
             }
             
@@ -247,28 +246,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         )
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.clickable { /* Open Help */ },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Help,
-                    contentDescription = null,
-                    tint = TextGray,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = stringResource(R.string.login_help),
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = TextGray,
-                        textDecoration = TextDecoration.Underline
-                    )
-                )
             }
         }
     }
