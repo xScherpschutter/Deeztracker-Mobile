@@ -120,17 +120,20 @@ class PlayerController(private val context: Context) {
 
     private fun fetchLyrics(track: LocalTrack) {
         lyricsJob?.cancel()
-        _playerState.update { it.copy(lyrics = emptyList(), currentLyricIndex = -1) }
+        _playerState.update { it.copy(lyrics = emptyList(), currentLyricIndex = -1, isLoadingLyrics = true) }
         
         lyricsJob = kotlinx.coroutines.GlobalScope.launch {
             val lrcContent = lyricsRepository.getLyrics(track)
             if (lrcContent != null) {
                 val parsedLyrics = com.crowstar.deeztrackermobile.features.lyrics.LrcParser.parse(lrcContent)
-                _playerState.update { it.copy(lyrics = parsedLyrics) }
+                _playerState.update { it.copy(lyrics = parsedLyrics, isLoadingLyrics = false) }
                 // Force state update to calculate initial index immediately
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     updateState()
                 }
+            } else {
+                // No lyrics found, stop loading
+                _playerState.update { it.copy(isLoadingLyrics = false) }
             }
         }
     }
