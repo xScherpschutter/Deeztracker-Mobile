@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MusicNote
@@ -32,13 +33,15 @@ import com.crowstar.deeztrackermobile.R
 fun LocalPlaylistsScreen(
     playlists: List<LocalPlaylist>,
     onPlaylistClick: (LocalPlaylist) -> Unit,
-    onDeletePlaylist: (LocalPlaylist) -> Unit
+    onDeletePlaylist: (LocalPlaylist) -> Unit,
+    onCreatePlaylist: () -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
         // Stats Header
         item {
              Column(
@@ -109,6 +112,22 @@ fun LocalPlaylistsScreen(
                     }
                 }
             }
+        }
+    }
+        
+        // Floating Action Button
+        FloatingActionButton(
+            onClick = onCreatePlaylist,
+            containerColor = Primary,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = stringResource(R.string.new_playlist_title),
+                tint = Color.White
+            )
         }
     }
 }
