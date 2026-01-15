@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,6 +19,7 @@ import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist
 import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import com.crowstar.deeztrackermobile.ui.theme.Primary
 import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.R
 
@@ -28,12 +30,10 @@ fun LocalPlaylistDetailScreen(
     allTracks: List<LocalTrack>,
     onBackClick: () -> Unit,
     onTrackClick: (LocalTrack) -> Unit,
+    onPlayPlaylist: () -> Unit,
     onRemoveTrack: (LocalTrack) -> Unit
 ) {
     // Filter tracks belonging to this playlist
-    // Note: This preserves the order in playlist.trackIds if we wanted to, 
-    // but effectively we just find the tracks.
-    // If order matters, we should map trackIds to tracks.
     val playlistTracks = playlist.trackIds.mapNotNull { id -> 
         allTracks.find { it.id == id }
     }
@@ -63,6 +63,21 @@ fun LocalPlaylistDetailScreen(
                     fontSize = 14.sp
                 )
             }
+        }
+        
+        // Play Playlist Button
+        if (playlistTracks.isNotEmpty()) {
+             Button(
+                 onClick = onPlayPlaylist,
+                 modifier = Modifier
+                     .fillMaxWidth()
+                     .padding(bottom = 16.dp),
+                 colors = ButtonDefaults.buttonColors(containerColor = Primary)
+             ) {
+                 Icon(Icons.Default.PlayArrow, contentDescription = null)
+                 Spacer(modifier = Modifier.width(8.dp))
+                 Text(stringResource(R.string.action_play_playlist))
+             }
         }
 
         if (playlistTracks.isEmpty()) {

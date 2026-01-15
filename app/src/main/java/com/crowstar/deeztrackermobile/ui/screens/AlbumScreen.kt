@@ -123,7 +123,7 @@ fun AlbumScreen(
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Downloading...", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.action_downloading), fontSize = 16.sp, fontWeight = FontWeight.Medium)
                         } else {
                             Icon(
                                 Icons.Default.Download,
@@ -131,7 +131,7 @@ fun AlbumScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Download Album", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.action_download_album), fontSize = 16.sp, fontWeight = FontWeight.Medium)
                         }
                     }
                     Spacer(modifier = Modifier.height(24.dp))

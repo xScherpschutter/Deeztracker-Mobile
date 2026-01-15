@@ -59,7 +59,7 @@ import androidx.compose.ui.text.style.TextAlign
 @Composable
 fun LocalMusicScreen(
     onBackClick: () -> Unit,
-    onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
+    onTrackClick: (LocalTrack, List<LocalTrack>, String?) -> Unit,
     onAlbumClick: (LocalAlbum) -> Unit,
     onArtistClick: (LocalArtist) -> Unit,
     viewModel: LocalMusicViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
@@ -166,11 +166,15 @@ fun LocalMusicScreen(
                     allTracks = unfilteredTracks,
                     onBackClick = { selectedPlaylistId = null },
                     onTrackClick = { track ->
-                        // Pass only playlist tracks if we want the player to play only from playlist
-                        // For now, keeping original behavior of passing all tracks, 
-                        // but ideally we should filter 'tracks' to match the playlist content if that's the desired player behavior.
-                        // Assuming specific requirement is to fix UI, preserving 'tracks' context.
-                         onTrackClick(track, tracks)
+                         // Filter tracks to match playlist content context
+                         val playlistTracks = selectedPlaylist.trackIds.mapNotNull { id -> unfilteredTracks.find { it.id == id } }
+                         onTrackClick(track, playlistTracks, selectedPlaylist.name)
+                    },
+                    onPlayPlaylist = {
+                         val playlistTracks = selectedPlaylist.trackIds.mapNotNull { id -> unfilteredTracks.find { it.id == id } }
+                         if (playlistTracks.isNotEmpty()) {
+                             onTrackClick(playlistTracks.first(), playlistTracks, selectedPlaylist.name)
+                         }
                     },
                     onRemoveTrack = { track -> viewModel.removeTrackFromPlaylist(selectedPlaylist, track) }
                 )
@@ -363,7 +367,7 @@ fun LocalMusicScreen(
                 when (selectedView) {
                     0 -> LocalTracksList(
                         tracks = tracks, 
-                        onTrackClick = onTrackClick,
+                        onTrackClick = { track, list -> onTrackClick(track, list, null) },
                         onShare = { track -> shareTrack(track) },
                         onDelete = { track -> viewModel.requestDeleteTrack(track) },
                         onAddToPlaylist = { track -> trackForPlaylist = track }

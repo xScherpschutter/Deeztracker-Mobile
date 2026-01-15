@@ -281,6 +281,7 @@ fun MainNavigation(
     playerController: PlayerController,
     safePopBackStack: () -> Unit
 ) {
+    val downloadsTitle = stringResource(R.string.downloads_title)
     NavHost(navController, startDestination = "library") {
         composable("search") { 
             SearchScreen(
@@ -293,8 +294,8 @@ fun MainNavigation(
         composable("library") { 
             LocalMusicScreen(
                 onBackClick = { /* No back action */ },
-                onTrackClick = { track, playlist -> 
-                    playerController.playTrack(track, playlist)
+                onTrackClick = { track, playlist, source -> 
+                    playerController.playTrack(track, playlist, source = source)
                 },
                 onAlbumClick = { album -> navController.navigate("localAlbum/${album.id}") },
                 onArtistClick = { artist -> navController.navigate("localArtist/${artist.name}") }
@@ -304,7 +305,7 @@ fun MainNavigation(
         composable("downloads") { 
             DownloadsScreen(
                 onTrackClick = { track, playlist ->
-                    playerController.playTrack(track, playlist, source = "Downloads")
+                    playerController.playTrack(track, playlist, source = downloadsTitle)
                 }
             ) 
         }
@@ -320,11 +321,11 @@ fun MainNavigation(
                 albumId = albumId,
                 onBackClick = safePopBackStack,
                 onTrackClick = { track, playlist ->
-                    playerController.playTrack(track, playlist, source = "Album: ${track.album}")
+                    playerController.playTrack(track, playlist, source = track.album ?: "")
                 },
                 onPlayAlbum = { tracks ->
                      if (tracks.isNotEmpty()) {
-                         playerController.playTrack(tracks.first(), tracks, source = "Album: ${tracks.first().album}")
+                         playerController.playTrack(tracks.first(), tracks, source = tracks.first().album ?: "")
                      }
                 }
             )
@@ -339,11 +340,11 @@ fun MainNavigation(
                 artistName = artistName,
                 onBackClick = safePopBackStack,
                 onTrackClick = { track, playlist ->
-                    playerController.playTrack(track, playlist, source = "Artist: ${track.artist}")
+                    playerController.playTrack(track, playlist, source = track.artist)
                 },
                 onPlayArtist = { tracks ->
                     if (tracks.isNotEmpty()) {
-                        playerController.playTrack(tracks.first(), tracks, source = "Artist: $artistName")
+                        playerController.playTrack(tracks.first(), tracks, source = artistName)
                     }
                 }
             )

@@ -117,7 +117,8 @@ class PlayerController(private val context: Context) {
          }
     }
 
-    fun playTrack(track: LocalTrack, playlist: List<LocalTrack>, source: String = "Local Library") {
+    fun playTrack(track: LocalTrack, playlist: List<LocalTrack>, source: String? = null) {
+        val resolvedSource = source ?: context.getString(com.crowstar.deeztrackermobile.R.string.local_music_title)
         val player = mediaController
         if (player == null) {
             initializeController()
@@ -146,7 +147,7 @@ class PlayerController(private val context: Context) {
         player.prepare()
         player.play()
         
-        _playerState.update { it.copy(currentTrack = track, isPlaying = true, playingSource = source) }
+        _playerState.update { it.copy(currentTrack = track, isPlaying = true, playingSource = resolvedSource) }
     }
 
     fun togglePlayPause() {
