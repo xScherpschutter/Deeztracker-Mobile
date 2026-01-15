@@ -172,7 +172,16 @@ class MusicService : MediaLibraryService() {
                 }
                 return super.onCustomCommand(session, controller, customCommand, args)
             }
-        }).build()
+        })
+        .setSessionActivity(
+            PendingIntent.getActivity(
+                this,
+                0,
+                Intent(this, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+        )
+        .build()
     }
 
     @OptIn(UnstableApi::class) 
