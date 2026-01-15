@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Deeztracker Mobile</string>
+    <string name="app_name">Deeztracker</string>
 
     <!-- Login Screen -->
     <string name="login_title">Iniciar sesión en Deezer</string>

@@ -27,6 +27,7 @@ import com.crowstar.deeztrackermobile.navigation.AppNavigation
 import com.crowstar.deeztrackermobile.ui.utils.LocaleHelper
 import com.crowstar.deeztrackermobile.ui.theme.DeeztrackerMobileTheme
 import com.crowstar.deeztrackermobile.ui.theme.Primary
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -42,6 +43,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         setContent {
             DeeztrackerMobileTheme {
