@@ -249,4 +249,19 @@ class PlayerController(private val context: Context) {
         player.sendCustomCommand(command, args)
         _playerState.update { it.copy(volume = volume) }
     }
+
+    /**
+     * Stop playback, clear queue, and release controller.
+     * Use this when logging out to silence the app.
+     */
+    fun stop() {
+        val player = mediaController ?: return
+        player.stop()
+        player.clearMediaItems()
+        player.release() // Unbinds and should eventually kill service if no other clients
+        mediaController = null
+        controllerFuture = null
+        stopPositionUpdates()
+        _playerState.update { PlayerState() } // Reset state
+    }
 }
