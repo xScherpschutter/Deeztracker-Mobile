@@ -70,6 +70,7 @@ fun AppNavigation() {
                     navController.navigate("album/$albumId")
                 },
                 onLogout = {
+                    com.crowstar.deeztrackermobile.features.player.PlayerController.getInstance(context).stop()
                     navController.navigate("login") {
                         popUpTo("main") { inclusive = true }
                     }
