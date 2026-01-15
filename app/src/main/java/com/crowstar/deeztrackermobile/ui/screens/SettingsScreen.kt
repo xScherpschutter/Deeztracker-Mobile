@@ -143,7 +143,7 @@ fun SettingsScreen(
                     onDismissRequest = { showLanguageDropdown = false },
                     modifier = Modifier.background(SurfaceDark)
                 ) {
-                    listOf("English", "Spanish", "French").forEach { lang ->
+                    listOf("English", "Spanish").forEach { lang ->
                         DropdownMenuItem(
                             text = { Text(lang, color = Color.White) },
                             onClick = {

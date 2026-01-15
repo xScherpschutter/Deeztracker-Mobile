@@ -239,7 +239,7 @@ fun MusicPlayerScreen(
                 }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Progress
             Column(
@@ -276,7 +276,7 @@ fun MusicPlayerScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Controls
             Row(
@@ -340,35 +340,7 @@ fun MusicPlayerScreen(
                 }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
-            
-             // Bottom Utility Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 12.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White.copy(alpha = 0.05f))
-                    .padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.Menu,
-                    contentDescription = stringResource(R.string.player_lyrics),
-                    tint = TextGray
-                )
-                
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(stringResource(R.string.player_hifi), color = Primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
-                
-                Icon(
-                    Icons.Default.List,
-                    contentDescription = stringResource(R.string.player_queue),
-                    tint = TextGray
-                )
-            }
+            Spacer(modifier = Modifier.height(16.dp))
         }
         
         // Playlist Sheet
