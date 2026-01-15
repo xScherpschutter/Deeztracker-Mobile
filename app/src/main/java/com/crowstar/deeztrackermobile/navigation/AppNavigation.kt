@@ -68,6 +68,11 @@ fun AppNavigation() {
                 },
                 onAlbumClick = { albumId ->
                     navController.navigate("album/$albumId")
+                },
+                onLogout = {
+                    navController.navigate("login") {
+                        popUpTo("main") { inclusive = true }
+                    }
                 }
             )
         }
