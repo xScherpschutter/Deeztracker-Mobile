@@ -303,7 +303,6 @@ fun MainNavigation(
         
         composable("downloads") { 
             DownloadsScreen(
-                onBackClick = safePopBackStack,
                 onTrackClick = { track, playlist ->
                     playerController.playTrack(track, playlist, source = "Downloads")
                 }
