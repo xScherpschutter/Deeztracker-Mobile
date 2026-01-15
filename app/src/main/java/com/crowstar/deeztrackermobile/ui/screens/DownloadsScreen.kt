@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,7 +36,9 @@ import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.utils.formatTime
 import com.crowstar.deeztrackermobile.R
-import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,7 +53,10 @@ fun DownloadsScreen(
     val context = LocalContext.current
     
     // Search Query State
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    
+    // List Scroll State
+    val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     
     // Context Menu Actions
     fun shareTrack(track: LocalTrack) {
@@ -182,6 +188,7 @@ fun DownloadsScreen(
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {

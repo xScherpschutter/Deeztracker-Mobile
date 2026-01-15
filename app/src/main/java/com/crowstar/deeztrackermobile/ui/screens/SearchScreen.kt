@@ -58,6 +58,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -95,9 +96,9 @@ fun SearchScreen(
     onPlaylistClick: (Long) -> Unit = {},
     onAlbumClick: (Long) -> Unit = {}
 ) {
-    var query by remember { mutableStateOf("") }
-    var hasSearched by remember { mutableStateOf(false) }
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var hasSearched by rememberSaveable { mutableStateOf(false) }
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     val tabs = listOf(
         stringResource(R.string.tab_tracks),
         stringResource(R.string.tab_artists),
@@ -174,6 +175,13 @@ fun SearchScreen(
                 isLoading = false
                 isAppending = false
             }
+        }
+    }
+
+    // Restore Search State if coming back
+    LaunchedEffect(Unit) {
+        if (query.isNotEmpty() && hasSearched && tracks.isEmpty() && artists.isEmpty() && albums.isEmpty() && playlists.isEmpty() && !isLoading) {
+             performSearch(isNewSearch = true)
         }
     }
 
