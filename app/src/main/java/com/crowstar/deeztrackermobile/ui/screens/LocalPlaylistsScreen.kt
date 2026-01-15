@@ -36,30 +36,58 @@ fun LocalPlaylistsScreen(
     onDeletePlaylist: (LocalPlaylist) -> Unit,
     onCreatePlaylist: () -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-        // Stats Header
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Stats Bar
         item {
-             Column(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.stats_playlists_format, playlists.size),
+                    color = TextGray,
+                    fontSize = 12.sp
+                )
+            }
+        }
+        
+        // Add Playlist Button (Center Icon)
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onCreatePlaylist)
+                    .padding(vertical = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                 Icon(
-                     Icons.Default.MusicNote, 
-                     contentDescription = null, 
-                     tint = TextGray.copy(alpha = 0.5f),
-                     modifier = Modifier.size(48.dp)
-                 )
-                 Text(
-                     stringResource(R.string.stats_playlists_format, playlists.size),
-                     color = TextGray,
-                     fontSize = 12.sp,
-                     fontWeight = FontWeight.Bold
-                 )
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Primary.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = null,
+                        tint = Primary,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    stringResource(R.string.new_playlist_title),
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
         
@@ -89,45 +117,32 @@ fun LocalPlaylistsScreen(
                     )
                 }
 
-                Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            contentDescription = stringResource(R.string.player_options),
-                            tint = TextGray
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        modifier = Modifier.background(SurfaceDark)
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_delete), color = Color.Red) },
-                            onClick = {
-                                showMenu = false
-                                onDeletePlaylist(playlist)
-                            }
-                        )
+                // Only show menu for non-favorites playlists
+                if (playlist.id != "favorites") {
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = stringResource(R.string.player_options),
+                                tint = TextGray
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            modifier = Modifier.background(SurfaceDark)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_delete), color = Color.Red) },
+                                onClick = {
+                                    showMenu = false
+                                    onDeletePlaylist(playlist)
+                                }
+                            )
+                        }
                     }
                 }
             }
-        }
-    }
-        
-        // Floating Action Button
-        FloatingActionButton(
-            onClick = onCreatePlaylist,
-            containerColor = Primary,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            Icon(
-                Icons.Default.Add,
-                contentDescription = stringResource(R.string.new_playlist_title),
-                tint = Color.White
-            )
         }
     }
 }
