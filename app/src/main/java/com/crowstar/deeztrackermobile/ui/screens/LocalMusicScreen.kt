@@ -53,7 +53,9 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.text.style.TextAlign
-
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,8 +78,11 @@ fun LocalMusicScreen(
     
     val context = LocalContext.current
     
-    // Search Query State
-    var searchQuery by remember { mutableStateOf("") }
+    // Search Query State - Persist across navigation
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    
+    // Scroll State - Persist across navigation
+    val tracksListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     
     // Context Menu Actions
     fun shareTrack(track: LocalTrack) {
@@ -376,7 +381,8 @@ fun LocalMusicScreen(
             Box(modifier = Modifier.padding(padding)) {
                 when (selectedView) {
                     0 -> LocalTracksList(
-                        tracks = tracks, 
+                        tracks = tracks,
+                        state = tracksListState,
                         onTrackClick = { track, list -> onTrackClick(track, list, null) },
                         onShare = { track -> shareTrack(track) },
                         onDelete = { track -> viewModel.requestDeleteTrack(track) },
@@ -405,6 +411,7 @@ fun LocalMusicScreen(
 @Composable
 fun LocalTracksList(
     tracks: List<LocalTrack>,
+    state: LazyListState = rememberLazyListState(),
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
     onShare: (LocalTrack) -> Unit,
     onDelete: (LocalTrack) -> Unit,
@@ -455,7 +462,8 @@ fun LocalTracksList(
         }
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            state = state
         ) {
             items(tracks) { track ->
                 LocalTrackItem(
