@@ -26,41 +26,95 @@ class LyricsRepository(private val context: Context) {
         
         // 1. Check Cache
         if (cacheFile.exists()) {
-            Log.d("LyricsRepository", "Found lyrics in cache: ${cacheFile.absolutePath}")
-            return try {
-                cacheFile.readText()
+            val cachedContent = try {
+                 cacheFile.readText()
             } catch (e: Exception) {
-                Log.e("LyricsRepository", "Error reading cache", e)
                 null
+            }
+            
+            // If cache contains "NOT_FOUND" from previous versions or is invalid, ignore it
+            if (cachedContent == "NOT_FOUND" || cachedContent.isNullOrBlank()) {
+                Log.d("LyricsRepository", "Invalid or 'NOT_FOUND' in cache. Deleting and refetching.")
+                cacheFile.delete()
+            } else {
+                Log.d("LyricsRepository", "Found lyrics in cache: ${cacheFile.absolutePath}")
+                return cachedContent
             }
         }
 
-        // 2. Fetch from API
-        return try {
-            Log.d("LyricsRepository", "Fetching lyrics from API for: ${track.title} - ${track.artist}")
-            // Duration in seconds needed for better accuracy
-            // Assuming track.duration is ms, convert to seconds
-            val durationSeconds = track.duration / 1000.0
-            
-            val response = api.getLyrics(
-                trackName = track.title,
-                artistName = track.artist,
-                albumName = track.album,
-                duration = durationSeconds
-            )
-            
-            val lyrics = response.syncedLyrics ?: response.plainLyrics
-            
-            if (!lyrics.isNullOrBlank()) {
-                // 3. Save to Cache
-                saveToCache(cacheFile, lyrics)
-                lyrics
-            } else {
-                null
-            }
+        // 2. Fetch from API with prioritization for SYNCED lyrics
+        Log.d("LyricsRepository", "Starting lyrics search for: ${track.title} - ${track.artist}")
+        val durationSeconds = track.duration / 1000.0
 
+        // Step A: Exact match (Title, Artist, Album, Duration)
+        val strictResponse = safeApiCall(track.title, track.artist, track.album, durationSeconds)
+        
+        // If we found synced lyrics immediately, return them
+        if (!strictResponse?.syncedLyrics.isNullOrBlank()) {
+            Log.d("LyricsRepository", "Found synced lyrics via Exact Match!")
+            val lyrics = strictResponse!!.syncedLyrics!!
+            saveToCache(cacheFile, lyrics)
+            return lyrics
+        }
+
+        // Step B: Fuzzy Search (Fallback if strict failed or only had plain lyrics)
+        // User requested: "If get fails (or no synced), go directly to search"
+        Log.d("LyricsRepository", "Exact match failed or unsynced. Trying Fuzzy Search...")
+        
+        val searchResults = safeSearch("${track.title} ${track.artist}")
+        
+        // Look for SYNCED lyrics in the top results (using first 5 to be safe)
+        val bestSynced = searchResults.take(5).firstNotNullOfOrNull { it.syncedLyrics.takeIf { s -> !s.isNullOrBlank() } }
+        
+        if (bestSynced != null) {
+            Log.d("LyricsRepository", "Found synced lyrics via Fuzzy Search!")
+            saveToCache(cacheFile, bestSynced)
+            return bestSynced
+        }
+        
+        // Step C: Fallback to Plain Lyrics
+        // Prioritize strict result plain lyrics, then search result plain lyrics
+        val bestPlain = strictResponse?.plainLyrics.takeIf { !it.isNullOrBlank() }
+            ?: searchResults.firstNotNullOfOrNull { it.plainLyrics.takeIf { s -> !s.isNullOrBlank() } }
+            
+        if (bestPlain != null) {
+             Log.d("LyricsRepository", "Only plain lyrics found.")
+             saveToCache(cacheFile, bestPlain)
+             return bestPlain
+        }
+
+        Log.d("LyricsRepository", "No lyrics found after all strategies.")
+        return null
+    }
+
+    private suspend fun safeSearch(query: String): List<LrcLibResponse> {
+        return try {
+            Log.d("LyricsRepository", "Fuzzy searching with query: '$query'")
+            val results = api.search(query = query)
+            Log.d("LyricsRepository", "Fuzzy search found ${results.size} results")
+            results
         } catch (e: Exception) {
-            Log.e("LyricsRepository", "Error fetching lyrics", e)
+            Log.e("LyricsRepository", "Fuzzy search failed: ${e.message}", e)
+            emptyList()
+        }
+    }
+
+    private suspend fun safeApiCall(
+        trackName: String, 
+        artistName: String, 
+        albumName: String?, 
+        duration: Double?
+    ): LrcLibResponse? {
+        return try {
+            // Log.d("LyricsRepository", "Strategy check: $trackName, $artistName, $albumName, $duration")
+            api.getLyrics(
+                trackName = trackName, 
+                artistName = artistName, 
+                albumName = albumName, 
+                duration = duration
+            )
+        } catch (e: Exception) {
+            Log.w("LyricsRepository", "Strict strategy failed: ${e.message}") 
             null
         }
     }
