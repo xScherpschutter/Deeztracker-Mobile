@@ -388,6 +388,7 @@ fun MusicPlayerScreen(
                      LyricsScreen(
                          lyrics = playerState.lyrics,
                          currentIndex = playerState.currentLyricIndex,
+                         isLoading = playerState.isLoadingLyrics,
                          onLineClick = { position ->
                              playerController.seekTo(position)
                          }

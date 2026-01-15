@@ -141,4 +141,5 @@
     <!-- Lyrics -->
     <string name="lyrics_title">Letra</string>
     <string name="lyrics_not_available">Letra no disponible</string>
+    <string name="lyrics_loading">Cargando letra...</string>
 </resources>
