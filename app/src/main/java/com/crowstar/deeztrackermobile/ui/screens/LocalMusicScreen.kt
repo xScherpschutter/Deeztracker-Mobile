@@ -192,7 +192,17 @@ fun LocalMusicScreen(
             ) {
                 // Header Row
                 TopAppBar(
-                    title = { Text(stringResource(R.string.local_music_title), color = Color.White, fontWeight = FontWeight.Bold) },
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.foundation.Image(
+                                painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_app_icon),
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.local_music_title), color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    },
                     actions = {
                         IconButton(onClick = { viewModel.loadMusic() }) {
                             Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh), tint = Color.White)
