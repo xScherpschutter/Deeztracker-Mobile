@@ -56,6 +56,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextOverflow
+import kotlinx.coroutines.launch
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -418,25 +423,43 @@ fun LocalTracksList(
     onDelete: (LocalTrack) -> Unit,
     onAddToPlaylist: (LocalTrack) -> Unit
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Stats Bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    val scope = rememberCoroutineScope()
+    
+    // Group tracks by first letter and create index map
+    val (letterIndexMap, currentLetter) = remember(tracks) {
+        val grouped = mutableMapOf<Char, Int>()
+        tracks.forEachIndexed { index, track ->
+            val firstChar = track.title.firstOrNull()?.uppercaseChar()?.let {
+                if (it.isLetter()) it else '#'
+            } ?: '#'
+            if (!grouped.containsKey(firstChar)) {
+                grouped[firstChar] = index
+            }
+        }
+        grouped to mutableStateOf<Char?>('A')
+    }
+    
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
-            Text(
-                text = stringResource(R.string.stats_tracks_format, tracks.size),
-                color = TextGray,
-                fontSize = 12.sp
-            )
-            
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Simple visual bar represenation
+            // Stats Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.stats_tracks_format, tracks.size),
+                    color = TextGray,
+                    fontSize = 12.sp
+                )
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                // Simple visual bar representation
                 Box(
                     modifier = Modifier
                         .width(100.dp)
@@ -451,7 +474,9 @@ fun LocalTracksList(
                             .background(Primary)
                     )
                 }
+                
                 Spacer(modifier = Modifier.width(8.dp))
+                
                 val totalSize = tracks.sumOf { it.size }
                 val sizeGb = totalSize / (1024.0 * 1024.0 * 1024.0)
                 Text(
@@ -460,22 +485,50 @@ fun LocalTracksList(
                     fontSize = 12.sp
                 )
             }
-        }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            state = state
-        ) {
-            items(tracks) { track ->
-                LocalTrackItem(
-                    track = track,
-                    onShare = { onShare(track) },
-                    onDelete = { onDelete(track) },
-                    onAddToPlaylist = { onAddToPlaylist(track) },
-                    onClick = { onTrackClick(track, tracks) }
-                )
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = state,
+                contentPadding = PaddingValues(end = 36.dp) // Space for fast scroller
+            ) {
+                items(tracks) { track ->
+                    LocalTrackItem(
+                        track = track,
+                        onShare = { onShare(track) },
+                        onDelete = { onDelete(track) },
+                        onAddToPlaylist = { onAddToPlaylist(track) },
+                        onClick = { onTrackClick(track, tracks) }
+                    )
+                }
             }
         }
+        
+        // Fast Scroller Overlay
+        AlphabeticalFastScroller(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 4.dp),
+            selectedLetter = currentLetter.value,
+            onLetterSelected = { letter ->
+                scope.launch {
+                    val index = letterIndexMap[letter]
+                    if (index != null) {
+                        state.animateScrollToItem(index)
+                        currentLetter.value = letter
+                    } else {
+                        // Find next available letter
+                        val availableLetters = letterIndexMap.keys.sorted()
+                        val nextLetter = availableLetters.firstOrNull { it >= letter }
+                        if (nextLetter != null) {
+                            letterIndexMap[nextLetter]?.let {
+                                state.animateScrollToItem(it)
+                                currentLetter.value = nextLetter
+                            }
+                        }
+                    }
+                }
+            }
+        )
     }
 }
 
@@ -795,5 +848,73 @@ fun FormatBadge(mimeType: String) {
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold
         )
+    }
+}
+
+@Composable
+fun AlphabeticalFastScroller(
+    modifier: Modifier = Modifier,
+    selectedLetter: Char? = null,
+    onLetterSelected: (Char) -> Unit
+) {
+    val letters = remember { listOf('#') + ('A'..'Z').toList() }
+    var currentlySelectedLetter by remember { mutableStateOf<Char?>(null) }
+    
+    Box(
+        modifier = modifier
+            .width(28.dp)
+            .fillMaxHeight()
+            .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+            .padding(vertical = 4.dp)
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        val index = (offset.y / size.height * letters.size).toInt()
+                            .coerceIn(0, letters.size - 1)
+                        val letter = letters[index]
+                        currentlySelectedLetter = letter
+                        onLetterSelected(letter)
+                    },
+                    onDrag = { change, _ ->
+                        change.consume()
+                        val offset = change.position
+                        val index = (offset.y / size.height * letters.size).toInt()
+                            .coerceIn(0, letters.size - 1)
+                        val letter = letters[index]
+                        if (letter != currentlySelectedLetter) {
+                            currentlySelectedLetter = letter
+                            onLetterSelected(letter)
+                        }
+                    },
+                    onDragEnd = {
+                        currentlySelectedLetter = null
+                    }
+                )
+            }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 4.dp),
+            verticalArrangement = Arrangement.SpaceEvenly,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            letters.forEach { letter ->
+                val isSelected = letter == (currentlySelectedLetter ?: selectedLetter)
+                Box(
+                    modifier = Modifier
+                        .size(if (isSelected) 18.dp else 14.dp)
+                        .clickable { onLetterSelected(letter) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = letter.toString(),
+                        color = if (isSelected) Primary else TextGray,
+                        fontSize = if (isSelected) 12.sp else 9.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+        }
     }
 }
