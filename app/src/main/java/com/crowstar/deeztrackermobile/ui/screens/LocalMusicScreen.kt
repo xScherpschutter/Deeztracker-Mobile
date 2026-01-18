@@ -77,6 +77,7 @@ fun LocalMusicScreen(
     val playlists by viewModel.playlists.collectAsState()
     
     val context = LocalContext.current
+    val localMusicTitle = stringResource(R.string.local_music_title)
     
     // Search Query State - Persist across navigation
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -383,7 +384,7 @@ fun LocalMusicScreen(
                     0 -> LocalTracksList(
                         tracks = tracks,
                         state = tracksListState,
-                        onTrackClick = { track, list -> onTrackClick(track, list, null) },
+                        onTrackClick = { track, list -> onTrackClick(track, list, localMusicTitle) },
                         onShare = { track -> shareTrack(track) },
                         onDelete = { track -> viewModel.requestDeleteTrack(track) },
                         onAddToPlaylist = { track -> trackForPlaylist = track }

@@ -282,6 +282,7 @@ fun MainNavigation(
     safePopBackStack: () -> Unit
 ) {
     val downloadsTitle = stringResource(R.string.downloads_title)
+    val localMusicTitle = stringResource(R.string.local_music_title)
     NavHost(navController, startDestination = "library") {
         composable("search") { 
             SearchScreen(
