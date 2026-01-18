@@ -39,6 +39,9 @@ import com.crowstar.deeztrackermobile.R
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import com.crowstar.deeztrackermobile.ui.components.AlphabeticalFastScroller
+import kotlinx.coroutines.launch
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -187,20 +190,65 @@ fun DownloadsScreen(
                     }
                 }
             } else {
-                LazyColumn(
-                    state = listState,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(tracks) { track ->
-                        DownloadedTrackItem(
-                            track = track,
-                            onClick = { onTrackClick(track, tracks) },
-                            onDelete = { viewModel.deleteTrack(track) },
-                            onShare = { shareTrack(track) },
-                            onDetails = { trackDetails = track }
-                        )
+                val scope = rememberCoroutineScope()
+                
+                // Group tracks by first letter and create index map
+                val (letterIndexMap, currentLetter) = remember(tracks) {
+                    val grouped = mutableMapOf<Char, Int>()
+                    tracks.forEachIndexed { index, track ->
+                        val firstChar = track.title.firstOrNull()?.uppercaseChar()?.let {
+                            if (it.isLetter()) it else '#'
+                        } ?: '#'
+                        if (!grouped.containsKey(firstChar)) {
+                            grouped[firstChar] = index
+                        }
                     }
+                    grouped to mutableStateOf<Char?>('A')
+                }
+                
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = listState,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp, end = 36.dp) // Space for fast scroller
+                    ) {
+                        items(tracks) { track ->
+                            DownloadedTrackItem(
+                                track = track,
+                                onClick = { onTrackClick(track, tracks) },
+                                onDelete = { viewModel.deleteTrack(track) },
+                                onShare = { shareTrack(track) },
+                                onDetails = { trackDetails = track }
+                            )
+                        }
+                    }
+                    
+                    // Fast Scroller Overlay
+                    AlphabeticalFastScroller(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 4.dp),
+                        selectedLetter = currentLetter.value,
+                        onLetterSelected = { letter ->
+                            scope.launch {
+                                val index = letterIndexMap[letter]
+                                if (index != null) {
+                                    listState.animateScrollToItem(index)
+                                    currentLetter.value = letter
+                                } else {
+                                    // Find next available letter
+                                    val availableLetters = letterIndexMap.keys.sorted()
+                                    val nextLetter = availableLetters.firstOrNull { it >= letter }
+                                    if (nextLetter != null) {
+                                        letterIndexMap[nextLetter]?.let {
+                                            listState.animateScrollToItem(it)
+                                            currentLetter.value = nextLetter
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    )
                 }
             }
         }
