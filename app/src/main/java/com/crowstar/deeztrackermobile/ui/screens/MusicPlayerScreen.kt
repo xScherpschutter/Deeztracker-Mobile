@@ -119,6 +119,7 @@ fun MusicPlayerScreen(
                  Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                         .padding(top = 16.dp, bottom = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -184,16 +185,16 @@ fun MusicPlayerScreen(
                     // Album Art
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            .padding(vertical = 42.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth(0.85f)
+                                .fillMaxWidth(0.75f) // Smaller cover art (was 0.85f)
                                 .aspectRatio(1f)
-                                .shadow(16.dp, RoundedCornerShape(24.dp))
-                                .clip(RoundedCornerShape(24.dp))
+                                .shadow(24.dp, RoundedCornerShape(20.dp)) // Softer shadow
+                                .clip(RoundedCornerShape(20.dp))
                                 .background(Color.DarkGray)
                         ) {
                             if (track.albumArtUri != null) {
@@ -220,7 +221,7 @@ fun MusicPlayerScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp),
+                            .padding(horizontal = 34.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -249,7 +250,9 @@ fun MusicPlayerScreen(
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(16.dp))
+
+                    
+                    Spacer(modifier = Modifier.height(42.dp))
 
                     // Progress
                     Column(
@@ -286,7 +289,7 @@ fun MusicPlayerScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
 
                     // Controls
                     Row(
@@ -350,7 +353,7 @@ fun MusicPlayerScreen(
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
              } else {
                  // Lyrics Page

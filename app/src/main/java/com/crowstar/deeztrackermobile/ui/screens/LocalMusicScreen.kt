@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Input
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Refresh
@@ -70,6 +71,7 @@ fun LocalMusicScreen(
     onTrackClick: (LocalTrack, List<LocalTrack>, String?) -> Unit,
     onAlbumClick: (LocalAlbum) -> Unit,
     onArtistClick: (LocalArtist) -> Unit,
+    onImportPlaylist: () -> Unit,
     viewModel: LocalMusicViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
         factory = LocalMusicViewModelFactory(LocalContext.current)
     )
@@ -188,6 +190,13 @@ fun LocalMusicScreen(
                              onTrackClick(playlistTracks.first(), playlistTracks, selectedPlaylist.name)
                          }
                     },
+                    onShufflePlaylist = {
+                        val playlistTracks = selectedPlaylist.trackIds.mapNotNull { id -> unfilteredTracks.find { it.id == id } }
+                        if (playlistTracks.isNotEmpty()) {
+                            val shuffled = playlistTracks.shuffled()
+                            onTrackClick(shuffled.first(), shuffled, selectedPlaylist.name)
+                        }
+                    },
                     onRemoveTrack = { track -> viewModel.removeTrackFromPlaylist(selectedPlaylist, track) }
                 )
             }
@@ -216,6 +225,11 @@ fun LocalMusicScreen(
                         }
                     },
                     actions = {
+                        if (selectedView == 3) { // Playlists Tab
+                             IconButton(onClick = onImportPlaylist) {
+                                 Icon(Icons.Default.Input, contentDescription = "Import Playlist", tint = Color.White)
+                             }
+                        }
                         IconButton(onClick = { viewModel.loadMusic() }) {
                             Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh), tint = Color.White)
                         }
@@ -333,9 +347,6 @@ fun LocalMusicScreen(
                          onClick = {
                              if (newPlaylistName.isNotBlank()) {
                                  viewModel.createPlaylist(newPlaylistName)
-                                 // Optionally wait and add the track immediately?
-                                 // For now just create and user can select it since the sheet is still open (or re-opens)
-                                 // Improving UX: close dialog, keep sheet open, updated list will show new playlist
                                  showCreatePlaylistDialog = false
                              }
                          },
@@ -412,8 +423,12 @@ fun LocalMusicScreen(
                 }
             }
         }
+
     }
+
+
 }
+
 
 @Composable
 fun LocalTracksList(

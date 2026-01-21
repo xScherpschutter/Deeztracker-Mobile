@@ -254,4 +254,27 @@ class LocalMusicRepository(private val contentResolver: ContentResolver) {
         val allTracks = getAllTracks()
         allTracks.filter { it.filePath.startsWith(downloadPath) }
     }
+
+    /**
+     * Get track ID by file path
+     */
+    suspend fun getTrackIdByPath(path: String): Long? = withContext(Dispatchers.IO) {
+        val projection = arrayOf(MediaStore.Audio.Media._ID)
+        val selection = "${MediaStore.Audio.Media.DATA} = ?"
+        val selectionArgs = arrayOf(path)
+
+        contentResolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            selection,
+            selectionArgs,
+            null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+                return@withContext cursor.getLong(idColumn)
+            }
+        }
+        return@withContext null
+    }
 }
