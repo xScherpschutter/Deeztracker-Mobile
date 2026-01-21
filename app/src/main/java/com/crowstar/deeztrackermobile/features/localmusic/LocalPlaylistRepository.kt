@@ -4,6 +4,8 @@ import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -12,6 +14,7 @@ import java.io.File
 class LocalPlaylistRepository(private val context: Context) {
 
     private val playlistsFile = File(context.filesDir, "playlists.json")
+    private val mutex = kotlinx.coroutines.sync.Mutex()
     
     private val _playlists = MutableStateFlow<List<LocalPlaylist>>(emptyList())
     val playlists: StateFlow<List<LocalPlaylist>> = _playlists
@@ -55,42 +58,51 @@ class LocalPlaylistRepository(private val context: Context) {
         }
     }
 
-    suspend fun createPlaylist(name: String) = withContext(Dispatchers.IO) {
-        val newPlaylist = LocalPlaylist(name = name)
-        val current = _playlists.value.toMutableList()
-        current.add(newPlaylist)
-        savePlaylistsToFile(current)
-        _playlists.value = current
+    suspend fun createPlaylist(name: String): String = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val newPlaylist = LocalPlaylist(name = name)
+            val current = _playlists.value.toMutableList()
+            current.add(newPlaylist)
+            savePlaylistsToFile(current)
+            _playlists.value = current
+            newPlaylist.id
+        }
     }
 
     suspend fun deletePlaylist(playlistId: String) = withContext(Dispatchers.IO) {
-        val current = _playlists.value.filter { it.id != playlistId }
-        savePlaylistsToFile(current)
-        _playlists.value = current
-    }
-
-    suspend fun addTrackToPlaylist(playlistId: String, trackId: Long) = withContext(Dispatchers.IO) {
-        val current = _playlists.value.map { playlist ->
-            if (playlist.id == playlistId) {
-                if (!playlist.trackIds.contains(trackId)) {
-                    playlist.copy(trackIds = playlist.trackIds + trackId)
-                } else playlist
-            } else playlist
-        }
-        if (current != _playlists.value) {
+        mutex.withLock {
+            val current = _playlists.value.filter { it.id != playlistId }
             savePlaylistsToFile(current)
             _playlists.value = current
         }
     }
 
-    suspend fun removeTrackFromPlaylist(playlistId: String, trackId: Long) = withContext(Dispatchers.IO) {
-        val current = _playlists.value.map { playlist ->
-             if (playlist.id == playlistId) {
-                playlist.copy(trackIds = playlist.trackIds - trackId)
-            } else playlist
+    suspend fun addTrackToPlaylist(playlistId: String, trackId: Long) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val current = _playlists.value.map { playlist ->
+                if (playlist.id == playlistId) {
+                    if (!playlist.trackIds.contains(trackId)) {
+                        playlist.copy(trackIds = playlist.trackIds + trackId)
+                    } else playlist
+                } else playlist
+            }
+            if (current != _playlists.value) {
+                savePlaylistsToFile(current)
+                _playlists.value = current
+            }
         }
-        savePlaylistsToFile(current)
-        _playlists.value = current
+    }
+
+    suspend fun removeTrackFromPlaylist(playlistId: String, trackId: Long) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val current = _playlists.value.map { playlist ->
+                 if (playlist.id == playlistId) {
+                    playlist.copy(trackIds = playlist.trackIds - trackId)
+                } else playlist
+            }
+            savePlaylistsToFile(current)
+            _playlists.value = current
+        }
     }
 
     fun isFavorite(trackId: Long): Boolean {

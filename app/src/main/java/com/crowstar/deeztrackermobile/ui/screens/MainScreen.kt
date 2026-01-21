@@ -44,6 +44,7 @@ fun MainScreen(
     onArtistClick: (Long) -> Unit,
     onPlaylistClick: (Long) -> Unit,
     onAlbumClick: (Long) -> Unit,
+    importAction: () -> Unit,
     onLogout: () -> Unit
 ) {
     val navController = rememberNavController()
@@ -117,6 +118,7 @@ fun MainScreen(
                 onArtistClick, 
                 onPlaylistClick,
                 onAlbumClick,
+                importAction = importAction,
                 onLogout = onLogout,
                 playerController = playerController,
                 safePopBackStack = safePopBackStack
@@ -277,6 +279,7 @@ fun MainNavigation(
     onArtistClick: (Long) -> Unit,
     onPlaylistClick: (Long) -> Unit,
     onAlbumClick: (Long) -> Unit,
+    importAction: () -> Unit,
     onLogout: () -> Unit,
     playerController: PlayerController,
     safePopBackStack: () -> Unit
@@ -298,7 +301,8 @@ fun MainNavigation(
                     playerController.playTrack(track, playlist, source = source)
                 },
                 onAlbumClick = { album -> navController.navigate("localAlbum/${album.id}") },
-                onArtistClick = { artist -> navController.navigate("localArtist/${artist.name}") }
+                onArtistClick = { artist -> navController.navigate("localArtist/${artist.name}") },
+                onImportPlaylist = importAction
             ) 
         }
         

@@ -34,7 +34,8 @@ sealed class DownloadState {
         val type: DownloadType,
         val title: String,
         val successCount: Int,
-        val failedCount: Int = 0
+        val failedCount: Int = 0,
+        val skippedCount: Int = 0  // Tracks that were already downloaded
     ) : DownloadState()
     
     /**

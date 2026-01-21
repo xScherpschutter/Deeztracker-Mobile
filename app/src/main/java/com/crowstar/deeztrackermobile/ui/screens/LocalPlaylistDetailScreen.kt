@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist
 import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
+import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import androidx.compose.ui.res.stringResource
@@ -31,6 +33,7 @@ fun LocalPlaylistDetailScreen(
     onBackClick: () -> Unit,
     onTrackClick: (LocalTrack) -> Unit,
     onPlayPlaylist: () -> Unit,
+    onShufflePlaylist: () -> Unit,
     onRemoveTrack: (LocalTrack) -> Unit
 ) {
     // Filter tracks belonging to this playlist
@@ -65,19 +68,36 @@ fun LocalPlaylistDetailScreen(
             }
         }
         
-        // Play Playlist Button
+        // Play & Shuffle Buttons
         if (playlistTracks.isNotEmpty()) {
-             Button(
-                 onClick = onPlayPlaylist,
-                 modifier = Modifier
-                     .fillMaxWidth()
-                     .padding(bottom = 16.dp),
-                 colors = ButtonDefaults.buttonColors(containerColor = Primary)
-             ) {
-                 Icon(Icons.Default.PlayArrow, contentDescription = null)
-                 Spacer(modifier = Modifier.width(8.dp))
-                 Text(stringResource(R.string.action_play_playlist))
-             }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Play Button
+                Button(
+                    onClick = onPlayPlaylist,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.action_play_playlist))
+                }
+
+                // Shuffle Button
+                Button(
+                    onClick = onShufflePlaylist,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark)
+                ) {
+                     Icon(Icons.Default.Shuffle, contentDescription = null, tint = Color.White)
+                     Spacer(modifier = Modifier.width(8.dp))
+                     Text("Shuffle", color = Color.White)
+                }
+            }
         }
 
         if (playlistTracks.isEmpty()) {
