@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -51,11 +52,44 @@ fun ArtistScreen(
     val context = LocalContext.current
     val downloadManager = remember { DownloadManager.getInstance(context) }
     val downloadState by downloadManager.downloadState.collectAsState()
+    val downloadRefreshTrigger by downloadManager.downloadRefreshTrigger.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
 
 
     LaunchedEffect(artistId) {
         viewModel.loadArtist(artistId)
+    }
+    
+    // Handle download state changes and show snackbar
+    LaunchedEffect(downloadState) {
+        when (val state = downloadState) {
+            is DownloadState.Completed -> {
+                val message = buildString {
+                    append(state.title)
+                    if (state.successCount > 0) append(": ${state.successCount} downloaded")
+                    if (state.skippedCount > 0) append(", ${state.skippedCount} already had")
+                    if (state.failedCount > 0) append(", ${state.failedCount} failed")
+                    if (state.successCount == 0 && state.skippedCount == 0 && state.failedCount == 0) {
+                        append(" downloaded successfully")
+                    }
+                }
+                snackbarHostState.showSnackbar(
+                    message = message,
+                    duration = SnackbarDuration.Short
+                )
+                downloadManager.resetState()
+            }
+            is DownloadState.Error -> {
+                snackbarHostState.showSnackbar(
+                    message = "Error: ${state.message}",
+                    duration = SnackbarDuration.Short
+                )
+                downloadManager.resetState()
+            }
+            else -> { /* Idle or Downloading - no snackbar */ }
+        }
     }
     
 
@@ -75,7 +109,8 @@ fun ArtistScreen(
             )
         },
 
-        containerColor = BackgroundDark
+        containerColor = BackgroundDark,
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         if (isLoading) {
             Box(
@@ -148,10 +183,22 @@ fun ArtistScreen(
 
                     items(topTracks.size) { index ->
                         val track = topTracks[index]
+                        var isDownloaded by remember { mutableStateOf(false) }
+                        
+                        // Check if track is downloaded, re-check when refresh trigger changes
+                        LaunchedEffect(track.id, downloadRefreshTrigger) {
+                            isDownloaded = downloadManager.isTrackDownloaded(
+                                track.title,
+                                track.artist?.name ?: ""
+                            )
+                        }
+                        
                         ArtistTrackItem(
                             track = track,
                             index = index,
-                            isDownloading = downloadState is DownloadState.Downloading,
+                            isDownloaded = isDownloaded,
+                            isDownloading = downloadState is DownloadState.Downloading && 
+                                (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString(),
                             onDownloadClick = {
                                 downloadManager.startTrackDownload(track.id, track.title)
                             }
@@ -260,6 +307,7 @@ private fun AlbumCard(album: Album, onAlbumClick: (Long) -> Unit) {
 private fun ArtistTrackItem(
     track: Track,
     index: Int,
+    isDownloaded: Boolean,
     isDownloading: Boolean,
     onDownloadClick: () -> Unit
 ) {
@@ -320,13 +368,31 @@ private fun ArtistTrackItem(
         // Download Button
         IconButton(
             onClick = onDownloadClick,
-            enabled = !isDownloading
+            enabled = !isDownloading && !isDownloaded
         ) {
-            Icon(
-                Icons.Default.Download,
-                contentDescription = "Download",
-                tint = if (isDownloading) TextGray else Primary
-            )
+            when {
+                isDownloaded -> {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = "Downloaded",
+                        tint = Color.Green
+                    )
+                }
+                isDownloading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Primary,
+                        strokeWidth = 2.dp
+                    )
+                }
+                else -> {
+                    Icon(
+                        Icons.Default.Download,
+                        contentDescription = "Download",
+                        tint = Primary
+                    )
+                }
+            }
         }
     }
 }

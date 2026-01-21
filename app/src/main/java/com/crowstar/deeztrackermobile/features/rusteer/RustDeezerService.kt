@@ -9,6 +9,7 @@ import uniffi.rusteer.BatchDownloadResult
 import uniffi.rusteer.DownloadQuality
 import uniffi.rusteer.DownloadResult
 import uniffi.rusteer.RusteerService
+import uniffi.rusteer.Track
 
 class RustDeezerService(context: Context) {
     private val service = RusteerService()
@@ -72,6 +73,22 @@ class RustDeezerService(context: Context) {
     fun logout() {
         clearArl()
         Log.d(TAG, "User logged out, ARL cleared")
+    }
+
+    /**
+     * Search for tracks on Deezer.
+     *
+     * @param query The search query (e.g. "Artist - Title")
+     * @return List of matching tracks
+     */
+    suspend fun searchTracks(query: String): List<Track> = withContext(Dispatchers.IO) {
+        val arl = getSavedArl() ?: throw IllegalStateException("Not logged in - ARL not set")
+        try {
+            service.searchTracks(arl, query)
+        } catch (e: Exception) {
+            Log.e(TAG, "Search failed for query: $query", e)
+            emptyList()
+        }
     }
     
     // ==================== DOWNLOAD METHODS ====================

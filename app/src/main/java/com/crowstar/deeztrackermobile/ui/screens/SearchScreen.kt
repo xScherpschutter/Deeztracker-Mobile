@@ -25,6 +25,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -114,6 +115,7 @@ fun SearchScreen(
     val context = LocalContext.current
     val downloadManager = remember { DownloadManager.getInstance(context) }
     val downloadState by downloadManager.downloadState.collectAsState()
+    val downloadRefreshTrigger by downloadManager.downloadRefreshTrigger.collectAsState()
 
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var artists by remember { mutableStateOf<List<Artist>>(emptyList()) }
@@ -385,9 +387,21 @@ fun SearchScreen(
                             0 -> {
 
                                 items(tracks) { track ->
+                                    var isDownloaded by remember { mutableStateOf(false) }
+                                    
+                                    // Check if track is downloaded, re-check when refresh trigger changes
+                                    LaunchedEffect(track.id, downloadRefreshTrigger) {
+                                        isDownloaded = downloadManager.isTrackDownloaded(
+                                            track.title,
+                                            track.artist?.name ?: ""
+                                        )
+                                    }
+                                    
                                     TrackItem(
                                         track = track,
-                                        isDownloading = isDownloading,
+                                        isDownloaded = isDownloaded,
+                                        isDownloading = isDownloading && 
+                                            (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString(),
                                         onDownloadClick = {
                                             downloadManager.startTrackDownload(track.id, track.title)
                                         }
@@ -436,6 +450,7 @@ fun SearchScreen(
 @Composable
 fun TrackItem(
     track: Track,
+    isDownloaded: Boolean = false,
     isDownloading: Boolean = false,
     onDownloadClick: () -> Unit = {}
 ) {
@@ -489,18 +504,37 @@ fun TrackItem(
         
         IconButton(
             onClick = onDownloadClick,
-            enabled = !isDownloading,
+            enabled = !isDownloading && !isDownloaded,
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.05f))
         ) {
-            Icon(
-                imageVector = Icons.Default.Download,
-                contentDescription = "Download",
-                tint = if (isDownloading) TextGray.copy(alpha = 0.5f) else Primary,
-                modifier = Modifier.size(20.dp)
-            )
+            when {
+                isDownloaded -> {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Downloaded",
+                        tint = Color.Green,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                isDownloading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Primary,
+                        strokeWidth = 2.dp
+                    )
+                }
+                else -> {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = "Download",
+                        tint = Primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         }
     }
 }

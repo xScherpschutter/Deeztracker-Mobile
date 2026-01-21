@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -46,11 +47,41 @@ fun AlbumScreen(
     val context = LocalContext.current
     val downloadManager = remember { DownloadManager.getInstance(context) }
     val downloadState by downloadManager.downloadState.collectAsState()
+    val downloadRefreshTrigger by downloadManager.downloadRefreshTrigger.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(albumId) {
         viewModel.loadAlbum(albumId)
     }
-    // Handle download state changes
+    // Handle download state changes and show snackbar
+    LaunchedEffect(downloadState) {
+        when (val state = downloadState) {
+            is DownloadState.Completed -> {
+                val message = buildString {
+                    append(state.title)
+                    if (state.successCount > 0) append(": ${state.successCount} downloaded")
+                    if (state.skippedCount > 0) append(", ${state.skippedCount} already had")
+                    if (state.failedCount > 0) append(", ${state.failedCount} failed")
+                    if (state.successCount == 0 && state.skippedCount == 0 && state.failedCount == 0) {
+                        append(" downloaded successfully")
+                    }
+                }
+                snackbarHostState.showSnackbar(
+                    message = message,
+                    duration = SnackbarDuration.Short
+                )
+                downloadManager.resetState()
+            }
+            is DownloadState.Error -> {
+                snackbarHostState.showSnackbar(
+                    message = "Error: ${state.message}",
+                    duration = SnackbarDuration.Short
+                )
+                downloadManager.resetState()
+            }
+            else -> { /* Idle or Downloading - no snackbar */ }
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -61,7 +92,6 @@ fun AlbumScreen(
                     }
                 },
                 actions = {
-                    val isDownloading = downloadState is DownloadState.Downloading
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent
@@ -69,7 +99,8 @@ fun AlbumScreen(
             )
         },
 
-        containerColor = BackgroundDark
+        containerColor = BackgroundDark,
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         if (isLoading) {
             Box(
@@ -99,20 +130,16 @@ fun AlbumScreen(
                     val isDownloading = downloadState is DownloadState.Downloading
                     Button(
                         onClick = {
-                            if (!isDownloading) {
-                                album?.let { albumData ->
-                                    downloadManager.startAlbumDownload(albumData.id, albumData.title)
-                                }
+                            album?.let { albumData ->
+                                downloadManager.startAlbumDownload(albumData.id, albumData.title)
                             }
                         },
-                        enabled = !isDownloading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
                             .height(48.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Primary,
-                            disabledContainerColor = Primary.copy(alpha = 0.5f)
+                            containerColor = Primary
                         ),
                         shape = RoundedCornerShape(24.dp)
                     ) {
@@ -140,10 +167,26 @@ fun AlbumScreen(
                 // Tracks List
                 items(tracks.size) { index ->
                     val track = tracks[index]
+                    var isDownloaded by remember { mutableStateOf(false) }
+                    
+                    // Check if track is downloaded, re-check when refresh trigger changes
+                    LaunchedEffect(track.id, downloadRefreshTrigger) {
+                        isDownloaded = downloadManager.isTrackDownloaded(
+                            track.title,
+                            track.artist?.name ?: ""
+                        )
+                    }
+                    
                     TrackListItem(
                         track = track,
                         index = index + 1,
-                        isDownloading = downloadState is DownloadState.Downloading,
+                        isDownloaded = isDownloaded,
+                        isDownloading = (downloadState is DownloadState.Downloading) && (
+                            // Individual track download
+                            (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString() ||
+                            // Part of bulk album download - check if this is the current track being downloaded
+                            (downloadState as? DownloadState.Downloading)?.currentTrackId == track.id.toString()
+                        ),
                         onDownloadClick = {
                             downloadManager.startTrackDownload(track.id, track.title)
                         }
@@ -210,6 +253,7 @@ private fun AlbumHeader(album: Album) {
 private fun TrackListItem(
     track: Track,
     index: Int,
+    isDownloaded: Boolean,
     isDownloading: Boolean,
     onDownloadClick: () -> Unit
 ) {
@@ -260,14 +304,33 @@ private fun TrackListItem(
         // Download Button
         IconButton(
             onClick = onDownloadClick,
-            enabled = !isDownloading
+            enabled = !isDownloading && !isDownloaded
         ) {
-            Icon(
-                Icons.Default.Download,
-                contentDescription = "Download track",
-                tint = if (isDownloading) TextGray else Primary,
-                modifier = Modifier.size(20.dp)
-            )
+            when {
+                isDownloaded -> {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = "Downloaded",
+                        tint = Color.Green,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                isDownloading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Primary,
+                        strokeWidth = 2.dp
+                    )
+                }
+                else -> {
+                    Icon(
+                        Icons.Default.Download,
+                        contentDescription = "Download track",
+                        tint = Primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         }
     }
 }

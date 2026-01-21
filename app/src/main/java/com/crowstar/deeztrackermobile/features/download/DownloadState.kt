@@ -24,7 +24,8 @@ sealed class DownloadState {
     data class Downloading(
         val type: DownloadType,
         val title: String,
-        val itemId: String
+        val itemId: String,
+        val currentTrackId: String? = null  // Track ID currently being downloaded in bulk operations
     ) : DownloadState()
     
     /**
@@ -34,7 +35,8 @@ sealed class DownloadState {
         val type: DownloadType,
         val title: String,
         val successCount: Int,
-        val failedCount: Int = 0
+        val failedCount: Int = 0,
+        val skippedCount: Int = 0  // Tracks that were already downloaded
     ) : DownloadState()
     
     /**
