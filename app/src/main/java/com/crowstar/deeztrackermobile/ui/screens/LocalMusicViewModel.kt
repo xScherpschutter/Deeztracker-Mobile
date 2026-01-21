@@ -142,6 +142,16 @@ class LocalMusicViewModel(
         }
     }
 
+    suspend fun createPlaylistSync(name: String): String {
+        return playlistRepository.createPlaylist(name)
+    }
+
+    fun addTrackToPlaylistId(playlistId: String, track: LocalTrack) {
+        viewModelScope.launch {
+            playlistRepository.addTrackToPlaylist(playlistId, track.id)
+        }
+    }
+
     fun deletePlaylist(playlist: LocalPlaylist) {
         viewModelScope.launch {
             playlistRepository.deletePlaylist(playlist.id)

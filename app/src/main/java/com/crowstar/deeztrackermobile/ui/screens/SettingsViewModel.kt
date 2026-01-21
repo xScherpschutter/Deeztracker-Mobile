@@ -23,6 +23,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _language = MutableStateFlow("English")
     val language: StateFlow<String> = _language.asStateFlow()
 
+    private val _downloadLocation = MutableStateFlow("MUSIC")
+    val downloadLocation: StateFlow<String> = _downloadLocation.asStateFlow()
+
     init {
         loadSettings()
     }
@@ -39,6 +42,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         // Load Language
         val savedLanguage = prefs.getString("language", "English")
         _language.value = savedLanguage ?: "English"
+
+        // Load Download Location
+        val savedLocation = prefs.getString("download_location", "MUSIC")
+        _downloadLocation.value = savedLocation ?: "MUSIC"
     }
 
     fun setAudioQuality(quality: DownloadQuality) {
@@ -49,6 +56,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setLanguage(lang: String) {
         _language.value = lang
         prefs.edit().putString("language", lang).apply()
+    }
+
+    fun setDownloadLocation(location: String) {
+        _downloadLocation.value = location
+        prefs.edit().putString("download_location", location).apply()
     }
 
     fun logout() {

@@ -41,6 +41,9 @@ fun SettingsScreen(
 
     var showQualityDropdown by remember { mutableStateOf(false) }
     var showLanguageDropdown by remember { mutableStateOf(false) }
+    var showLocationDropdown by remember { mutableStateOf(false) }
+
+    val downloadLocation by viewModel.downloadLocation.collectAsState()
 
     Scaffold(
         topBar = {
@@ -153,6 +156,44 @@ fun SettingsScreen(
                             }
                         )
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Storage Setting
+            Text(
+                text = "Storage", // Hardcoded for now
+                color = Primary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            SettingItem(
+                title = "Download Location",
+                value = if (downloadLocation == "MUSIC") "Music Folder" else "Downloads Folder",
+                onClick = { showLocationDropdown = true }
+            ) {
+                DropdownMenu(
+                    expanded = showLocationDropdown,
+                    onDismissRequest = { showLocationDropdown = false },
+                    modifier = Modifier.background(SurfaceDark)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Music Folder", color = Color.White) },
+                        onClick = {
+                            viewModel.setDownloadLocation("MUSIC")
+                            showLocationDropdown = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Downloads Folder", color = Color.White) },
+                        onClick = {
+                            viewModel.setDownloadLocation("DOWNLOADS")
+                            showLocationDropdown = false
+                        }
+                    )
                 }
             }
 

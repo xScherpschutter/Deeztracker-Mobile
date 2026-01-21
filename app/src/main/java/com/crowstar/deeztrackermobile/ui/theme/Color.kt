@@ -12,7 +12,7 @@ val Pink40 = Color(0xFF7D5260)
 
 // Deeztracker Colors
 val Primary = Color(0xFF00AAFF)
-val BackgroundDark = Color(0xFF050505)
-val SurfaceDark = Color(0xFF121212)
+val BackgroundDark = Color(0xFF121212) // Softer Dark
+val SurfaceDark = Color(0xFF1E1E1E)
 val TextWhite = Color(0xFFFFFFFF)
 val TextGray = Color(0xFF9CA3AF) // slate-400/500 equivalent

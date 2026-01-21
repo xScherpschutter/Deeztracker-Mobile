@@ -724,6 +724,8 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -754,6 +756,8 @@ internal interface UniffiLib : Library {
     fun uniffi_rusteer_fn_method_rusteerservice_download_playlist(`ptr`: Pointer,`arl`: RustBuffer.ByValue,`playlistId`: RustBuffer.ByValue,`outputDir`: RustBuffer.ByValue,`quality`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_rusteer_fn_method_rusteerservice_download_track(`ptr`: Pointer,`arl`: RustBuffer.ByValue,`trackId`: RustBuffer.ByValue,`outputDir`: RustBuffer.ByValue,`quality`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_rusteer_fn_method_rusteerservice_search_tracks(`ptr`: Pointer,`arl`: RustBuffer.ByValue,`query`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_rusteer_fn_method_rusteerservice_verify_arl(`ptr`: Pointer,`arl`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
@@ -875,6 +879,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_rusteer_checksum_method_rusteerservice_download_track(
     ): Short
+    fun uniffi_rusteer_checksum_method_rusteerservice_search_tracks(
+    ): Short
     fun uniffi_rusteer_checksum_method_rusteerservice_verify_arl(
     ): Short
     fun uniffi_rusteer_checksum_constructor_rusteerservice_new(
@@ -903,6 +909,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_rusteer_checksum_method_rusteerservice_download_track() != 17392.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_rusteer_checksum_method_rusteerservice_search_tracks() != 56640.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_rusteer_checksum_method_rusteerservice_verify_arl() != 47168.toShort()) {
@@ -1235,6 +1244,11 @@ public interface RusteerServiceInterface {
     fun `downloadTrack`(`arl`: kotlin.String, `trackId`: kotlin.String, `outputDir`: kotlin.String, `quality`: DownloadQuality): DownloadResult
     
     /**
+     * Search for tracks
+     */
+    fun `searchTracks`(`arl`: kotlin.String, `query`: kotlin.String): List<Track>
+    
+    /**
      * Verify if an ARL token is valid (for login)
      * This is a blocking call that internally uses Tokio runtime
      */
@@ -1367,6 +1381,22 @@ open class RusteerService: Disposable, AutoCloseable, RusteerServiceInterface {
     uniffiRustCallWithError(RusteerException) { _status ->
     UniffiLib.INSTANCE.uniffi_rusteer_fn_method_rusteerservice_download_track(
         it, FfiConverterString.lower(`arl`),FfiConverterString.lower(`trackId`),FfiConverterString.lower(`outputDir`),FfiConverterTypeDownloadQuality.lower(`quality`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Search for tracks
+     */
+    @Throws(RusteerException::class)override fun `searchTracks`(`arl`: kotlin.String, `query`: kotlin.String): List<Track> {
+            return FfiConverterSequenceTypeTrack.lift(
+    callWithPointer {
+    uniffiRustCallWithError(RusteerException) { _status ->
+    UniffiLib.INSTANCE.uniffi_rusteer_fn_method_rusteerservice_search_tracks(
+        it, FfiConverterString.lower(`arl`),FfiConverterString.lower(`query`),_status)
 }
     }
     )
@@ -1540,6 +1570,50 @@ public object FfiConverterTypeFailedDownload: FfiConverterRustBuffer<FailedDownl
 
 
 
+data class Track (
+    var `id`: kotlin.String, 
+    var `title`: kotlin.String, 
+    var `artist`: kotlin.String, 
+    var `album`: kotlin.String, 
+    var `coverUrl`: kotlin.String?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeTrack: FfiConverterRustBuffer<Track> {
+    override fun read(buf: ByteBuffer): Track {
+        return Track(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: Track) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`artist`) +
+            FfiConverterString.allocationSize(value.`album`) +
+            FfiConverterOptionalString.allocationSize(value.`coverUrl`)
+    )
+
+    override fun write(value: Track, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`artist`, buf)
+            FfiConverterString.write(value.`album`, buf)
+            FfiConverterOptionalString.write(value.`coverUrl`, buf)
+    }
+}
+
+
+
 
 enum class DownloadQuality {
     
@@ -1634,6 +1708,38 @@ public object FfiConverterTypeRusteerError : FfiConverterRustBuffer<RusteerExcep
 /**
  * @suppress
  */
+public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
+    override fun read(buf: ByteBuffer): kotlin.String? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterString.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.String?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterString.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.String?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeDownloadResult: FfiConverterRustBuffer<List<DownloadResult>> {
     override fun read(buf: ByteBuffer): List<DownloadResult> {
         val len = buf.getInt()
@@ -1680,6 +1786,34 @@ public object FfiConverterSequenceTypeFailedDownload: FfiConverterRustBuffer<Lis
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeFailedDownload.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeTrack: FfiConverterRustBuffer<List<Track>> {
+    override fun read(buf: ByteBuffer): List<Track> {
+        val len = buf.getInt()
+        return List<Track>(len) {
+            FfiConverterTypeTrack.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<Track>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeTrack.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<Track>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeTrack.write(it, buf)
         }
     }
 }

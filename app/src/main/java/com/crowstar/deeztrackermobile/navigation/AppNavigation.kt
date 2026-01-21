@@ -69,6 +69,9 @@ fun AppNavigation() {
                 onAlbumClick = { albumId ->
                     navController.navigate("album/$albumId")
                 },
+                importAction = {
+                    navController.navigate("import_playlist")
+                },
                 onLogout = {
                     com.crowstar.deeztrackermobile.features.player.PlayerController.getInstance(context).stop()
                     navController.navigate("login") {
@@ -110,6 +113,12 @@ fun AppNavigation() {
             val playlistId = backStackEntry.arguments?.getLong("playlistId") ?: return@composable
             PlaylistScreen(
                 playlistId = playlistId,
+                onBackClick = safePopBackStack
+            )
+        }
+
+        composable("import_playlist") {
+            com.crowstar.deeztrackermobile.ui.screens.ImportPlaylistScreen(
                 onBackClick = safePopBackStack
             )
         }
