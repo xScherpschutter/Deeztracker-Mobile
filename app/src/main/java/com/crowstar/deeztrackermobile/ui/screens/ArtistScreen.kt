@@ -52,6 +52,7 @@ fun ArtistScreen(
     val context = LocalContext.current
     val downloadManager = remember { DownloadManager.getInstance(context) }
     val downloadState by downloadManager.downloadState.collectAsState()
+    val downloadRefreshTrigger by downloadManager.downloadRefreshTrigger.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -184,8 +185,8 @@ fun ArtistScreen(
                         val track = topTracks[index]
                         var isDownloaded by remember { mutableStateOf(false) }
                         
-                        // Check if track is downloaded
-                        LaunchedEffect(track.id) {
+                        // Check if track is downloaded, re-check when refresh trigger changes
+                        LaunchedEffect(track.id, downloadRefreshTrigger) {
                             isDownloaded = downloadManager.isTrackDownloaded(
                                 track.title,
                                 track.artist?.name ?: ""

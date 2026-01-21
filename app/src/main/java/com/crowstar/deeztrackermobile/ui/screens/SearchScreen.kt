@@ -115,6 +115,7 @@ fun SearchScreen(
     val context = LocalContext.current
     val downloadManager = remember { DownloadManager.getInstance(context) }
     val downloadState by downloadManager.downloadState.collectAsState()
+    val downloadRefreshTrigger by downloadManager.downloadRefreshTrigger.collectAsState()
 
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var artists by remember { mutableStateOf<List<Artist>>(emptyList()) }
@@ -388,8 +389,8 @@ fun SearchScreen(
                                 items(tracks) { track ->
                                     var isDownloaded by remember { mutableStateOf(false) }
                                     
-                                    // Check if track is downloaded
-                                    LaunchedEffect(track.id) {
+                                    // Check if track is downloaded, re-check when refresh trigger changes
+                                    LaunchedEffect(track.id, downloadRefreshTrigger) {
                                         isDownloaded = downloadManager.isTrackDownloaded(
                                             track.title,
                                             track.artist?.name ?: ""

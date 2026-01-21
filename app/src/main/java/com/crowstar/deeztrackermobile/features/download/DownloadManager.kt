@@ -59,6 +59,10 @@ class DownloadManager private constructor(
     private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
     
+    // Trigger that increments when downloads complete and are confirmed in MediaStore
+    private val _downloadRefreshTrigger = MutableStateFlow(0)
+    val downloadRefreshTrigger: StateFlow<Int> = _downloadRefreshTrigger.asStateFlow()
+    
     private val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
 
     init {
@@ -199,6 +203,9 @@ class DownloadManager private constructor(
                              Log.e(TAG, "Could not find MediaStore ID for ${result.path} after retries")
                          }
                     }
+                    
+                    // Trigger UI refresh after file is confirmed in MediaStore
+                    _downloadRefreshTrigger.value += 1
                 }
                 is DownloadRequest.Album -> {
                     // Get album tracks first
@@ -248,6 +255,11 @@ class DownloadManager private constructor(
                         skippedCount = skippedCount
                     )
                     Log.d(TAG, "Album download completed: $successCount succeeded, $skippedCount skipped, $failedCount failed")
+                    
+                    // Trigger UI refresh after files are confirmed in MediaStore
+                    if (successCount > 0) {
+                        _downloadRefreshTrigger.value += 1
+                    }
                 }
                 is DownloadRequest.Playlist -> {
                     // Get playlist tracks first
@@ -297,6 +309,11 @@ class DownloadManager private constructor(
                         skippedCount = skippedCount
                     )
                     Log.d(TAG, "Playlist download completed: $successCount succeeded, $skippedCount skipped, $failedCount failed")
+                    
+                    // Trigger UI refresh after files are confirmed in MediaStore
+                    if (successCount > 0) {
+                        _downloadRefreshTrigger.value += 1
+                    }
                 }
             }
         } catch (e: Exception) {
