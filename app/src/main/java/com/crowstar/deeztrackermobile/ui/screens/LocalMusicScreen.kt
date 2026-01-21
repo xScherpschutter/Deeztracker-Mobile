@@ -340,9 +340,6 @@ fun LocalMusicScreen(
                          onClick = {
                              if (newPlaylistName.isNotBlank()) {
                                  viewModel.createPlaylist(newPlaylistName)
-                                 // Optionally wait and add the track immediately?
-                                 // For now just create and user can select it since the sheet is still open (or re-opens)
-                                 // Improving UX: close dialog, keep sheet open, updated list will show new playlist
                                  showCreatePlaylistDialog = false
                              }
                          },

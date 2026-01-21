@@ -232,6 +232,14 @@ class DownloadManager private constructor(
                             Log.d(TAG, "Skipping already downloaded track: ${track.title}")
                         } else {
                             try {
+                                // Update state to show this specific track is downloading
+                                _downloadState.value = DownloadState.Downloading(
+                                    type = DownloadType.ALBUM,
+                                    title = request.title,
+                                    itemId = request.id.toString(),
+                                    currentTrackId = track.id.toString()
+                                )
+                                
                                 val result = rustService.downloadTrack(
                                     trackId = track.id.toString(),
                                     outputDir = downloadDirectory,
@@ -240,6 +248,9 @@ class DownloadManager private constructor(
                                 successCount++
                                 scanFileSuspend(result.path)
                                 Log.d(TAG, "Downloaded track: ${track.title}")
+                                
+                                // Trigger UI refresh after this track is confirmed in MediaStore
+                                _downloadRefreshTrigger.value += 1
                             } catch (e: Exception) {
                                 failedCount++
                                 Log.e(TAG, "Failed to download track: ${track.title}", e)
@@ -255,11 +266,6 @@ class DownloadManager private constructor(
                         skippedCount = skippedCount
                     )
                     Log.d(TAG, "Album download completed: $successCount succeeded, $skippedCount skipped, $failedCount failed")
-                    
-                    // Trigger UI refresh after files are confirmed in MediaStore
-                    if (successCount > 0) {
-                        _downloadRefreshTrigger.value += 1
-                    }
                 }
                 is DownloadRequest.Playlist -> {
                     // Get playlist tracks first
@@ -286,6 +292,14 @@ class DownloadManager private constructor(
                             Log.d(TAG, "Skipping already downloaded track: ${track.title}")
                         } else {
                             try {
+                                // Update state to show this specific track is downloading
+                                _downloadState.value = DownloadState.Downloading(
+                                    type = DownloadType.PLAYLIST,
+                                    title = request.title,
+                                    itemId = request.id.toString(),
+                                    currentTrackId = track.id.toString()
+                                )
+                                
                                 val result = rustService.downloadTrack(
                                     trackId = track.id.toString(),
                                     outputDir = downloadDirectory,
@@ -294,6 +308,9 @@ class DownloadManager private constructor(
                                 successCount++
                                 scanFileSuspend(result.path)
                                 Log.d(TAG, "Downloaded track: ${track.title}")
+                                
+                                // Trigger UI refresh after this track is confirmed in MediaStore
+                                _downloadRefreshTrigger.value += 1
                             } catch (e: Exception) {
                                 failedCount++
                                 Log.e(TAG, "Failed to download track: ${track.title}", e)
@@ -309,11 +326,6 @@ class DownloadManager private constructor(
                         skippedCount = skippedCount
                     )
                     Log.d(TAG, "Playlist download completed: $successCount succeeded, $skippedCount skipped, $failedCount failed")
-                    
-                    // Trigger UI refresh after files are confirmed in MediaStore
-                    if (successCount > 0) {
-                        _downloadRefreshTrigger.value += 1
-                    }
                 }
             }
         } catch (e: Exception) {
