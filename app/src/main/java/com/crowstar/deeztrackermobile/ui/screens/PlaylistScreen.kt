@@ -206,8 +206,12 @@ fun PlaylistScreen(
                             track = track,
                             index = index + 1,
                             isDownloaded = isDownloaded,
-                            isDownloading = downloadState is DownloadState.Downloading && 
-                                (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString(),
+                            isDownloading = (downloadState is DownloadState.Downloading) && (
+                                // Individual track download
+                                (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString() ||
+                                // Part of bulk playlist download - check if this is the current track being downloaded
+                                (downloadState as? DownloadState.Downloading)?.currentTrackId == track.id.toString()
+                            ),
                             onDownloadClick = {
                                 downloadManager.startTrackDownload(track.id, track.title)
                             }
