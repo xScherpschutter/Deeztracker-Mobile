@@ -236,9 +236,7 @@ fun DownloadsScreen(
                     
                     // Fast Scroller Overlay
                     AlphabeticalFastScroller(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .padding(end = 4.dp),
+                        modifier = Modifier.align(Alignment.CenterEnd),
                         selectedLetter = currentLetter.value,
                         onLetterSelected = { letter ->
                             scope.launch {
