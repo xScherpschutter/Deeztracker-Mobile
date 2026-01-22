@@ -38,7 +38,7 @@ class LocalMusicRepository(private val contentResolver: ContentResolver) {
 
         // Filter: only music files (not notifications, ringtones, etc.)
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
-        val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
+        val sortOrder = "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC"
 
         contentResolver.query(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -105,7 +105,7 @@ class LocalMusicRepository(private val contentResolver: ContentResolver) {
             MediaStore.Audio.Albums.NUMBER_OF_SONGS
         )
 
-        val sortOrder = "${MediaStore.Audio.Albums.ALBUM} ASC"
+        val sortOrder = "${MediaStore.Audio.Albums.ALBUM} COLLATE NOCASE ASC"
 
         contentResolver.query(
             MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,

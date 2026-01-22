@@ -28,11 +28,12 @@ fun AlphabeticalFastScroller(
 ) {
     val letters = remember { listOf('#') + ('A'..'Z').toList() }
     var currentlySelectedLetter by remember { mutableStateOf<Char?>(null) }
+    var lastSelectedLetter by remember { mutableStateOf<Char?>(null) }
     var isDragging by remember { mutableStateOf(false) }
     
     // Animate opacity instead of visibility to avoid size changes
     val popupAlpha by animateFloatAsState(
-        targetValue = if (isDragging && currentlySelectedLetter != null) 1f else 0f,
+        targetValue = if (isDragging) 1f else 0f,
         animationSpec = tween(durationMillis = 150),
         label = "popupAlpha"
     )
@@ -44,7 +45,7 @@ fun AlphabeticalFastScroller(
             .fillMaxHeight()
     ) {
         // Preview popup - positioned outside the scroller, perfectly centered
-        if (popupAlpha > 0f || isDragging) {
+        if (popupAlpha > 0f) {
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -55,7 +56,7 @@ fun AlphabeticalFastScroller(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = currentlySelectedLetter?.toString() ?: "",
+                    text = (currentlySelectedLetter ?: lastSelectedLetter)?.toString() ?: "",
                     color = Color.White,
                     fontSize = 48.sp,
                     fontWeight = FontWeight.Bold
@@ -77,6 +78,7 @@ fun AlphabeticalFastScroller(
                                 .coerceIn(0, letters.size - 1)
                             val letter = letters[index]
                             currentlySelectedLetter = letter
+                            lastSelectedLetter = letter
                             onLetterSelected(letter)
                         },
                         onDrag = { change, _ ->
@@ -87,12 +89,13 @@ fun AlphabeticalFastScroller(
                             val letter = letters[index]
                             if (letter != currentlySelectedLetter) {
                                 currentlySelectedLetter = letter
+                                lastSelectedLetter = letter
                                 onLetterSelected(letter)
                             }
                         },
                         onDragEnd = {
                             isDragging = false
-                            // Don't clear currentlySelectedLetter here - let the fadeOut animation complete
+                            currentlySelectedLetter = null
                         }
                     )
                 }
