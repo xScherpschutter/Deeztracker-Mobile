@@ -50,6 +50,10 @@
     <string name="settings_general_header">GENERAL</string>
     <string name="settings_language_title">Language</string>
     <string name="settings_logout">Log Out</string>
+    <string name="settings_storage_header">STORAGE</string>
+    <string name="settings_download_location_title">Download Location</string>
+    <string name="settings_location_music">Music</string>
+    <string name="settings_location_downloads">Downloads</string>
 
     <!-- General / Common -->
     <string name="action_refresh">Refresh</string>
