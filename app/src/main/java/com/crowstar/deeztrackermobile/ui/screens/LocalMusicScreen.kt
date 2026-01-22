@@ -90,6 +90,13 @@ fun LocalMusicScreen(
     // Search Query State - Persist across navigation
     var searchQuery by rememberSaveable { mutableStateOf("") }
     
+    // Re-apply filter when loading completes or query changes (handles screen restoration)
+    LaunchedEffect(isLoading, searchQuery) {
+        if (!isLoading) {
+             viewModel.searchTracks(searchQuery)
+        }
+    }
+    
     // Scroll State - Persist across navigation
     val tracksListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     

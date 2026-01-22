@@ -58,6 +58,13 @@ fun DownloadsScreen(
     // Search Query State
     var searchQuery by rememberSaveable { mutableStateOf("") }
     
+    // Re-apply filter when loading completes or query changes (handles screen restoration)
+    LaunchedEffect(isLoading, searchQuery) {
+        if (!isLoading) {
+            viewModel.filter(searchQuery)
+        }
+    }
+    
     // List Scroll State
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     
