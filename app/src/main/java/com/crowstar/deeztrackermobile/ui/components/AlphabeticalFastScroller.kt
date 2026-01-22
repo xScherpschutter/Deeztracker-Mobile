@@ -1,5 +1,7 @@
 package com.crowstar.deeztrackermobile.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -10,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,60 +28,97 @@ fun AlphabeticalFastScroller(
 ) {
     val letters = remember { listOf('#') + ('A'..'Z').toList() }
     var currentlySelectedLetter by remember { mutableStateOf<Char?>(null) }
+    var isDragging by remember { mutableStateOf(false) }
     
+    // Animate opacity instead of visibility to avoid size changes
+    val popupAlpha by animateFloatAsState(
+        targetValue = if (isDragging && currentlySelectedLetter != null) 1f else 0f,
+        animationSpec = tween(durationMillis = 150),
+        label = "popupAlpha"
+    )
+    
+    // Fixed width container to keep scroller static
     Box(
         modifier = modifier
             .width(28.dp)
             .fillMaxHeight()
-            .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
-            .padding(vertical = 4.dp)
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        val index = (offset.y / size.height * letters.size).toInt()
-                            .coerceIn(0, letters.size - 1)
-                        val letter = letters[index]
-                        currentlySelectedLetter = letter
-                        onLetterSelected(letter)
-                    },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        val offset = change.position
-                        val index = (offset.y / size.height * letters.size).toInt()
-                            .coerceIn(0, letters.size - 1)
-                        val letter = letters[index]
-                        if (letter != currentlySelectedLetter) {
-                            currentlySelectedLetter = letter
-                            onLetterSelected(letter)
-                        }
-                    },
-                    onDragEnd = {
-                        currentlySelectedLetter = null
-                    }
+    ) {
+        // Preview popup - positioned outside the scroller, perfectly centered
+        if (popupAlpha > 0f || isDragging) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(x = (-100).dp)
+                    .requiredSize(80.dp) // Force exact size ignoring parent constraints
+                    .graphicsLayer { alpha = popupAlpha } // Animate only opacity
+                    .background(Primary, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = currentlySelectedLetter?.toString() ?: "",
+                    color = Color.White,
+                    fontSize = 48.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
-    ) {
-        Column(
+        }
+        
+        // Fast scroller - static bar
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 4.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            letters.forEach { letter ->
-                val isSelected = letter == (currentlySelectedLetter ?: selectedLetter)
-                Box(
-                    modifier = Modifier
-                        .size(if (isSelected) 18.dp else 14.dp)
-                        .clickable { onLetterSelected(letter) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = letter.toString(),
-                        color = if (isSelected) Primary else TextGray,
-                        fontSize = if (isSelected) 12.sp else 9.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                .padding(vertical = 4.dp)
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            isDragging = true
+                            val index = (offset.y / size.height * letters.size).toInt()
+                                .coerceIn(0, letters.size - 1)
+                            val letter = letters[index]
+                            currentlySelectedLetter = letter
+                            onLetterSelected(letter)
+                        },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            val offset = change.position
+                            val index = (offset.y / size.height * letters.size).toInt()
+                                .coerceIn(0, letters.size - 1)
+                            val letter = letters[index]
+                            if (letter != currentlySelectedLetter) {
+                                currentlySelectedLetter = letter
+                                onLetterSelected(letter)
+                            }
+                        },
+                        onDragEnd = {
+                            isDragging = false
+                            // Don't clear currentlySelectedLetter here - let the fadeOut animation complete
+                        }
                     )
+                }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 4.dp),
+                verticalArrangement = Arrangement.SpaceEvenly,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                letters.forEach { letter ->
+                    val isSelected = letter == (currentlySelectedLetter ?: selectedLetter)
+                    Box(
+                        modifier = Modifier
+                            .size(if (isSelected) 18.dp else 14.dp)
+                            .clickable { onLetterSelected(letter) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = letter.toString(),
+                            color = if (isSelected) Primary else TextGray,
+                            fontSize = if (isSelected) 12.sp else 9.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
                 }
             }
         }

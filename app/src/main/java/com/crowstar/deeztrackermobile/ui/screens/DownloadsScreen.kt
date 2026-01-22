@@ -223,6 +223,17 @@ fun DownloadsScreen(
                         }
                     }
                     
+                    // Sync fast scroller with manual scroll position
+                    LaunchedEffect(listState.firstVisibleItemIndex) {
+                        val firstVisibleTrack = tracks.getOrNull(listState.firstVisibleItemIndex)
+                        if (firstVisibleTrack != null) {
+                            val letter = firstVisibleTrack.title.firstOrNull()?.uppercaseChar()?.let {
+                                if (it.isLetter()) it else '#'
+                            } ?: '#'
+                            currentLetter.value = letter
+                        }
+                    }
+                    
                     // Fast Scroller Overlay
                     AlphabeticalFastScroller(
                         modifier = Modifier

@@ -519,6 +519,17 @@ fun LocalTracksList(
             }
         }
         
+        // Sync fast scroller with manual scroll position
+        LaunchedEffect(state.firstVisibleItemIndex) {
+            val firstVisibleTrack = tracks.getOrNull(state.firstVisibleItemIndex)
+            if (firstVisibleTrack != null) {
+                val letter = firstVisibleTrack.title.firstOrNull()?.uppercaseChar()?.let {
+                    if (it.isLetter()) it else '#'
+                } ?: '#'
+                currentLetter.value = letter
+            }
+        }
+        
         // Fast Scroller Overlay
         AlphabeticalFastScroller(
             modifier = Modifier
