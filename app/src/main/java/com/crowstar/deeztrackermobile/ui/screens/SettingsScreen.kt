@@ -163,7 +163,7 @@ fun SettingsScreen(
 
             // Storage Setting
             Text(
-                text = "Storage", // Hardcoded for now
+                text = stringResource(R.string.settings_storage_header),
                 color = Primary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
@@ -171,8 +171,8 @@ fun SettingsScreen(
             )
 
             SettingItem(
-                title = "Download Location",
-                value = if (downloadLocation == "MUSIC") "Music Folder" else "Downloads Folder",
+                title = stringResource(R.string.settings_download_location_title),
+                value = if (downloadLocation == "MUSIC") stringResource(R.string.settings_location_music) else stringResource(R.string.settings_location_downloads),
                 onClick = { showLocationDropdown = true }
             ) {
                 DropdownMenu(
@@ -181,14 +181,14 @@ fun SettingsScreen(
                     modifier = Modifier.background(SurfaceDark)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Music Folder", color = Color.White) },
+                        text = { Text(stringResource(R.string.settings_location_music), color = Color.White) },
                         onClick = {
                             viewModel.setDownloadLocation("MUSIC")
                             showLocationDropdown = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Downloads Folder", color = Color.White) },
+                        text = { Text(stringResource(R.string.settings_location_downloads), color = Color.White) },
                         onClick = {
                             viewModel.setDownloadLocation("DOWNLOADS")
                             showLocationDropdown = false
