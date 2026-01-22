@@ -12,6 +12,7 @@ import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import android.os.Environment
 
 class DownloadsViewModel(
     private val application: Application,
@@ -38,10 +39,13 @@ class DownloadsViewModel(
             _isLoading.value = true
             try {
                 // Ensure directory exists or get path
-                val downloadDir = DownloadManager.getInstance(application).downloadDirectory
-                // Get absolute path string to match. Note: MediaStore DATA usually contains absolute path.
+                val appDownloadDir = DownloadManager.getInstance(application).downloadDirectory
+                val nativeDownloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
                 
-                allDownloadedTracks = repository.getDownloadedTracks(downloadDir)
+                // Get absolute path string to match. Query both app specific dir and native downloads
+                val pathsToQuery = listOf(appDownloadDir, nativeDownloadsDir)
+                
+                allDownloadedTracks = repository.getDownloadedTracks(pathsToQuery)
                 _tracks.value = allDownloadedTracks
             } catch (e: Exception) {
                 e.printStackTrace()
