@@ -142,4 +142,22 @@
     <string name="lyrics_title">Letra</string>
     <string name="lyrics_not_available">Letra no disponible</string>
     <string name="lyrics_loading">Cargando letra...</string>
+
+    <!-- Import Playlist Screen -->
+    <string name="import_playlist_title">Importar Playlist</string>
+    <string name="import_playlist_reading">Leyendo archivo de playlist...</string>
+    <string name="import_playlist_checking_local">Verificando biblioteca local...</string>
+    <string name="import_playlist_searching_deezer">Buscando pistas faltantes en Deezer...</string>
+    <string name="import_playlist_empty_title">Selecciona un archivo .m3u o .pls para importar</string>
+    <string name="import_playlist_select_file">Seleccionar Archivo</string>
+    <string name="import_playlist_format">Playlist: %s</string>
+    <string name="import_playlist_download_queued">%d pistas en cola de descarga</string>
+    <string name="import_playlist_action_import_download">Importar y descargar (%d)</string>
+    <string name="import_playlist_action_create">Crear Playlist</string>
+    <string name="import_playlist_found_locally">Encontrado localmente: %s</string>
+    <string name="import_playlist_found_deezer">Encontrado en Deezer: %s - %s</string>
+    <string name="import_playlist_not_found">No encontrado en Deezer</string>
+    <string name="import_playlist_searching">Buscando...</string>
+    <string name="import_playlist_default_name">Playlist Importada</string>
+
 </resources>

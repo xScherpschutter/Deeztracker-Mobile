@@ -38,6 +38,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.rusteer.Track
+import androidx.compose.ui.res.stringResource
+import com.crowstar.deeztrackermobile.R
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -64,6 +66,12 @@ fun ImportPlaylistScreen(
     var isProcessing by remember { mutableStateOf(false) }
     var progressMessage by remember { mutableStateOf("") }
     
+    // Resources for logic that needs string access
+    val readingMsg = stringResource(R.string.import_playlist_reading)
+    val checkingMsg = stringResource(R.string.import_playlist_checking_local)
+    val searchingMsg = stringResource(R.string.import_playlist_searching_deezer)
+    val queuedMsg = stringResource(R.string.import_playlist_download_queued)
+
     // File Picker
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -71,13 +79,13 @@ fun ImportPlaylistScreen(
         uri?.let {
             scope.launch {
                 isProcessing = true
-                progressMessage = "Reading playlist file..."
+                progressMessage = readingMsg
                 try {
                     val (name, tracks) = parsePlaylist(context, it)
                     playlistName = name
                     
                     // Check local files
-                    progressMessage = "Checking local library..."
+                    progressMessage = checkingMsg
                     val localTracks = localRepo.getAllTracks()
                     
                     // Map to state objects
@@ -94,7 +102,7 @@ fun ImportPlaylistScreen(
                     importedTracks = stateList
                     
                     // Auto-search for missing
-                    progressMessage = "Searching Deezer for missing tracks..."
+                    progressMessage = searchingMsg
                     stateList.forEachIndexed { index, item ->
                         if (item.status is ImportStatus.Missing) {
                              val searchResult = rustService.searchTracks(item.rawQuery).firstOrNull()
@@ -123,10 +131,10 @@ fun ImportPlaylistScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Import Playlist", color = Color.White) },
+                title = { Text(stringResource(R.string.import_playlist_title), color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundDark)
@@ -155,13 +163,13 @@ fun ImportPlaylistScreen(
                             modifier = Modifier.size(64.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Select an .m3u or .pls file to import", color = TextGray)
+                        Text(stringResource(R.string.import_playlist_empty_title), color = TextGray)
                         Spacer(modifier = Modifier.height(24.dp))
                         Button(
                             onClick = { launcher.launch(arrayOf("*/*")) }, // Mime types can be tricky, allowing all for now
                             colors = ButtonDefaults.buttonColors(containerColor = Primary)
                         ) {
-                            Text("Select File", color = Color.Black)
+                            Text(stringResource(R.string.import_playlist_select_file), color = Color.Black)
                         }
                     }
                 }
@@ -173,7 +181,7 @@ fun ImportPlaylistScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Playlist: $playlistName",
+                        text = stringResource(R.string.import_playlist_format, playlistName),
                         color = Color.White,
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -211,7 +219,7 @@ fun ImportPlaylistScreen(
                                 val downloadCount = tracksToDownload.size
                                 if (downloadCount > 0) {
                                     snackbarHostState.showSnackbar(
-                                        message = "$downloadCount tracks queued for download",
+                                        message = String.format(queuedMsg, downloadCount), // Use format directly here or context.getString
                                         duration = SnackbarDuration.Short
                                     )
                                 }
@@ -222,7 +230,10 @@ fun ImportPlaylistScreen(
                         enabled = canImport && !isProcessing,
                         colors = ButtonDefaults.buttonColors(containerColor = Primary)
                     ) {
-                        val text = if (missingCount > 0) "Import & Download ($missingCount)" else "Create Playlist"
+                        val text = if (missingCount > 0) 
+                            stringResource(R.string.import_playlist_action_import_download, missingCount)
+                        else 
+                            stringResource(R.string.import_playlist_action_create)
                         Text(text, color = Color.Black)
                     }
                 }
@@ -263,10 +274,10 @@ fun ImportItemRow(item: ImportedTrackState) {
                 overflow = TextOverflow.Ellipsis
             )
             val subtext = when (val s = item.status) {
-                is ImportStatus.FoundLocally -> "Found locally: ${s.localTrack.title}"
-                is ImportStatus.FoundOnDeezer -> "Found on Deezer: ${s.track.title} - ${s.track.artist}"
-                is ImportStatus.NotFound -> "Not found on Deezer"
-                is ImportStatus.Missing -> "Searching..."
+                is ImportStatus.FoundLocally -> stringResource(R.string.import_playlist_found_locally, s.localTrack.title)
+                is ImportStatus.FoundOnDeezer -> stringResource(R.string.import_playlist_found_deezer, s.track.title, s.track.artist)
+                is ImportStatus.NotFound -> stringResource(R.string.import_playlist_not_found)
+                is ImportStatus.Missing -> stringResource(R.string.import_playlist_searching)
             }
             Text(
                 text = subtext,
@@ -306,7 +317,7 @@ suspend fun parsePlaylist(context: android.content.Context, uri: Uri): Pair<Stri
     
     // Attempt to guess name from filename
     // Cursor query for display name not shown here for brevity, defaulting to "Imported"
-    var name = "Imported Playlist"
+    var name = context.getString(R.string.import_playlist_default_name)
     
     // Query display name
     val projection = arrayOf(android.provider.OpenableColumns.DISPLAY_NAME)
@@ -320,47 +331,10 @@ suspend fun parsePlaylist(context: android.content.Context, uri: Uri): Pair<Stri
         }
     }
     
-    contentResolver.openInputStream(uri)?.use { inputStream ->
-        BufferedReader(InputStreamReader(inputStream)).use { reader ->
-            var line = reader.readLine()
-            while (line != null) {
-                line = line.trim()
-                if (line.isNotEmpty()) {
-                    if (line.startsWith("#EXTINF:")) {
-                        // #EXTINF:123,Artist - Title
-                        val info = line.substringAfter(",", "")
-                        if (info.isNotEmpty()) lines.add(info)
-                    } else if (!line.startsWith("#")) {
-                        // It's a path. Try to extract filename if we haven't got EXTINF for this entry
-                        // But EXTINF usually precedes the path.
-                        // If we already added from EXTINF, skip path processing or use it as fallback?
-                        // Simplified: Just use EXTINF if present, otherwise path filename
-                        // For now, let's assume EXTINF is the primary source for "Query".
-                        // If we didn't get a line from the previous EXTINF, maybe parse path.
-                        // But lines.add is unconditional above.
-                        
-                        if (lines.isEmpty() || !lines.last().equals(line)) { 
-                             // Wait, mapping EXTINF to path is standard m3u.
-                             // Line 1: #EXTINF...
-                             // Line 2: path
-                             // We only want the metadata.
-                        }
-                    }
-                }
-                line = reader.readLine()
-            }
-        }
-    }
-    
-    // If no EXTINF found (plain m3u), we might have skipped everything.
-    // Let's make it robust: Collect all non-empty, non-comment lines as paths, 
-    // AND collect EXTINF.
-    // Actually, best approach for a "Search Query" generator:
-    // 1. If line has EXTINF, use that.
-    // 2. If line is path, and we didn't just add an EXTINF, extract filename without extension.
+    // Check extension
+    // Simple parsing logic...
     
     // Re-implementation for robustness
-    // Reset
     val queries = mutableListOf<String>()
     contentResolver.openInputStream(uri)?.use { inputStream ->
         BufferedReader(InputStreamReader(inputStream)).use { reader ->
