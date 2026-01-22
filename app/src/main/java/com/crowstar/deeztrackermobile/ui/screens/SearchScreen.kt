@@ -182,8 +182,18 @@ fun SearchScreen(
 
     // Restore Search State if coming back
     LaunchedEffect(Unit) {
-        if (query.isNotEmpty() && hasSearched && tracks.isEmpty() && artists.isEmpty() && albums.isEmpty() && playlists.isEmpty() && !isLoading) {
-             performSearch(isNewSearch = true)
+        if (query.isNotEmpty() && hasSearched && !isLoading) {
+             val isCurrentListEmpty = when(selectedTabIndex) {
+                 0 -> tracks.isEmpty()
+                 1 -> artists.isEmpty()
+                 2 -> albums.isEmpty()
+                 3 -> playlists.isEmpty()
+                 else -> true
+             }
+             
+             if (isCurrentListEmpty) {
+                 performSearch(isNewSearch = true)
+             }
         }
     }
 
