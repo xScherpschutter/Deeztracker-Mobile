@@ -163,5 +163,11 @@
     <string name="import_playlist_not_found">Not found on Deezer</string>
     <string name="import_playlist_searching">Searching...</string>
     <string name="import_playlist_default_name">Imported Playlist</string>
+    <string name="import_playlist_error_invalid_file">Invalid file type. Please select an .m3u or .pls file</string>
+    <string name="import_playlist_error_empty_file">The selected file is empty</string>
+    <string name="import_playlist_error_corrupted">The file appears to be corrupted or invalid</string>
+    <string name="import_playlist_error_read">Error reading file. Please try again</string>
+    <string name="import_playlist_error_unknown">An unexpected error occurred</string>
+
 
 </resources>
