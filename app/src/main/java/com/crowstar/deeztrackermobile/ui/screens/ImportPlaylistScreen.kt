@@ -71,8 +71,15 @@ fun ImportPlaylistScreen(
     val checkingMsg = stringResource(R.string.import_playlist_checking_local)
     val searchingMsg = stringResource(R.string.import_playlist_searching_deezer)
     val queuedMsg = stringResource(R.string.import_playlist_download_queued)
+    
+    // Error messages
+    val errorInvalidFile = stringResource(R.string.import_playlist_error_invalid_file)
+    val errorEmptyFile = stringResource(R.string.import_playlist_error_empty_file)
+    val errorCorrupted = stringResource(R.string.import_playlist_error_corrupted)
+    val errorRead = stringResource(R.string.import_playlist_error_read)
+    val errorUnknown = stringResource(R.string.import_playlist_error_unknown)
 
-    // File Picker
+    // File Picker - Restrict to playlist MIME types
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -81,6 +88,17 @@ fun ImportPlaylistScreen(
                 isProcessing = true
                 progressMessage = readingMsg
                 try {
+                    // Validate file extension first
+                    val fileName = getFileName(context, it)
+                    if (!isValidPlaylistFile(fileName)) {
+                        snackbarHostState.showSnackbar(
+                            message = errorInvalidFile,
+                            duration = SnackbarDuration.Long
+                        )
+                        Log.w("ImportPlaylist", "Invalid file type: $fileName")
+                        return@launch
+                    }
+                    
                     val (name, tracks) = parsePlaylist(context, it)
                     playlistName = name
                     
@@ -118,8 +136,28 @@ fun ImportPlaylistScreen(
                         }
                     }
                     
+                } catch (e: InvalidPlaylistException) {
+                    Log.e("ImportPlaylist", "Invalid playlist file", e)
+                    snackbarHostState.showSnackbar(
+                        message = when (e.reason) {
+                            InvalidPlaylistReason.EMPTY_FILE -> errorEmptyFile
+                            InvalidPlaylistReason.CORRUPTED -> errorCorrupted
+                            InvalidPlaylistReason.INVALID_FORMAT -> errorInvalidFile
+                        },
+                        duration = SnackbarDuration.Long
+                    )
+                } catch (e: java.io.IOException) {
+                    Log.e("ImportPlaylist", "IO error reading file", e)
+                    snackbarHostState.showSnackbar(
+                        message = errorRead,
+                        duration = SnackbarDuration.Long
+                    )
                 } catch (e: Exception) {
-                    Log.e("ImportPlaylist", "Error importing", e)
+                    Log.e("ImportPlaylist", "Unexpected error importing", e)
+                    snackbarHostState.showSnackbar(
+                        message = errorUnknown,
+                        duration = SnackbarDuration.Long
+                    )
                 } finally {
                     isProcessing = false
                     progressMessage = ""
@@ -166,7 +204,16 @@ fun ImportPlaylistScreen(
                         Text(stringResource(R.string.import_playlist_empty_title), color = TextGray)
                         Spacer(modifier = Modifier.height(24.dp))
                         Button(
-                            onClick = { launcher.launch(arrayOf("*/*")) }, // Mime types can be tricky, allowing all for now
+                            onClick = { 
+                                // Restrict to playlist MIME types
+                                launcher.launch(arrayOf(
+                                    "audio/x-mpegurl",      // .m3u
+                                    "audio/mpegurl",        // .m3u (alternative)
+                                    "application/vnd.apple.mpegurl", // .m3u8
+                                    "audio/x-scpls",        // .pls
+                                    "text/plain"            // Fallback for systems that don't recognize playlist MIME types
+                                ))
+                            },
                             colors = ButtonDefaults.buttonColors(containerColor = Primary)
                         ) {
                             Text(stringResource(R.string.import_playlist_select_file), color = Color.Black)
@@ -310,60 +357,132 @@ sealed class ImportStatus {
     object NotFound : ImportStatus()
 }
 
+// Custom exceptions for better error handling
+enum class InvalidPlaylistReason {
+    EMPTY_FILE,
+    CORRUPTED,
+    INVALID_FORMAT
+}
+
+class InvalidPlaylistException(val reason: InvalidPlaylistReason, message: String) : Exception(message)
+
+// Validation helpers
+fun isValidPlaylistFile(fileName: String?): Boolean {
+    if (fileName == null) return false
+    val extension = fileName.substringAfterLast('.', "").lowercase()
+    return extension in listOf("m3u", "m3u8", "pls")
+}
+
+fun getFileName(context: android.content.Context, uri: Uri): String? {
+    val projection = arrayOf(android.provider.OpenableColumns.DISPLAY_NAME)
+    return context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+        if (cursor.moveToFirst()) {
+            val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (nameIndex != -1) cursor.getString(nameIndex) else null
+        } else null
+    }
+}
+
 // Logic Helper
 suspend fun parsePlaylist(context: android.content.Context, uri: Uri): Pair<String, List<String>> = withContext(Dispatchers.IO) {
     val contentResolver = context.contentResolver
-    val lines = mutableListOf<String>()
     
-    // Attempt to guess name from filename
-    // Cursor query for display name not shown here for brevity, defaulting to "Imported"
+    // Get and validate filename
     var name = context.getString(R.string.import_playlist_default_name)
+    val fileName = getFileName(context, uri)
     
-    // Query display name
-    val projection = arrayOf(android.provider.OpenableColumns.DISPLAY_NAME)
-    contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
-        if (cursor.moveToFirst()) {
-            val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-            if (nameIndex != -1) {
-                val filename = cursor.getString(nameIndex)
-                name = filename.substringBeforeLast(".") // Remove extension
-            }
+    if (fileName != null) {
+        name = fileName.substringBeforeLast(".") // Remove extension
+        
+        // Validate extension
+        if (!isValidPlaylistFile(fileName)) {
+            throw InvalidPlaylistException(
+                InvalidPlaylistReason.INVALID_FORMAT,
+                "File extension not supported: $fileName"
+            )
         }
     }
     
-    // Check extension
-    // Simple parsing logic...
-    
-    // Re-implementation for robustness
+    // Parse playlist content
     val queries = mutableListOf<String>()
-    contentResolver.openInputStream(uri)?.use { inputStream ->
-        BufferedReader(InputStreamReader(inputStream)).use { reader ->
-            var line = reader.readLine()
-            var lastWasExtInf = false
-            
-            while (line != null) {
-                line = line.trim()
-                if (line.startsWith("#EXTINF:")) {
-                    val info = line.substringAfter(",", "").trim()
-                    if (info.isNotEmpty()) {
-                        queries.add(info)
-                        lastWasExtInf = true
+    var hasValidContent = false
+    
+    try {
+        contentResolver.openInputStream(uri)?.use { inputStream ->
+            BufferedReader(InputStreamReader(inputStream)).use { reader ->
+                var line = reader.readLine()
+                var lastWasExtInf = false
+                var lineCount = 0
+                
+                while (line != null) {
+                    lineCount++
+                    line = line.trim()
+                    
+                    // Check for M3U header or PLS header
+                    if (line.startsWith("#EXTM3U") || line.startsWith("[playlist]")) {
+                        hasValidContent = true
                     }
-                } else if (!line.startsWith("#") && line.isNotEmpty()) {
-                    if (!lastWasExtInf) {
-                        // Try to get filename from path
-                        // /storage/emulated/0/Music/Artist - Title.mp3
-                        val filename = line.substringAfterLast("/").substringAfterLast("\\")
-                        val nameWithoutExt = filename.substringBeforeLast(".")
-                        if (nameWithoutExt.isNotEmpty()) {
-                            queries.add(nameWithoutExt)
+                    
+                    if (line.startsWith("#EXTINF:")) {
+                        val info = line.substringAfter(",", "").trim()
+                        if (info.isNotEmpty()) {
+                            queries.add(info)
+                            lastWasExtInf = true
+                            hasValidContent = true
                         }
+                    } else if (line.startsWith("File") && line.contains("=")) {
+                        // PLS format: File1=path
+                        val path = line.substringAfter("=").trim()
+                        if (path.isNotEmpty()) {
+                            val filename = path.substringAfterLast("/").substringAfterLast("\\")
+                            val nameWithoutExt = filename.substringBeforeLast(".")
+                            if (nameWithoutExt.isNotEmpty()) {
+                                queries.add(nameWithoutExt)
+                                hasValidContent = true
+                            }
+                        }
+                    } else if (!line.startsWith("#") && !line.startsWith("[") && line.isNotEmpty()) {
+                        // M3U format: direct file path
+                        if (!lastWasExtInf) {
+                            val filename = line.substringAfterLast("/").substringAfterLast("\\")
+                            val nameWithoutExt = filename.substringBeforeLast(".")
+                            if (nameWithoutExt.isNotEmpty()) {
+                                queries.add(nameWithoutExt)
+                                hasValidContent = true
+                            }
+                        }
+                        lastWasExtInf = false
                     }
-                    lastWasExtInf = false
+                    line = reader.readLine()
                 }
-                line = reader.readLine()
+                
+                // Validate file had content
+                if (lineCount == 0) {
+                    throw InvalidPlaylistException(
+                        InvalidPlaylistReason.EMPTY_FILE,
+                        "Playlist file is empty"
+                    )
+                }
             }
-        }
+        } ?: throw InvalidPlaylistException(
+            InvalidPlaylistReason.CORRUPTED,
+            "Could not open input stream"
+        )
+    } catch (e: InvalidPlaylistException) {
+        throw e // Re-throw our custom exceptions
+    } catch (e: Exception) {
+        throw InvalidPlaylistException(
+            InvalidPlaylistReason.CORRUPTED,
+            "Error reading playlist file: ${e.message}"
+        )
+    }
+    
+    // Validate we found at least some tracks or valid playlist markers
+    if (queries.isEmpty() && !hasValidContent) {
+        throw InvalidPlaylistException(
+            InvalidPlaylistReason.CORRUPTED,
+            "No valid tracks found in playlist"
+        )
     }
     
     Pair(name, queries.distinct()) // remove duplicates
