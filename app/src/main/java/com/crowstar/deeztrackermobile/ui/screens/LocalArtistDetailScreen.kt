@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import android.net.Uri
 import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.R
+import com.crowstar.deeztrackermobile.ui.components.MarqueeText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,13 +77,13 @@ fun LocalArtistDetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
+                    MarqueeText(
                         text = artistName,
                         color = Color.White,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Text(
                         text = stringResource(R.string.stats_playlist_tracks_format, tracks.size),
@@ -130,8 +131,8 @@ private fun ArtistTrackItem(track: LocalTrack, onClick: () -> Unit) {
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = track.title, color = Color.White, fontSize = 16.sp, maxLines = 1)
-            Text(text = track.artist, color = TextGray, fontSize = 12.sp, maxLines = 1)
+            MarqueeText(text = track.title, color = Color.White, fontSize = 16.sp, modifier = Modifier.fillMaxWidth())
+            MarqueeText(text = track.artist, color = TextGray, fontSize = 12.sp, modifier = Modifier.fillMaxWidth())
         }
         Text(
             text = track.getFormattedDuration(),

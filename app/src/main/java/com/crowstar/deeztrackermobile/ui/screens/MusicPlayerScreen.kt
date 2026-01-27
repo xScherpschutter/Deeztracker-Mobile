@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 import com.crowstar.deeztrackermobile.ui.utils.formatTime
 import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.R
+import com.crowstar.deeztrackermobile.ui.components.MarqueeText
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.HorizontalPager
@@ -226,19 +227,19 @@ fun MusicPlayerScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
+                            MarqueeText(
                                 text = track.title,
                                 color = Color.White,
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
-                                maxLines = 1
+                                modifier = Modifier.fillMaxWidth()
                             )
-                            Text(
+                            MarqueeText(
                                 text = track.artist,
                                 color = TextGray,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Medium,
-                                maxLines = 1
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                         IconButton(onClick = { playerController.toggleFavorite() }) {

@@ -40,6 +40,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.crowstar.deeztrackermobile.ui.components.AlphabeticalFastScroller
+import com.crowstar.deeztrackermobile.ui.components.MarqueeText
 import kotlinx.coroutines.launch
 
 
@@ -305,18 +306,18 @@ fun DownloadedTrackItem(
 
         // Info
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            MarqueeText(
                 text = track.title,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
-                maxLines = 1
+                modifier = Modifier.fillMaxWidth()
             )
-            Text(
+            MarqueeText(
                 text = "${track.artist} • ${formatTime(track.duration)}",
                 color = TextGray,
                 fontSize = 14.sp,
-                maxLines = 1
+                modifier = Modifier.fillMaxWidth()
             )
         }
 

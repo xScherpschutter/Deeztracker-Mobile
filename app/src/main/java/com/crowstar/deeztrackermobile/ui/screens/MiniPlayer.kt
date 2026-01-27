@@ -31,6 +31,7 @@ import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.R
+import com.crowstar.deeztrackermobile.ui.components.MarqueeText
 
 @Composable
 fun MiniPlayer(
@@ -87,18 +88,18 @@ fun MiniPlayer(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(
+                        MarqueeText(
                             text = track.title,
                             color = Color.White,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            maxLines = 1
+                            modifier = Modifier.fillMaxWidth()
                         )
-                        Text(
+                        MarqueeText(
                             text = track.artist,
                             color = TextGray,
                             fontSize = 12.sp,
-                            maxLines = 1
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
 

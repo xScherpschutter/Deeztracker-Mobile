@@ -24,6 +24,7 @@ import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.R
+import com.crowstar.deeztrackermobile.ui.components.MarqueeText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,11 +55,12 @@ fun LocalPlaylistDetailScreen(
             }
             Spacer(modifier = Modifier.width(8.dp))
             Column {
-                Text(
+                MarqueeText(
                     text = playlist.name,
                     color = Color.White,
                     fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Text(
                     text = stringResource(R.string.stats_playlist_tracks_format, playlistTracks.size),
