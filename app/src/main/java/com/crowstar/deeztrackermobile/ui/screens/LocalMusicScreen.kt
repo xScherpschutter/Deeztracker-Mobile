@@ -44,6 +44,7 @@ import com.crowstar.deeztrackermobile.R
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import com.crowstar.deeztrackermobile.features.localmusic.LocalAlbum
 import com.crowstar.deeztrackermobile.features.localmusic.LocalArtist
 import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist
@@ -99,6 +100,9 @@ fun LocalMusicScreen(
     
     // Scroll State - Persist across navigation
     val tracksListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    val albumsGridState = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() }
+    val artistsGridState = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() }
+    val playlistsListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     
     // Context Menu Actions
     fun shareTrack(track: LocalTrack) {
@@ -413,10 +417,11 @@ fun LocalMusicScreen(
                         onDelete = { track -> viewModel.requestDeleteTrack(track) },
                         onAddToPlaylist = { track -> trackForPlaylist = track }
                     )
-                    1 -> LocalAlbumsGrid(albums, onAlbumClick)
-                    2 -> LocalArtistsGrid(artists, onArtistClick)
+                    1 -> LocalAlbumsGrid(albums, albumsGridState, onAlbumClick)
+                    2 -> LocalArtistsGrid(artists, artistsGridState, onArtistClick)
                     3 -> LocalPlaylistsScreen(
                         playlists = playlists,
+                        state = playlistsListState,
                         onPlaylistClick = { playlist -> 
                             selectedPlaylistId = playlist.id
                         },
@@ -565,10 +570,11 @@ fun LocalTracksList(
 }
 
 @Composable
-fun LocalAlbumsGrid(albums: List<LocalAlbum>, onAlbumClick: (LocalAlbum) -> Unit) {
+fun LocalAlbumsGrid(albums: List<LocalAlbum>, state: LazyGridState, onAlbumClick: (LocalAlbum) -> Unit) {
     // Placeholder for Albums Grid
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
+        state = state,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -632,10 +638,11 @@ fun AlbumGridItem(album: LocalAlbum, onClick: () -> Unit) {
 }
 
 @Composable
-fun LocalArtistsGrid(artists: List<LocalArtist>, onArtistClick: (LocalArtist) -> Unit) {
+fun LocalArtistsGrid(artists: List<LocalArtist>, state: LazyGridState, onArtistClick: (LocalArtist) -> Unit) {
     // Placeholder for Artists Grid
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
+        state = state,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
