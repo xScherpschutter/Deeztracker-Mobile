@@ -144,9 +144,9 @@ class DownloadManager private constructor(
                 val localTitle = track.title.lowercase().replace(Regex("[^a-z0-9]"), "")
                 val localArtist = track.artist.lowercase().replace(Regex("[^a-z0-9]"), "")
                 
-                // Match if both title and artist are similar
-                val titleMatch = localTitle.contains(normalizedTitle) || normalizedTitle.contains(localTitle)
-                val artistMatch = localArtist.contains(normalizedArtist) || normalizedArtist.contains(localArtist)
+                // Match if both title and artist are identical (normalized)
+                val titleMatch = localTitle == normalizedTitle
+                val artistMatch = localArtist == normalizedArtist
                 
                 titleMatch && artistMatch
             }
