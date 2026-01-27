@@ -159,7 +159,7 @@
     <string name="import_playlist_action_import_download">Importar y descargar (%d)</string>
     <string name="import_playlist_action_create">Crear Playlist</string>
     <string name="import_playlist_found_locally">Encontrado localmente: %s</string>
-    <string name="import_playlist_found_deezer">Encontrado en Deezer: %s - %s</string>
+    <string name="import_playlist_found_deezer">Encontrado en Deezer: %1$s - %2$s</string>
     <string name="import_playlist_not_found">No encontrado en Deezer</string>
     <string name="import_playlist_searching">Buscando...</string>
     <string name="import_playlist_default_name">Playlist Importada</string>
