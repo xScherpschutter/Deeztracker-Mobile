@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import uniffi.rusteer.DownloadQuality
 import android.media.MediaScannerConnection 
 import java.io.File
@@ -113,6 +114,7 @@ class DownloadManager private constructor(
     /**
      * Reset state to Idle (call after showing notification to user).
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun resetState() {
         if (downloadChannel.isEmpty) {
             _downloadState.value = DownloadState.Idle
@@ -137,16 +139,30 @@ class DownloadManager private constructor(
     suspend fun isTrackDownloaded(trackTitle: String, artistName: String): Boolean {
         return try {
             val localTracks = musicRepository.getAllTracks()
-            val normalizedTitle = trackTitle.lowercase().replace(Regex("[^a-z0-9]"), "")
-            val normalizedArtist = artistName.lowercase().replace(Regex("[^a-z0-9]"), "")
+            
+            // Title Normalization: Strip 'feat', lowercase, remove non-alphanumeric
+            fun normalizeTitle(input: String): String {
+                val withoutFeat = input.replace(Regex("(?i)[\\(\\[]?(?:feat\\.|ft\\.|featuring|with).*"), "")
+                return withoutFeat.lowercase().replace(Regex("[^a-z0-9]"), "")
+            }
+
+            // Artist Normalization: Lowercase, remove non-alphanumeric (Keep 'feat' info as it might be relevant for artist content)
+            fun normalizeArtist(input: String): String {
+                return input.lowercase().replace(Regex("[^a-z0-9]"), "")
+            }
+            
+            val normalizedTitle = normalizeTitle(trackTitle)
+            val normalizedArtist = normalizeArtist(artistName)
             
             localTracks.any { track ->
-                val localTitle = track.title.lowercase().replace(Regex("[^a-z0-9]"), "")
-                val localArtist = track.artist.lowercase().replace(Regex("[^a-z0-9]"), "")
+                val localTitle = normalizeTitle(track.title)
+                val localArtist = normalizeArtist(track.artist)
                 
-                // Match if both title and artist are identical (normalized)
+                // Title: Strict match (after stripping feat)
                 val titleMatch = localTitle == normalizedTitle
-                val artistMatch = localArtist == normalizedArtist
+                
+                // Artist: Partial match allowed (to handle "Artist A" vs "Artist A, Artist B")
+                val artistMatch = localArtist.contains(normalizedArtist) || normalizedArtist.contains(localArtist)
                 
                 titleMatch && artistMatch
             }
