@@ -33,6 +33,7 @@ import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import com.crowstar.deeztrackermobile.ui.components.MarqueeText
 import com.crowstar.deeztrackermobile.ui.utils.formatDuration
 
 
@@ -256,11 +257,12 @@ private fun ArtistHeader(artist: Artist) {
                 fontWeight = FontWeight.Medium
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
+            MarqueeText(
                 text = artist.name,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = Color.White,
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -288,12 +290,12 @@ private fun AlbumCard(album: Album, onAlbumClick: (Long) -> Unit) {
             contentScale = ContentScale.Crop
         )
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
+        MarqueeText(
             text = album.title,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             color = Color.White,
-            maxLines = 1
+            modifier = Modifier.fillMaxWidth()
         )
         Text(
             text = album.releaseDate?.take(4) ?: "",
@@ -341,18 +343,18 @@ private fun ArtistTrackItem(
 
         // Track Info
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            MarqueeText(
                 text = track.title,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color.White,
-                maxLines = 1
+                modifier = Modifier.fillMaxWidth()
             )
-            Text(
+            MarqueeText(
                 text = track.artist?.name ?: "Unknown Artist",
                 fontSize = 12.sp,
                 color = TextGray,
-                maxLines = 1
+                modifier = Modifier.fillMaxWidth()
             )
         }
 

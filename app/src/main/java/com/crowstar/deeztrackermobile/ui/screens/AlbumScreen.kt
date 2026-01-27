@@ -30,6 +30,7 @@ import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.utils.formatDuration
 import androidx.compose.ui.res.stringResource
+import com.crowstar.deeztrackermobile.ui.components.MarqueeText
 import com.crowstar.deeztrackermobile.R
 
 
@@ -222,20 +223,24 @@ private fun AlbumHeader(album: Album) {
         Spacer(modifier = Modifier.height(24.dp))
 
         // Album Title
-        Text(
+        MarqueeText(
             text = album.title,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = Color.White,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         // Artist Name
-        Text(
+        MarqueeText(
             text = album.artist?.name ?: "Unknown Artist",
             fontSize = 16.sp,
-            color = TextGray
+            color = TextGray,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -276,19 +281,19 @@ private fun TrackListItem(
 
         // Track Info
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            MarqueeText(
                 text = track.title,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color.White,
-                maxLines = 1
+                modifier = Modifier.fillMaxWidth()
             )
             if (track.artist?.name != track.album?.title) {
-                Text(
+                MarqueeText(
                     text = track.artist?.name ?: "Unknown Artist",
                     fontSize = 12.sp,
                     color = TextGray,
-                    maxLines = 1
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }

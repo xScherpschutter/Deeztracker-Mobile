@@ -88,6 +88,7 @@ import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.theme.TextWhite
+import com.crowstar.deeztrackermobile.ui.components.MarqueeText
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -485,19 +486,20 @@ fun TrackItem(
         Spacer(modifier = Modifier.width(16.dp))
         
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            MarqueeText(
                 text = track.title ?: stringResource(R.string.unknown_track),
                 color = Color.White,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1
+                modifier = Modifier.fillMaxWidth()
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
+                MarqueeText(
                     text = track.artist?.name ?: stringResource(R.string.unknown_artist),
                     color = TextGray,
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
                 if (track.album != null) {
                     Spacer(modifier = Modifier.width(6.dp))
@@ -572,12 +574,12 @@ fun ArtistItem(artist: Artist, onClick: () -> Unit = {}) {
         Spacer(modifier = Modifier.width(16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            MarqueeText(
                 text = artist.name ?: stringResource(R.string.unknown_artist),
                 color = Color.White,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1
+                modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "${artist.nbFan ?: 0} ${stringResource(R.string.label_fans)}",
@@ -612,18 +614,19 @@ fun AlbumItem(album: com.crowstar.deeztrackermobile.features.deezer.Album, onCli
         Spacer(modifier = Modifier.width(16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            MarqueeText(
                 text = album.title ?: stringResource(R.string.unknown_album),
                 color = Color.White,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1
+                modifier = Modifier.fillMaxWidth()
             )
-            Text(
+            MarqueeText(
                 text = album.artist?.name ?: stringResource(R.string.unknown_artist),
                 color = TextGray,
                 fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
@@ -652,12 +655,12 @@ fun PlaylistItem(playlist: Playlist, onClick: () -> Unit = {}) {
         Spacer(modifier = Modifier.width(16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            MarqueeText(
                 text = playlist.title ?: stringResource(R.string.unknown_playlist),
                 color = Color.White,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1
+                modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "${playlist.nbTracks ?: 0} ${stringResource(R.string.label_tracks)}",

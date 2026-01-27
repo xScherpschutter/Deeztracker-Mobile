@@ -29,6 +29,7 @@ import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.utils.formatDuration
+import com.crowstar.deeztrackermobile.ui.components.MarqueeText
 import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.R
 
@@ -247,20 +248,24 @@ private fun PlaylistHeader(playlist: Playlist) {
         Spacer(modifier = Modifier.height(24.dp))
 
         // Playlist Title
-        Text(
+        MarqueeText(
             text = playlist.title,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = Color.White,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         // Creator Name
-        Text(
+        MarqueeText(
             text = playlist.creator?.name ?: "Unknown Creator",
             fontSize = 16.sp,
-            color = TextGray
+            color = TextGray,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -311,18 +316,18 @@ private fun PlaylistTrackItem(
 
         // Track Info
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            MarqueeText(
                 text = track.title,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color.White,
-                maxLines = 1
+                modifier = Modifier.fillMaxWidth()
             )
-            Text(
+            MarqueeText(
                 text = track.artist?.name ?: "Unknown Artist",
                 fontSize = 12.sp,
                 color = TextGray,
-                maxLines = 1
+                modifier = Modifier.fillMaxWidth()
             )
         }
 

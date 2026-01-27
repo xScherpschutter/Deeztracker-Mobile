@@ -63,6 +63,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.launch
 import com.crowstar.deeztrackermobile.ui.components.AlphabeticalFastScroller
+import com.crowstar.deeztrackermobile.ui.components.MarqueeText
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -617,20 +618,18 @@ fun AlbumGridItem(album: LocalAlbum, onClick: () -> Unit) {
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
+        MarqueeText(
             text = album.title,
             color = Color.White,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
-            maxLines = 1,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
-        Text(
+        MarqueeText(
             text = album.artist,
             color = TextGray,
             fontSize = 12.sp,
-            maxLines = 1,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
@@ -677,12 +676,11 @@ fun ArtistGridItem(artist: LocalArtist, onClick: () -> Unit) {
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
+        MarqueeText(
             text = artist.name,
             color = Color.White,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
-            maxLines = 1,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
@@ -747,20 +745,19 @@ fun LocalTrackItem(
 
         // Info
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            MarqueeText(
                 text = track.title,
                 color = Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
+                MarqueeText(
                     text = track.artist,
                     color = TextGray,
                     fontSize = 12.sp,
-                    maxLines = 1,
                     modifier = Modifier.weight(1f, fill = false)
                 )
                 
