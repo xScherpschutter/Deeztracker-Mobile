@@ -522,7 +522,7 @@ fun LocalTracksList(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = state,
-                contentPadding = PaddingValues(end = 36.dp, bottom = contentPadding) // Space for fast scroller + Dynamic Bottom Padding
+                contentPadding = PaddingValues(bottom = 16.dp + contentPadding, end = 36.dp) // Space for fast scroller + Dynamic Bottom Padding
             ) {
                 items(tracks) { track ->
                     LocalTrackItem(
@@ -550,13 +550,13 @@ fun LocalTracksList(
         // Fast Scroller Overlay
         AlphabeticalFastScroller(
             modifier = Modifier.align(Alignment.CenterEnd),
-            bottomInset = contentPadding + 48.dp,
+            bottomInset = contentPadding,
             selectedLetter = currentLetter.value,
             onLetterSelected = { letter ->
                 scope.launch {
                     val index = letterIndexMap[letter]
                     if (index != null) {
-                        state.animateScrollToItem(index)
+                        state.scrollToItem(index)
                         currentLetter.value = letter
                     } else {
                         // Find next available letter
@@ -564,7 +564,7 @@ fun LocalTracksList(
                         val nextLetter = availableLetters.firstOrNull { it >= letter }
                         if (nextLetter != null) {
                             letterIndexMap[nextLetter]?.let {
-                                state.animateScrollToItem(it)
+                                state.scrollToItem(it)
                                 currentLetter.value = nextLetter
                             }
                         }
@@ -586,7 +586,7 @@ fun LocalAlbumsGrid(
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         state = state,
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + contentPadding),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp + contentPadding),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -657,7 +657,7 @@ fun LocalArtistsGrid(
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         state = state,
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + contentPadding),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp + contentPadding),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {

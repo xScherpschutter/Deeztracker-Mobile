@@ -45,7 +45,7 @@ fun AlphabeticalFastScroller(
         modifier = modifier
             .width(28.dp)
             .fillMaxHeight()
-            .background(BackgroundDark)
+            .padding(bottom = bottomInset)
     ) {
         // Preview popup - positioned outside the scroller, perfectly centered
         if (popupAlpha > 0f) {
@@ -53,8 +53,8 @@ fun AlphabeticalFastScroller(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .offset(x = (-100).dp)
-                    .requiredSize(80.dp) // Force exact size ignoring parent constraints
-                    .graphicsLayer { alpha = popupAlpha } // Animate only opacity
+                    .requiredSize(80.dp) // Force exact square size
+                    .graphicsLayer { alpha = popupAlpha }
                     .background(Primary, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
@@ -67,7 +67,7 @@ fun AlphabeticalFastScroller(
             }
         }
         
-        // Fast scroller - static bar
+        // The actual fast scroller bar with letters
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -75,32 +75,26 @@ fun AlphabeticalFastScroller(
                 .padding(vertical = 4.dp)
                 .pointerInput(Unit) {
                     detectDragGestures(
-                        onDragStart = { offset ->
+                        onDragStart = { 
                             isDragging = true
-                            val index = (offset.y / size.height * letters.size).toInt()
-                                .coerceIn(0, letters.size - 1)
-                            val letter = letters[index]
-                            currentlySelectedLetter = letter
-                            lastSelectedLetter = letter
-                            onLetterSelected(letter)
                         },
-                        onDrag = { change, _ ->
-                            change.consume()
-                            val offset = change.position
-                            val index = (offset.y / size.height * letters.size).toInt()
-                                .coerceIn(0, letters.size - 1)
-                            val letter = letters[index]
-                            if (letter != currentlySelectedLetter) {
-                                currentlySelectedLetter = letter
-                                lastSelectedLetter = letter
-                                onLetterSelected(letter)
-                            }
+                        onDragEnd = { 
+                            isDragging = false 
                         },
-                        onDragEnd = {
-                            isDragging = false
-                            currentlySelectedLetter = null
+                        onDragCancel = { 
+                            isDragging = false 
                         }
-                    )
+                    ) { change, _ ->
+                        change.consume()
+                        val totalHeight = size.height.toFloat()
+                        val yPos = change.position.y.coerceIn(0f, totalHeight)
+                        val letterIndex = ((yPos / totalHeight) * letters.size).toInt()
+                            .coerceIn(0, letters.size - 1)
+                        val targetLetter = letters[letterIndex]
+                        currentlySelectedLetter = targetLetter
+                        lastSelectedLetter = targetLetter
+                        onLetterSelected(targetLetter)
+                    }
                 }
         ) {
             Column(
@@ -114,21 +108,17 @@ fun AlphabeticalFastScroller(
                     val isSelected = letter == (currentlySelectedLetter ?: selectedLetter)
                     Box(
                         modifier = Modifier
-                            .size(if (isSelected) 18.dp else 14.dp)
+                            .size(if (isSelected) 16.dp else 12.dp)
                             .clickable { onLetterSelected(letter) },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = letter.toString(),
                             color = if (isSelected) Primary else TextGray,
-                            fontSize = if (isSelected) 12.sp else 9.sp,
+                            fontSize = if (isSelected) 11.sp else 8.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                     }
-                }
-                // Add spacer at the end instead of padding
-                if (bottomInset > 0.dp) {
-                    Spacer(modifier = Modifier.height(bottomInset))
                 }
             }
         }
