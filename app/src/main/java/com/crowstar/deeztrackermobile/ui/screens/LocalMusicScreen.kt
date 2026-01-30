@@ -74,6 +74,7 @@ fun LocalMusicScreen(
     onAlbumClick: (LocalAlbum) -> Unit,
     onArtistClick: (LocalArtist) -> Unit,
     onImportPlaylist: () -> Unit,
+    contentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: LocalMusicViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
         factory = LocalMusicViewModelFactory(LocalContext.current)
     )
@@ -416,10 +417,11 @@ fun LocalMusicScreen(
                         onTrackClick = { track, list -> onTrackClick(track, list, localMusicTitle) },
                         onShare = { track -> shareTrack(track) },
                         onDelete = { track -> viewModel.requestDeleteTrack(track) },
-                        onAddToPlaylist = { track -> trackForPlaylist = track }
+                        onAddToPlaylist = { track -> trackForPlaylist = track },
+                        contentPadding = contentPadding
                     )
-                    1 -> LocalAlbumsGrid(albums, albumsGridState, onAlbumClick)
-                    2 -> LocalArtistsGrid(artists, artistsGridState, onArtistClick)
+                    1 -> LocalAlbumsGrid(albums, albumsGridState, onAlbumClick, contentPadding)
+                    2 -> LocalArtistsGrid(artists, artistsGridState, onArtistClick, contentPadding)
                     3 -> LocalPlaylistsScreen(
                         playlists = playlists,
                         state = playlistsListState,
@@ -431,7 +433,8 @@ fun LocalMusicScreen(
                         },
                         onCreatePlaylist = {
                             showCreatePlaylistDialog = true
-                        }
+                        },
+                        contentPadding = contentPadding
                     )
                 }
             }
@@ -450,7 +453,8 @@ fun LocalTracksList(
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
     onShare: (LocalTrack) -> Unit,
     onDelete: (LocalTrack) -> Unit,
-    onAddToPlaylist: (LocalTrack) -> Unit
+    onAddToPlaylist: (LocalTrack) -> Unit,
+    contentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     val scope = rememberCoroutineScope()
     
@@ -518,7 +522,7 @@ fun LocalTracksList(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = state,
-                contentPadding = PaddingValues(end = 36.dp) // Space for fast scroller
+                contentPadding = PaddingValues(end = 36.dp, bottom = contentPadding) // Space for fast scroller + Dynamic Bottom Padding
             ) {
                 items(tracks) { track ->
                     LocalTrackItem(
@@ -545,7 +549,9 @@ fun LocalTracksList(
         
         // Fast Scroller Overlay
         AlphabeticalFastScroller(
-            modifier = Modifier.align(Alignment.CenterEnd),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(bottom = contentPadding),
             selectedLetter = currentLetter.value,
             onLetterSelected = { letter ->
                 scope.launch {
@@ -571,12 +577,17 @@ fun LocalTracksList(
 }
 
 @Composable
-fun LocalAlbumsGrid(albums: List<LocalAlbum>, state: LazyGridState, onAlbumClick: (LocalAlbum) -> Unit) {
+fun LocalAlbumsGrid(
+    albums: List<LocalAlbum>, 
+    state: LazyGridState, 
+    onAlbumClick: (LocalAlbum) -> Unit,
+    contentPadding: androidx.compose.ui.unit.Dp = 0.dp
+) {
     // Placeholder for Albums Grid
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         state = state,
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + contentPadding),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -637,12 +648,17 @@ fun AlbumGridItem(album: LocalAlbum, onClick: () -> Unit) {
 }
 
 @Composable
-fun LocalArtistsGrid(artists: List<LocalArtist>, state: LazyGridState, onArtistClick: (LocalArtist) -> Unit) {
+fun LocalArtistsGrid(
+    artists: List<LocalArtist>, 
+    state: LazyGridState, 
+    onArtistClick: (LocalArtist) -> Unit,
+    contentPadding: androidx.compose.ui.unit.Dp = 0.dp
+) {
     // Placeholder for Artists Grid
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         state = state,
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + contentPadding),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {

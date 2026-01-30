@@ -37,12 +37,18 @@ fun LocalPlaylistsScreen(
     state: LazyListState = rememberLazyListState(),
     onPlaylistClick: (LocalPlaylist) -> Unit,
     onDeletePlaylist: (LocalPlaylist) -> Unit,
-    onCreatePlaylist: () -> Unit
+    onCreatePlaylist: () -> Unit,
+    contentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         state = state,
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            top = 16.dp,
+            end = 16.dp,
+            bottom = 16.dp + contentPadding
+        ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Stats Bar

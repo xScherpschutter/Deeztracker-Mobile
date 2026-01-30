@@ -109,10 +109,30 @@ fun MainScreen(
             .fillMaxSize()
             .background(BackgroundDark)
     ) {
+        
+        // Calculate dynamic bottom padding for Snackbar and Content
+        val isMiniPlayerVisible = playerState.currentTrack != null
+        val isBottomBarVisible = currentRoute in listOf("library", "search", "downloads", "settings")
+        
+        // Calculate the height of the floating UI elements
+        var floatingUIHeight = 0.dp
+        
+        if (isBottomBarVisible) {
+            // Navbar (64) + Spacer (12) + Padding (8) = 84dp used space
+            floatingUIHeight += 84.dp 
+        } 
+        
+        if (isMiniPlayerVisible) {
+            // MiniPlayer height
+            floatingUIHeight += 70.dp
+        }
+        
         // Main Content Area
-        // Add padding at the bottom so content isn't hidden by the floating bars ONLY if not in player
-        val contentPadding = if (currentRoute == "player") 0.dp else 110.dp
-        Box(modifier = Modifier.fillMaxSize().padding(bottom = contentPadding)) {
+        // For 'library' (LocalMusicScreen), we want content to go behind the bottom bars, so 0.dp container padding.
+        // For others, if we want them to stop *above* the bars, we use floatingUIHeight.
+        val containerBottomPadding = if (currentRoute == "library" || currentRoute == "player") 0.dp else floatingUIHeight + 16.dp // Add a bit of buffer if not transparent
+
+        Box(modifier = Modifier.fillMaxSize().padding(bottom = containerBottomPadding)) {
             MainNavigation(
                 navController, 
                 onArtistClick, 
@@ -121,31 +141,16 @@ fun MainScreen(
                 importAction = importAction,
                 onLogout = onLogout,
                 playerController = playerController,
-                safePopBackStack = safePopBackStack
+                safePopBackStack = safePopBackStack,
+                bottomContentPadding = if (currentRoute == "library") floatingUIHeight + 8.dp else 0.dp // Pass padding to list screens
             )
         }
         
-        // Calculate dynamic bottom padding for Snackbar
-        val isMiniPlayerVisible = playerState.currentTrack != null
-        val isBottomBarVisible = currentRoute in listOf("library", "search", "downloads", "settings")
-        
+        // Snackbar Padding
         val finalSnackbarPadding = if (currentRoute == "player") {
             16.dp 
         } else {
-            var p = 0.dp
-            
-            if (isBottomBarVisible) {
-                // Navbar (64) + Spacer (12) + Padding (8) = 84dp used space
-                p += 82.dp 
-            } 
-            
-            if (isMiniPlayerVisible) {
-                // MiniPlayer height
-                p += 70.dp
-            }
-            
-            // Add base padding or buffer
-            if (p == 0.dp) 16.dp else p
+             if (floatingUIHeight == 0.dp) 16.dp else floatingUIHeight + 8.dp
         }
 
         // Centralized Snackbar
@@ -282,7 +287,8 @@ fun MainNavigation(
     importAction: () -> Unit,
     onLogout: () -> Unit,
     playerController: PlayerController,
-    safePopBackStack: () -> Unit
+    safePopBackStack: () -> Unit,
+    bottomContentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     val downloadsTitle = stringResource(R.string.downloads_title)
     val localMusicTitle = stringResource(R.string.local_music_title)
@@ -303,7 +309,8 @@ fun MainNavigation(
                 },
                 onAlbumClick = { album -> navController.navigate("localAlbum/${album.id}") },
                 onArtistClick = { artist -> navController.navigate("localArtist/${artist.name}") },
-                onImportPlaylist = importAction
+                onImportPlaylist = importAction,
+                contentPadding = bottomContentPadding
             ) 
         }
         
