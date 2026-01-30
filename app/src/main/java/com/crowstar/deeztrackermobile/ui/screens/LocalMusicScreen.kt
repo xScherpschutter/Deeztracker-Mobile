@@ -409,7 +409,7 @@ fun LocalMusicScreen(
             }
         } else {
             // View Switching Logic
-            Box(modifier = Modifier.padding(padding)) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
                 when (selectedView) {
                     0 -> LocalTracksList(
                         tracks = tracks,
@@ -549,9 +549,8 @@ fun LocalTracksList(
         
         // Fast Scroller Overlay
         AlphabeticalFastScroller(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(bottom = contentPadding),
+            modifier = Modifier.align(Alignment.CenterEnd),
+            bottomInset = contentPadding + 48.dp,
             selectedLetter = currentLetter.value,
             onLetterSelected = { letter ->
                 scope.launch {
