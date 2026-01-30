@@ -96,7 +96,8 @@ import kotlinx.coroutines.launch
 fun SearchScreen(
     onArtistClick: (Long) -> Unit = {},
     onPlaylistClick: (Long) -> Unit = {},
-    onAlbumClick: (Long) -> Unit = {}
+    onAlbumClick: (Long) -> Unit = {},
+    contentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var hasSearched by rememberSaveable { mutableStateOf(false) }
@@ -390,7 +391,12 @@ fun SearchScreen(
                     
                         LazyColumn(
                         state = listState,
-                        contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp, start = 16.dp, end = 16.dp),
+                        contentPadding = PaddingValues(
+                            top = 8.dp, 
+                            bottom = 16.dp + contentPadding, 
+                            start = 16.dp, 
+                            end = 16.dp
+                        ),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {

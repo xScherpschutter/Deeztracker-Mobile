@@ -48,6 +48,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun DownloadsScreen(
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
+    contentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: DownloadsViewModel = viewModel(
         factory = DownloadsViewModelFactory(LocalContext.current)
     )
@@ -218,7 +219,7 @@ fun DownloadsScreen(
                     LazyColumn(
                         state = listState,
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp, end = 36.dp) // Space for fast scroller
+                        contentPadding = PaddingValues(bottom = 16.dp + contentPadding, end = 36.dp) // Space for fast scroller + Dynamic Bottom Padding
                     ) {
                         items(tracks) { track ->
                             DownloadedTrackItem(
@@ -245,6 +246,7 @@ fun DownloadsScreen(
                     // Fast Scroller Overlay
                     AlphabeticalFastScroller(
                         modifier = Modifier.align(Alignment.CenterEnd),
+                        bottomInset = contentPadding + 8.dp,
                         selectedLetter = currentLetter.value,
                         onLetterSelected = { letter ->
                             scope.launch {

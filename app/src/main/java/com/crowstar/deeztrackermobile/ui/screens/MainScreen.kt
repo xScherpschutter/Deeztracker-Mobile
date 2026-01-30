@@ -127,10 +127,9 @@ fun MainScreen(
             floatingUIHeight += 70.dp
         }
         
-        // Main Content Area
-        // For 'library' (LocalMusicScreen), we want content to go behind the bottom bars, so 0.dp container padding.
+        // For 'library', 'search', 'downloads' we want content to go behind the bottom bars, so 0.dp container padding.
         // For others, if we want them to stop *above* the bars, we use floatingUIHeight.
-        val containerBottomPadding = if (currentRoute == "library" || currentRoute == "player") 0.dp else floatingUIHeight + 16.dp // Add a bit of buffer if not transparent
+        val containerBottomPadding = if (currentRoute in listOf("library", "search", "downloads", "player")) 0.dp else floatingUIHeight + 16.dp // Add a bit of buffer if not transparent
 
         Box(modifier = Modifier.fillMaxSize().padding(bottom = containerBottomPadding)) {
             MainNavigation(
@@ -142,7 +141,7 @@ fun MainScreen(
                 onLogout = onLogout,
                 playerController = playerController,
                 safePopBackStack = safePopBackStack,
-                bottomContentPadding = if (currentRoute == "library") floatingUIHeight + 8.dp else 0.dp // Pass padding to list screens
+                bottomContentPadding = if (currentRoute in listOf("library", "search", "downloads")) floatingUIHeight + 8.dp else 0.dp // Pass padding to list screens
             )
         }
         
@@ -297,7 +296,8 @@ fun MainNavigation(
             SearchScreen(
                 onArtistClick = onArtistClick,
                 onPlaylistClick = onPlaylistClick,
-                onAlbumClick = onAlbumClick
+                onAlbumClick = onAlbumClick,
+                contentPadding = bottomContentPadding
             )
         }
         
@@ -318,7 +318,8 @@ fun MainNavigation(
             DownloadsScreen(
                 onTrackClick = { track, playlist ->
                     playerController.playTrack(track, playlist, source = downloadsTitle)
-                }
+                },
+                contentPadding = bottomContentPadding
             ) 
         }
         composable("settings") { SettingsScreen(onLogout = onLogout) }

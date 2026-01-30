@@ -19,11 +19,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 
 @Composable
 fun AlphabeticalFastScroller(
     modifier: Modifier = Modifier,
     selectedLetter: Char? = null,
+    bottomInset: androidx.compose.ui.unit.Dp = 0.dp,
     onLetterSelected: (Char) -> Unit
 ) {
     val letters = remember { listOf('#') + ('A'..'Z').toList() }
@@ -43,6 +45,7 @@ fun AlphabeticalFastScroller(
         modifier = modifier
             .width(28.dp)
             .fillMaxHeight()
+            .background(BackgroundDark)
     ) {
         // Preview popup - positioned outside the scroller, perfectly centered
         if (popupAlpha > 0f) {
@@ -104,7 +107,7 @@ fun AlphabeticalFastScroller(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 4.dp),
-                verticalArrangement = Arrangement.SpaceEvenly,
+                verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 letters.forEach { letter ->
@@ -122,6 +125,10 @@ fun AlphabeticalFastScroller(
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                     }
+                }
+                // Add spacer at the end instead of padding
+                if (bottomInset > 0.dp) {
+                    Spacer(modifier = Modifier.height(bottomInset))
                 }
             }
         }
