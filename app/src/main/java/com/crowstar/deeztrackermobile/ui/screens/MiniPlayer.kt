@@ -52,7 +52,7 @@ fun MiniPlayer(
                     .fillMaxWidth()
                     .height(64.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF1E1E1E).copy(alpha = 0.95f)) // Glassy look
+                    .background(Color(0xFF1E1E1E).copy(alpha = 0.90f)) // Glassy look
                     .clickable(onClick = onClick)
                     .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.CenterStart
