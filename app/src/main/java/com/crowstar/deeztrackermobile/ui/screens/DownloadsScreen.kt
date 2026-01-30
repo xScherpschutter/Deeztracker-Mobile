@@ -246,13 +246,13 @@ fun DownloadsScreen(
                     // Fast Scroller Overlay
                     AlphabeticalFastScroller(
                         modifier = Modifier.align(Alignment.CenterEnd),
-                        bottomInset = contentPadding + 8.dp,
+                        bottomInset = contentPadding,
                         selectedLetter = currentLetter.value,
                         onLetterSelected = { letter ->
                             scope.launch {
                                 val index = letterIndexMap[letter]
                                 if (index != null) {
-                                    listState.animateScrollToItem(index)
+                                    listState.scrollToItem(index)
                                     currentLetter.value = letter
                                 } else {
                                     // Find next available letter
@@ -260,7 +260,7 @@ fun DownloadsScreen(
                                     val nextLetter = availableLetters.firstOrNull { it >= letter }
                                     if (nextLetter != null) {
                                         letterIndexMap[nextLetter]?.let {
-                                            listState.animateScrollToItem(it)
+                                            listState.scrollToItem(it)
                                             currentLetter.value = nextLetter
                                         }
                                     }
