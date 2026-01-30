@@ -215,7 +215,7 @@ fun FloatingBottomNavigationBar(navController: NavHostController) {
             .fillMaxWidth()
             .height(64.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF1E1E1E).copy(alpha = 0.98f))
+            .background(Color(0xFF1E1E1E).copy(alpha = 0.90f))
             .border(1.dp, Color.Black.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
     ) {
         Row(
