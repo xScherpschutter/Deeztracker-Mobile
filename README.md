@@ -1,4 +1,4 @@
-# 🎵 Deeztracker Mobile
+<h1 align="center">Deeztracker</h1>
 
 <p align="center">
   <img src="app/src/main/res/drawable/ic_app_icon.png" alt="Deeztracker Logo" width="120"/>
@@ -74,6 +74,11 @@ Deeztracker Mobile is a feature-rich Android application that allows users to do
 - Add tracks to custom playlists
 - **Synchronized Lyrics** - View lyrics that scroll with the music
 
+<p align="center">
+  <img src="preview/MusicPlayer.png" alt="Music Player" width="200"/>
+  <img src="preview/Lyrics.png" alt="Lyrics" width="200"/>
+</p>
+
 ### 📝 Playlist Management
 - Create custom playlists
 - Add downloaded tracks to playlists
@@ -132,7 +137,7 @@ Deeztracker Mobile is a feature-rich Android application that allows users to do
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/deeztracker-mobile.git
+git clone https://github.com/xScherpschutter/deeztracker-mobile.git
 
 # Navigate to project directory
 cd deeztracker-mobile
@@ -187,10 +192,6 @@ This application is intended for personal use only. Please respect copyright law
 
 ## 📄 License
 
-This project is for educational purposes. All rights reserved.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
-
-<p align="center">
-  Made with ❤️ using Kotlin & Jetpack Compose
-</p>
