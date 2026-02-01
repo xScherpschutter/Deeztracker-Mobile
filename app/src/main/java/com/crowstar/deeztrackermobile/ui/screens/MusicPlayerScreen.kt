@@ -141,7 +141,12 @@ fun MusicPlayerScreen(
                             Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.player_collapse), tint = Color.White)
                         }
 
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 8.dp)
+                        ) {
                             Text(
                                 text = stringResource(R.string.player_playing_from),
                                 color = TextGray,
@@ -149,11 +154,12 @@ fun MusicPlayerScreen(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp
                             )
-                            Text(
+                            MarqueeText(
                                 text = playerState.playingSource,
                                 color = Color.White.copy(alpha = 0.9f),
                                 fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
 
