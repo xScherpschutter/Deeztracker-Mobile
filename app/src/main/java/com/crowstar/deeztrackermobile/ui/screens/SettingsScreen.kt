@@ -26,6 +26,7 @@ import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import com.crowstar.deeztrackermobile.ui.utils.LanguageHelper
 import com.crowstar.deeztrackermobile.R
 import uniffi.rusteer.DownloadQuality
 
@@ -146,7 +147,7 @@ fun SettingsScreen(
                     onDismissRequest = { showLanguageDropdown = false },
                     modifier = Modifier.background(SurfaceDark)
                 ) {
-                    listOf("English", "Spanish").forEach { lang ->
+                    LanguageHelper.getAllDisplayNames().forEach { lang ->
                         DropdownMenuItem(
                             text = { Text(lang, color = Color.White) },
                             onClick = {

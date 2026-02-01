@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.crowstar.deeztrackermobile.features.rusteer.RustDeezerService
+import com.crowstar.deeztrackermobile.ui.utils.LanguageHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,9 +40,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             else -> DownloadQuality.MP3_128
         }
 
-        // Load Language
-        val savedLanguage = prefs.getString("language", "English")
-        _language.value = savedLanguage ?: "English"
+        // Load Language - convert code to display name
+        val savedLanguageCode = prefs.getString("language", "en") ?: "en"
+        _language.value = LanguageHelper.getDisplayName(savedLanguageCode)
 
         // Load Download Location
         val savedLocation = prefs.getString("download_location", "MUSIC")
@@ -55,7 +56,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setLanguage(lang: String) {
         _language.value = lang
-        prefs.edit().putString("language", lang).apply()
+        // Convert display name to code before saving
+        val languageCode = LanguageHelper.getCode(lang)
+        prefs.edit().putString("language", languageCode).apply()
     }
 
     fun setDownloadLocation(location: String) {
