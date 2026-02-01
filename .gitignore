@@ -86,3 +86,4 @@ Thumbs.db
 # Rust
 target/
 keystore.properties
+keystore_base64.txt
