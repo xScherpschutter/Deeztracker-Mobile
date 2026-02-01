@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -96,120 +97,120 @@ fun ArtistScreen(
 
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
-            )
-        },
-
         containerColor = BackgroundDark,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = Primary)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                // Artist Header
-                item {
-                    artist?.let { artistData ->
-                        ArtistHeader(artistData)
-                    }
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Primary)
                 }
-
-                // Albums Section
-                if (albums.isNotEmpty()) {
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                ) {
+                    // Artist Header
                     item {
-                        Spacer(modifier = Modifier.height(32.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        artist?.let { artistData ->
+                            ArtistHeader(artistData)
+                        }
+                    }
+
+                    // Albums Section
+                    if (albums.isNotEmpty()) {
+                        item {
+                            Spacer(modifier = Modifier.height(32.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Albums",
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+
+                        item {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(albums) { album ->
+                                    AlbumCard(album, onAlbumClick)
+                                }
+                            }
+                        }
+                    }
+
+                    // Top Tracks Section
+                    if (topTracks.isNotEmpty()) {
+                        item {
+                            Spacer(modifier = Modifier.height(32.dp))
                             Text(
-                                text = "Albums",
+                                text = "Top Tracks",
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+
+                        items(topTracks.size) { index ->
+                            val track = topTracks[index]
+                            var isDownloaded by remember { mutableStateOf(false) }
+                            
+                            // Check if track is downloaded, re-check when refresh trigger changes
+                            LaunchedEffect(track.id, downloadRefreshTrigger) {
+                                isDownloaded = downloadManager.isTrackDownloaded(
+                                    track.title,
+                                    track.artist?.name ?: ""
+                                )
+                            }
+                            
+                            ArtistTrackItem(
+                                track = track,
+                                index = index,
+                                isDownloaded = isDownloaded,
+                                isDownloading = downloadState is DownloadState.Downloading && 
+                                    (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString(),
+                                onDownloadClick = {
+                                    downloadManager.startTrackDownload(track.id, track.title)
+                                }
                             )
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
 
                     item {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(albums) { album ->
-                                AlbumCard(album, onAlbumClick)
-                            }
-                        }
+                        Spacer(modifier = Modifier.height(100.dp))
                     }
                 }
-
-                // Top Tracks Section
-                if (topTracks.isNotEmpty()) {
-                    item {
-                        Spacer(modifier = Modifier.height(32.dp))
-                        Text(
-                            text = "Top Tracks",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
-                    items(topTracks.size) { index ->
-                        val track = topTracks[index]
-                        var isDownloaded by remember { mutableStateOf(false) }
-                        
-                        // Check if track is downloaded, re-check when refresh trigger changes
-                        LaunchedEffect(track.id, downloadRefreshTrigger) {
-                            isDownloaded = downloadManager.isTrackDownloaded(
-                                track.title,
-                                track.artist?.name ?: ""
-                            )
-                        }
-                        
-                        ArtistTrackItem(
-                            track = track,
-                            index = index,
-                            isDownloaded = isDownloaded,
-                            isDownloading = downloadState is DownloadState.Downloading && 
-                                (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString(),
-                            onDownloadClick = {
-                                downloadManager.startTrackDownload(track.id, track.title)
-                            }
-                        )
-                    }
-                }
-
-                item {
-                    Spacer(modifier = Modifier.height(100.dp))
-                }
+            }
+            
+            // Floating Back Button
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .size(40.dp)
+                    .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                    .align(Alignment.TopStart)
+            ) {
+                Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
             }
         }
     }
