@@ -43,6 +43,9 @@ class LocalMusicViewModel(
     private val _loadedArtistTracks = MutableStateFlow<List<LocalTrack>>(emptyList())
     val loadedArtistTracks: StateFlow<List<LocalTrack>> = _loadedArtistTracks
 
+    private val _totalStorage = MutableStateFlow<Long>(0L)
+    val totalStorage: StateFlow<Long> = _totalStorage
+
     val playlists = playlistRepository.playlists // Expose playlists
     
     private val _deleteIntentSender = MutableStateFlow<IntentSender?>(null)
@@ -74,7 +77,12 @@ class LocalMusicViewModel(
                 _tracks.value = allTracks
                 _unfilteredTracks.value = allTracks
                 _albums.value = allAlbums
+                _albums.value = allAlbums
                 _artists.value = allArtists
+                
+                // Load storage info
+                val storage = repository.getTotalStorageSpace()
+                _totalStorage.value = storage
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
