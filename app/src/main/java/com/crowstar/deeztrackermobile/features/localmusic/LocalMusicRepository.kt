@@ -8,11 +8,24 @@ import android.os.Build
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import android.os.Environment
+import android.os.StatFs
 
 /**
  * Repository for accessing local music files using Android MediaStore API
  */
 class LocalMusicRepository(private val contentResolver: ContentResolver) {
+
+    /**
+     * Get total storage space of the device
+     */
+    suspend fun getTotalStorageSpace(): Long = withContext(Dispatchers.IO) {
+        val path = Environment.getExternalStorageDirectory()
+        val stat = StatFs(path.path)
+        val blockSize = stat.blockSizeLong
+        val totalBlocks = stat.blockCountLong
+        totalBlocks * blockSize
+    }
 
     /**
      * Get all music tracks from device storage

@@ -86,6 +86,7 @@ fun LocalMusicScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val selectedView by viewModel.selectedView.collectAsState()
     val playlists by viewModel.playlists.collectAsState()
+    val totalStorage by viewModel.totalStorage.collectAsState()
     
     val context = LocalContext.current
     val localMusicTitle = stringResource(R.string.local_music_title)
@@ -418,6 +419,7 @@ fun LocalMusicScreen(
                         onShare = { track -> shareTrack(track) },
                         onDelete = { track -> viewModel.requestDeleteTrack(track) },
                         onAddToPlaylist = { track -> trackForPlaylist = track },
+                        totalStorage = totalStorage,
                         contentPadding = contentPadding
                     )
                     1 -> LocalAlbumsGrid(albums, albumsGridState, onAlbumClick, contentPadding)
@@ -454,6 +456,7 @@ fun LocalTracksList(
     onShare: (LocalTrack) -> Unit,
     onDelete: (LocalTrack) -> Unit,
     onAddToPlaylist: (LocalTrack) -> Unit,
+    totalStorage: Long,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     val scope = rememberCoroutineScope()
@@ -493,6 +496,9 @@ fun LocalTracksList(
                 Spacer(modifier = Modifier.width(12.dp))
                 
                 // Simple visual bar representation
+                val totalSize = tracks.sumOf { it.size }
+                val progress = if (totalStorage > 0) totalSize.toFloat() / totalStorage.toFloat() else 0f
+                
                 Box(
                     modifier = Modifier
                         .width(100.dp)
@@ -502,7 +508,7 @@ fun LocalTracksList(
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.4f) // Static 40% for demo
+                            .fillMaxWidth(progress.coerceIn(0.01f, 1f)) // Ensure at least a tiny sliver is visible if > 0
                             .fillMaxHeight()
                             .background(Primary)
                     )
@@ -510,7 +516,6 @@ fun LocalTracksList(
                 
                 Spacer(modifier = Modifier.width(8.dp))
                 
-                val totalSize = tracks.sumOf { it.size }
                 val sizeGb = totalSize / (1024.0 * 1024.0 * 1024.0)
                 Text(
                     text = stringResource(R.string.stats_storage_format, sizeGb),
