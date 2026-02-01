@@ -33,6 +33,15 @@ fun AlphabeticalFastScroller(
     var lastSelectedLetter by remember { mutableStateOf<Char?>(null) }
     var isDragging by remember { mutableStateOf(false) }
     
+    // Sync internal state with external selectedLetter (from manual scrolling)
+    // Only update when not dragging to avoid conflicts with user interaction
+    LaunchedEffect(selectedLetter, isDragging) {
+        if (!isDragging && selectedLetter != null) {
+            currentlySelectedLetter = selectedLetter
+            lastSelectedLetter = selectedLetter
+        }
+    }
+    
     // Animate opacity instead of visibility to avoid size changes
     val popupAlpha by animateFloatAsState(
         targetValue = if (isDragging) 1f else 0f,
