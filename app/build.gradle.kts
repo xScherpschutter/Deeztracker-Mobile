@@ -22,10 +22,16 @@ android {
 
     signingConfigs {
         create("release") {
+            val keystorePropertiesFile = rootProject.file("keystore.properties")
+            val keystoreProperties = java.util.Properties()
+            if (keystorePropertiesFile.exists()) {
+                keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+            }
+
             storeFile = file("../deeztracker.jks")
-            storePassword = "187781"
-            keyAlias = "deeztracker_key"
-            keyPassword = "187781"
+            storePassword = keystoreProperties["storePassword"] as String? ?: System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = keystoreProperties["keyAlias"] as String? ?: System.getenv("KEY_ALIAS")
+            keyPassword = keystoreProperties["keyPassword"] as String? ?: System.getenv("KEY_PASSWORD")
         }
     }
 

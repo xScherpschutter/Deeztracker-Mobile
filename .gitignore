@@ -85,3 +85,4 @@ Thumbs.db
 
 # Rust
 target/
+keystore.properties
