@@ -39,6 +39,8 @@ fun LocalPlaylistDetailScreen(
     onPlayPlaylist: () -> Unit,
     onShufflePlaylist: () -> Unit,
     onRemoveTrack: (LocalTrack) -> Unit,
+    onShareTrack: (LocalTrack) -> Unit,
+    onEditTrack: (LocalTrack) -> Unit,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     // Filter tracks belonging to this playlist
@@ -131,10 +133,10 @@ fun LocalPlaylistDetailScreen(
                 LocalTrackItem(
                     track = track,
                     onClick = { onTrackClick(track) },
-                    onShare = { },
+                    onShare = { onShareTrack(track) },
                     onDelete = { onRemoveTrack(track) },
-                    onEdit = { },
-                    onAddToPlaylist = { },
+                    onEdit = { onEditTrack(track) },
+                    onAddToPlaylist = null,
                     deleteLabel = stringResource(R.string.action_remove)
                 )
             }

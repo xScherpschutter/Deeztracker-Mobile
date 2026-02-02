@@ -264,6 +264,8 @@ fun LocalMusicScreen(
                         }
                     },
                     onRemoveTrack = { track -> viewModel.removeTrackFromPlaylist(selectedPlaylist, track) },
+                    onShareTrack = { track -> shareTrack(track) },
+                    onEditTrack = { track -> trackToEdit = track },
                     contentPadding = contentPadding
                 )
             }
@@ -745,7 +747,7 @@ fun LocalTrackItem(
     onShare: () -> Unit,
     onDelete: () -> Unit,
     onEdit: () -> Unit,
-    onAddToPlaylist: () -> Unit,
+    onAddToPlaylist: (() -> Unit)? = null,
     onClick: () -> Unit,
     deleteLabel: String = stringResource(R.string.action_delete)
 ) {
@@ -848,13 +850,15 @@ fun LocalTrackItem(
                         onShare()
                     }
                 )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_add_to_playlist), color = Color.White) },
-                    onClick = {
-                        showMenu = false
-                        onAddToPlaylist()
-                    }
-                )
+                if (onAddToPlaylist != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_add_to_playlist), color = Color.White) },
+                        onClick = {
+                            showMenu = false
+                            onAddToPlaylist()
+                        }
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_details), color = Color.White) },
                     onClick = { 
