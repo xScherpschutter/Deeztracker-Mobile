@@ -23,6 +23,7 @@
             android:exported="true"
             android:label="@string/app_name"
             android:screenOrientation="portrait"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.DeeztrackerMobile.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
