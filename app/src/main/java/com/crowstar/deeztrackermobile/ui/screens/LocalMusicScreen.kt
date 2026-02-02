@@ -81,7 +81,7 @@ fun LocalMusicScreen(
     onImportPlaylist: () -> Unit,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: LocalMusicViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
-        factory = LocalMusicViewModelFactory(LocalContext.current)
+        factory = LocalMusicViewModel.LocalMusicViewModelFactory(LocalContext.current)
     )
 ) {
     val tracks by viewModel.tracks.collectAsState()

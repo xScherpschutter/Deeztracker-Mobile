@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import android.content.IntentSender
+import android.content.Context
+import androidx.lifecycle.ViewModelProvider
+import com.crowstar.deeztrackermobile.features.player.PlayerController
 
 class LocalMusicViewModel(
     private val repository: LocalMusicRepository,
@@ -203,5 +206,17 @@ class LocalMusicViewModel(
 
     fun onDeleteSuccess() {
         loadMusic()
+    }
+    class LocalMusicViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(LocalMusicViewModel::class.java)) {
+                val repository = LocalMusicRepository(context.contentResolver)
+                // Use singleton repository from PlayerController to ensure sync
+                val playlistRepository = PlayerController.getInstance(context).playlistRepository
+                return LocalMusicViewModel(repository, playlistRepository) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
+        }
     }
 }

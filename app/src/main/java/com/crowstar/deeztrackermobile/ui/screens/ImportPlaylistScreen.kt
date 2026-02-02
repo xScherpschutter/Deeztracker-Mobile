@@ -25,7 +25,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.crowstar.deeztrackermobile.ui.screens.LocalMusicViewModel
-import com.crowstar.deeztrackermobile.ui.screens.LocalMusicViewModelFactory
 import com.crowstar.deeztrackermobile.features.download.DownloadManager
 import com.crowstar.deeztrackermobile.features.localmusic.LocalMusicRepository
 import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
@@ -54,7 +53,7 @@ fun ImportPlaylistScreen(
     // Services
     val rustService = remember { RustDeezerService(context) }
     val viewModel: LocalMusicViewModel = viewModel(
-        factory = LocalMusicViewModelFactory(context)
+        factory = LocalMusicViewModel.LocalMusicViewModelFactory(context)
     )
     val localRepo = remember { LocalMusicRepository(context.contentResolver) }
     val downloadManager = remember { DownloadManager.getInstance(context) }
