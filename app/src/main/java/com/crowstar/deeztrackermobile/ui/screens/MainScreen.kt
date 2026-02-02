@@ -129,7 +129,7 @@ fun MainScreen(
         
         // For 'library', 'search', 'downloads' we want content to go behind the bottom bars, so 0.dp container padding.
         // For others, if we want them to stop *above* the bars, we use floatingUIHeight.
-        val containerBottomPadding = if (currentRoute in listOf("library", "search", "downloads", "player")) 0.dp else floatingUIHeight + 16.dp // Add a bit of buffer if not transparent
+        val containerBottomPadding = if (currentRoute in listOf("library", "search", "downloads", "settings", "player")) 0.dp else floatingUIHeight + 16.dp // Add a bit of buffer if not transparent
 
         Box(modifier = Modifier.fillMaxSize().padding(bottom = containerBottomPadding)) {
             MainNavigation(
@@ -141,7 +141,7 @@ fun MainScreen(
                 onLogout = onLogout,
                 playerController = playerController,
                 safePopBackStack = safePopBackStack,
-                bottomContentPadding = if (currentRoute in listOf("library", "search", "downloads")) floatingUIHeight + 8.dp else 0.dp // Pass padding to list screens
+                bottomContentPadding = if (currentRoute in listOf("library", "search", "downloads", "settings")) floatingUIHeight + 8.dp else 0.dp // Pass padding to list screens
             )
         }
         
@@ -322,7 +322,12 @@ fun MainNavigation(
                 contentPadding = bottomContentPadding
             ) 
         }
-        composable("settings") { SettingsScreen(onLogout = onLogout) }
+        composable("settings") { 
+            SettingsScreen(
+                onLogout = onLogout,
+                contentPadding = bottomContentPadding
+            ) 
+        }
         
         // Internal Dialog/Detail Routes
         composable(

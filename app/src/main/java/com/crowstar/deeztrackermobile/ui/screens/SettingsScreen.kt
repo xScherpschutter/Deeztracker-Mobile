@@ -4,6 +4,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -35,6 +37,7 @@ import uniffi.rusteer.DownloadQuality
 @Composable
 fun SettingsScreen(
     onLogout: () -> Unit,
+    contentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: SettingsViewModel = viewModel()
 ) {
     val audioQuality by viewModel.audioQuality.collectAsState()
@@ -69,171 +72,188 @@ fun SettingsScreen(
             )
         },
         containerColor = BackgroundDark
-    ) { padding ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp)
         ) {
-            
-            // Audio Quality Setting
-            Text(
-                text = stringResource(R.string.settings_audio_header),
-                color = Primary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            SettingItem(
-                title = stringResource(R.string.settings_audio_quality_title),
-                value = audioQuality.name,
-                onClick = { showQualityDropdown = true }
-            ) {
-                DropdownMenu(
-                    expanded = showQualityDropdown,
-                    onDismissRequest = { showQualityDropdown = false },
-                    modifier = Modifier.background(SurfaceDark)
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp + contentPadding)
                 ) {
-                    DownloadQuality.values().forEach { quality ->
-                        DropdownMenuItem(
-                            text = { Text(quality.name, color = Color.White) },
-                            onClick = {
-                                viewModel.setAudioQuality(quality)
-                                showQualityDropdown = false
-                            }
+            
+                    // Audio Quality Setting
+                    item {
+                        Text(
+                            text = stringResource(R.string.settings_audio_header),
+                            color = Primary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 8.dp)
                         )
+
+                        SettingItem(
+                            title = stringResource(R.string.settings_audio_quality_title),
+                            value = audioQuality.name,
+                            onClick = { showQualityDropdown = true }
+                        ) {
+                            DropdownMenu(
+                                expanded = showQualityDropdown,
+                                onDismissRequest = { showQualityDropdown = false },
+                                modifier = Modifier.background(SurfaceDark)
+                            ) {
+                                DownloadQuality.values().forEach { quality ->
+                                    DropdownMenuItem(
+                                        text = { Text(quality.name, color = Color.White) },
+                                        onClick = {
+                                            viewModel.setAudioQuality(quality)
+                                            showQualityDropdown = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+            
+                    // Premium Warning
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = TextGray,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = stringResource(R.string.settings_premium_warning),
+                                color = TextGray,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    // Language Setting
+                    item {
+                        Text(
+                            text = stringResource(R.string.settings_general_header),
+                            color = Primary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        SettingItem(
+                            title = stringResource(R.string.settings_language_title),
+                            value = language,
+                            onClick = { showLanguageDropdown = true }
+                        ) {
+                            DropdownMenu(
+                                expanded = showLanguageDropdown,
+                                onDismissRequest = { showLanguageDropdown = false },
+                                modifier = Modifier.background(SurfaceDark)
+                            ) {
+                                LanguageHelper.getAllDisplayNames().forEach { lang ->
+                                    DropdownMenuItem(
+                                        text = { Text(lang, color = Color.White) },
+                                        onClick = {
+                                            viewModel.setLanguage(lang)
+                                            showLanguageDropdown = false
+                                            (context as? android.app.Activity)?.recreate()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    // Storage Setting
+                    item {
+                        Text(
+                            text = stringResource(R.string.settings_storage_header),
+                            color = Primary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        SettingItem(
+                            title = stringResource(R.string.settings_download_location_title),
+                            value = if (downloadLocation == "MUSIC") stringResource(R.string.settings_location_music) else stringResource(R.string.settings_location_downloads),
+                            onClick = { showLocationDropdown = true }
+                        ) {
+                            DropdownMenu(
+                                expanded = showLocationDropdown,
+                                onDismissRequest = { showLocationDropdown = false },
+                                modifier = Modifier.background(SurfaceDark)
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.settings_location_music), color = Color.White) },
+                                    onClick = {
+                                        viewModel.setDownloadLocation("MUSIC")
+                                        showLocationDropdown = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.settings_location_downloads), color = Color.White) },
+                                    onClick = {
+                                        viewModel.setDownloadLocation("DOWNLOADS")
+                                        showLocationDropdown = false
+                                    }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    // Permissions Setting
+                    item {
+                        Text(
+                            text = stringResource(R.string.settings_permissions_header),
+                            color = Primary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        PermissionSettingItem()
+
+                        Spacer(modifier = Modifier.height(32.dp))
+                    }
+
+                    // Logout Button
+                    item {
+                        Button(
+                            onClick = {
+                                viewModel.logout()
+                                onLogout()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFCF6679) // Reddish color for logout
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Logout, contentDescription = null, tint = Color.White)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.settings_logout), color = Color.White, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Premium Warning
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    tint = TextGray,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = stringResource(R.string.settings_premium_warning),
-                    color = TextGray,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Language Setting
-            Text(
-                text = stringResource(R.string.settings_general_header),
-                color = Primary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            SettingItem(
-                title = stringResource(R.string.settings_language_title),
-                value = language,
-                onClick = { showLanguageDropdown = true }
-            ) {
-                DropdownMenu(
-                    expanded = showLanguageDropdown,
-                    onDismissRequest = { showLanguageDropdown = false },
-                    modifier = Modifier.background(SurfaceDark)
-                ) {
-                    LanguageHelper.getAllDisplayNames().forEach { lang ->
-                        DropdownMenuItem(
-                            text = { Text(lang, color = Color.White) },
-                            onClick = {
-                                viewModel.setLanguage(lang)
-                                showLanguageDropdown = false
-                                (context as? android.app.Activity)?.recreate()
-                            }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Storage Setting
-            Text(
-                text = stringResource(R.string.settings_storage_header),
-                color = Primary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            SettingItem(
-                title = stringResource(R.string.settings_download_location_title),
-                value = if (downloadLocation == "MUSIC") stringResource(R.string.settings_location_music) else stringResource(R.string.settings_location_downloads),
-                onClick = { showLocationDropdown = true }
-            ) {
-                DropdownMenu(
-                    expanded = showLocationDropdown,
-                    onDismissRequest = { showLocationDropdown = false },
-                    modifier = Modifier.background(SurfaceDark)
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.settings_location_music), color = Color.White) },
-                        onClick = {
-                            viewModel.setDownloadLocation("MUSIC")
-                            showLocationDropdown = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.settings_location_downloads), color = Color.White) },
-                        onClick = {
-                            viewModel.setDownloadLocation("DOWNLOADS")
-                            showLocationDropdown = false
-                        }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Permissions Setting
-            Text(
-                text = stringResource(R.string.settings_permissions_header),
-                color = Primary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            PermissionSettingItem()
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Logout Button
-            Button(
-                onClick = {
-                    viewModel.logout()
-                    onLogout()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFCF6679) // Reddish color for logout
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Default.Logout, contentDescription = null, tint = Color.White)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.settings_logout), color = Color.White, fontWeight = FontWeight.Bold)
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
