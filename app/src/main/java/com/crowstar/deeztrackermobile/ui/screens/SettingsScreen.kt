@@ -27,6 +27,7 @@ import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.utils.LanguageHelper
+import com.crowstar.deeztrackermobile.ui.utils.PermissionHelper
 import com.crowstar.deeztrackermobile.R
 import uniffi.rusteer.DownloadQuality
 
@@ -198,6 +199,19 @@ fun SettingsScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Permissions Setting
+            Text(
+                text = stringResource(R.string.settings_permissions_header),
+                color = Primary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            PermissionSettingItem()
+
             Spacer(modifier = Modifier.weight(1f))
 
             // Logout Button
@@ -250,5 +264,66 @@ fun SettingItem(
             }
         }
         dropdownContent()
+    }
+}
+
+@Composable
+fun PermissionSettingItem() {
+    val context = LocalContext.current
+    val hasPermission = remember { mutableStateOf(PermissionHelper.hasAllFilesAccess()) }
+    
+    // Update permission status when app resumes
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        val listener = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                hasPermission.value = PermissionHelper.hasAllFilesAccess()
+            }
+        }
+        val lifecycle = (context as? androidx.lifecycle.LifecycleOwner)?.lifecycle
+        lifecycle?.addObserver(listener)
+        onDispose {
+            lifecycle?.removeObserver(listener)
+        }
+    }
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(SurfaceDark)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_all_files_access),
+                color = Color.White,
+                fontSize = 16.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = if (hasPermission.value) {
+                    stringResource(R.string.settings_permission_granted)
+                } else {
+                    stringResource(R.string.settings_permission_not_granted)
+                },
+                color = if (hasPermission.value) androidx.compose.ui.graphics.Color(0xFF4CAF50) else TextGray,
+                fontSize = 12.sp
+            )
+        }
+        
+        if (!hasPermission.value) {
+            Button(
+                onClick = { PermissionHelper.requestAllFilesAccess(context) },
+                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_grant_permission),
+                    fontSize = 14.sp
+                )
+            }
+        }
     }
 }

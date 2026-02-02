@@ -52,8 +52,13 @@
     <string name="settings_logout">Log Out</string>
     <string name="settings_storage_header">STORAGE</string>
     <string name="settings_download_location_title">Download Location</string>
-    <string name="settings_location_music">Music</string>
-    <string name="settings_location_downloads">Downloads</string>
+    <string name="settings_location_music">Music Folder</string>
+    <string name="settings_location_downloads">Downloads Folder</string>
+    <string name="settings_permissions_header">PERMISSIONS</string>
+    <string name="settings_all_files_access">All Files Access</string>
+    <string name="settings_permission_granted">✓ Granted</string>
+    <string name="settings_permission_not_granted">Required to edit music metadata</string>
+    <string name="settings_grant_permission">Grant</string>
 
     <!-- General / Common -->
     <string name="action_refresh">Refresh</string>
@@ -61,6 +66,8 @@
     <string name="action_share">Share</string>
     <string name="action_details">Details</string>
     <string name="action_delete">Delete</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_save">Save</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_create">Create</string>
     <string name="action_add_to_playlist">Add to playlist</string>
@@ -84,6 +91,18 @@
     <string name="details_path_label">Path:</string>
     <string name="details_format_label">Format</string>
     <string name="details_bitrate_label">Bitrate</string>
+
+    <!-- Edit Dialog -->
+    <string name="edit_track_title">Edit Metadata</string>
+    <string name="edit_label_title">Title</string>
+    <string name="edit_label_artist">Artist</string>
+    <string name="edit_label_album">Album</string>
+    <string name="edit_label_year">Year</string>
+    <string name="edit_error_saving">Failed to save metadata</string>
+    <string name="edit_success">Metadata saved successfully</string>
+    <string name="edit_error_permission">Failed to request permission</string>
+    <string name="edit_error_permission_denied">Permission denied. Cannot edit file</string>
+
 
     <!-- Local Music Screen -->
     <string name="local_music_title">Local Music</string>
