@@ -41,7 +41,7 @@ fun LocalAlbumDetailScreen(
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
     onPlayAlbum: (List<LocalTrack>) -> Unit,
     viewModel: LocalMusicViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
-        factory = LocalMusicViewModelFactory(LocalContext.current)
+        factory = LocalMusicViewModel.LocalMusicViewModelFactory(LocalContext.current)
     )
 ) {
     val albums by viewModel.albums.collectAsState()
