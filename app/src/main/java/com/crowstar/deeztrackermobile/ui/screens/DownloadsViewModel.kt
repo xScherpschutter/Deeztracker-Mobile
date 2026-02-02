@@ -16,7 +16,8 @@ import android.os.Environment
 
 class DownloadsViewModel(
     private val application: Application,
-    private val repository: LocalMusicRepository
+    private val repository: LocalMusicRepository,
+    private val playlistRepository: com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylistRepository
 ) : AndroidViewModel(application) {
 
     private val _tracks = MutableStateFlow<List<LocalTrack>>(emptyList())
@@ -30,8 +31,13 @@ class DownloadsViewModel(
 
     private var allDownloadedTracks: List<LocalTrack> = emptyList()
 
+    val playlists = playlistRepository.playlists
+
     init {
         loadDownloadedMusic()
+        viewModelScope.launch {
+             playlistRepository.loadPlaylists()
+        }
     }
 
     fun loadDownloadedMusic() {
@@ -52,6 +58,18 @@ class DownloadsViewModel(
             } finally {
                 _isLoading.value = false
             }
+        }
+    }
+
+    fun createPlaylist(name: String) {
+        viewModelScope.launch {
+            playlistRepository.createPlaylist(name)
+        }
+    }
+
+    fun addTrackToPlaylist(playlist: com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist, track: LocalTrack) {
+        viewModelScope.launch {
+            playlistRepository.addTrackToPlaylist(playlist.id, track.id)
         }
     }
 
@@ -94,7 +112,8 @@ class DownloadsViewModelFactory(private val context: android.content.Context) : 
             @Suppress("UNCHECKED_CAST")
             return DownloadsViewModel(
                 context.applicationContext as Application,
-                LocalMusicRepository(context.contentResolver)
+                LocalMusicRepository(context.contentResolver),
+                com.crowstar.deeztrackermobile.features.player.PlayerController.getInstance(context).playlistRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

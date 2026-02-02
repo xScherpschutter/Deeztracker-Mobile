@@ -68,6 +68,7 @@ fun DownloadsScreen(
     )
 ) {
     val tracks by viewModel.tracks.collectAsState()
+    val playlists by viewModel.playlists.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val deleteIntentSender by viewModel.deleteIntentSender.collectAsState()
     val context = LocalContext.current
@@ -115,7 +116,9 @@ fun DownloadsScreen(
         }
     }
     
-    // Details Dialog State
+    // Playlist & Details State
+    var trackForPlaylist by remember { mutableStateOf<LocalTrack?>(null) }
+    var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var trackDetails by remember { mutableStateOf<LocalTrack?>(null) }
     
     // Edit Metadata State
@@ -165,25 +168,33 @@ fun DownloadsScreen(
     }
 
     if (trackDetails != null) {
-        AlertDialog(
-            onDismissRequest = { trackDetails = null },
-            title = { Text(stringResource(R.string.details_title), color = Color.White) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("${stringResource(R.string.details_title_label)} ${trackDetails?.title}", color = TextGray)
-                    Text("${stringResource(R.string.details_artist_label)} ${trackDetails?.artist}", color = TextGray)
-                    Text("${stringResource(R.string.details_album_label)} ${trackDetails?.album}", color = TextGray)
-                    Text("${stringResource(R.string.details_duration_label)} ${formatTime(trackDetails?.duration ?: 0)}", color = TextGray)
-                    Text("${stringResource(R.string.details_size_label)} ${Formatter.formatFileSize(context, trackDetails?.size ?: 0)}", color = TextGray)
-                    Text("${stringResource(R.string.details_path_label)} ${trackDetails?.filePath}", color = TextGray)
+        com.crowstar.deeztrackermobile.ui.components.TrackDetailsDialog(
+            track = trackDetails!!,
+            onDismiss = { trackDetails = null }
+        )
+    }
+
+    if (trackForPlaylist != null) {
+        com.crowstar.deeztrackermobile.ui.components.AddToPlaylistBottomSheet(
+            playlists = playlists,
+            onDismiss = { trackForPlaylist = null },
+            onPlaylistClick = { playlist ->
+                trackForPlaylist?.let { track ->
+                    viewModel.addTrackToPlaylist(playlist, track)
                 }
+                trackForPlaylist = null
             },
-            confirmButton = {
-                TextButton(onClick = { trackDetails = null }) {
-                    Text(stringResource(R.string.action_close), color = Primary)
-                }
-            },
-            containerColor = SurfaceDark
+            onCreateNewPlaylist = { showCreatePlaylistDialog = true }
+        )
+    }
+
+    if (showCreatePlaylistDialog) {
+        com.crowstar.deeztrackermobile.ui.components.CreatePlaylistDialog(
+            onDismiss = { showCreatePlaylistDialog = false },
+            onCreate = { newPlaylistName ->
+                viewModel.createPlaylist(newPlaylistName)
+                showCreatePlaylistDialog = false
+            }
         )
     }
 
@@ -258,7 +269,6 @@ fun DownloadsScreen(
                     }
                 }
             } else {
-                val scope = rememberCoroutineScope()
                 
                 // Group tracks by first letter and create index map
                 val (letterIndexMap, currentLetter) = remember(tracks) {
@@ -287,7 +297,8 @@ fun DownloadsScreen(
                                 onDelete = { viewModel.deleteTrack(track) },
                                 onShare = { shareTrack(track) },
                                 onEdit = { trackToEdit = track },
-                                onDetails = { trackDetails = track }
+                                onDetails = { trackDetails = track },
+                                onAddToPlaylist = { trackForPlaylist = track }
                             )
                         }
                     }
@@ -341,7 +352,8 @@ fun DownloadedTrackItem(
     onDelete: () -> Unit,
     onShare: () -> Unit,
     onEdit: () -> Unit,
-    onDetails: () -> Unit
+    onDetails: () -> Unit,
+    onAddToPlaylist: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -394,6 +406,13 @@ fun DownloadedTrackItem(
                 onDismissRequest = { showMenu = false },
                 modifier = Modifier.background(SurfaceDark)
             ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_add_to_playlist), color = Color.White) },
+                    onClick = {
+                        showMenu = false
+                        onAddToPlaylist()
+                    }
+                )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_details), color = Color.White) },
                     onClick = { 
