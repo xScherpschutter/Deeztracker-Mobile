@@ -114,6 +114,7 @@ fun LocalPlaylistDetailScreen(
                         onClick = { onTrackClick(track) },
                         onShare = { },
                         onDelete = { onRemoveTrack(track) },
+                        onEdit = { },
                         onAddToPlaylist = { },
                         deleteLabel = stringResource(R.string.action_remove)
                     )

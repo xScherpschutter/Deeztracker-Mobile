@@ -52,8 +52,13 @@
     <string name="settings_logout">Cerrar Sesión</string>
     <string name="settings_storage_header">ALMACENAMIENTO</string>
     <string name="settings_download_location_title">Ubicación de descarga</string>
-    <string name="settings_location_music">Música</string>
-    <string name="settings_location_downloads">Descargas</string>
+    <string name="settings_location_music">Carpeta de Música</string>
+    <string name="settings_location_downloads">Carpeta de Descargas</string>
+    <string name="settings_permissions_header">PERMISOS</string>
+    <string name="settings_all_files_access">Acceso a Todos los Archivos</string>
+    <string name="settings_permission_granted">✓ Concedido</string>
+    <string name="settings_permission_not_granted">Requerido para editar metadatos de música</string>
+    <string name="settings_grant_permission">Conceder</string>
     
     <!-- General / Common -->
     <string name="action_refresh">Actualizar</string>
@@ -61,6 +66,8 @@
     <string name="action_share">Compartir</string>
     <string name="action_details">Detalles</string>
     <string name="action_delete">Eliminar</string>
+    <string name="action_edit">Editar</string>
+    <string name="action_save">Guardar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_create">Crear</string>
     <string name="action_add_to_playlist">Añadir a playlist</string>
@@ -84,6 +91,18 @@
     <string name="details_path_label">Ruta:</string>
     <string name="details_format_label">Formato</string>
     <string name="details_bitrate_label">Bitrate</string>
+
+    <!-- Edit Dialog -->
+    <string name="edit_track_title">Editar Metadatos</string>
+    <string name="edit_label_title">Título</string>
+    <string name="edit_label_artist">Artista</string>
+    <string name="edit_label_album">Álbum</string>
+    <string name="edit_label_year">Año</string>
+    <string name="edit_error_saving">Error al guardar metadatos</string>
+    <string name="edit_success">Metadatos guardados correctamente</string>
+    <string name="edit_error_permission">Error al solicitar permiso</string>
+    <string name="edit_error_permission_denied">Permiso denegado. No se puede editar el archivo</string>
+
 
     <!-- Local Music Screen -->
     <string name="local_music_title">Música Local</string>

@@ -3,6 +3,8 @@ package com.crowstar.deeztrackermobile.ui.screens
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
@@ -64,7 +66,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.launch
 import com.crowstar.deeztrackermobile.ui.components.AlphabeticalFastScroller
 import com.crowstar.deeztrackermobile.ui.components.MarqueeText
-
+import com.crowstar.deeztrackermobile.features.localmusic.MetadataEditor
+import com.crowstar.deeztrackermobile.features.localmusic.TrackMetadata
+import com.crowstar.deeztrackermobile.ui.components.EditTrackDialog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -143,6 +149,53 @@ fun LocalMusicScreen(
     var trackForPlaylist by remember { mutableStateOf<LocalTrack?>(null) }
     var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
+
+    // Edit Metadata State
+    var trackToEdit by remember { mutableStateOf<LocalTrack?>(null) }
+    var metadataToEdit by remember { mutableStateOf<TrackMetadata?>(null) }
+    val metadataEditor = remember { MetadataEditor(context) }
+    val scope = rememberCoroutineScope()
+
+    if (trackToEdit != null && metadataToEdit == null) {
+        LaunchedEffect(trackToEdit) {
+            withContext(Dispatchers.IO) {
+                metadataToEdit = metadataEditor.readMetadata(trackToEdit!!.filePath)
+            }
+        }
+    }
+
+    if (trackToEdit != null && metadataToEdit != null) {
+        EditTrackDialog(
+            initialMetadata = metadataToEdit!!,
+            onDismiss = { 
+                trackToEdit = null
+                metadataToEdit = null
+            },
+            onSave = { newMetadata ->
+                val trackPath = trackToEdit!!.filePath
+                // Close dialog immediately
+                trackToEdit = null
+                metadataToEdit = null
+                
+                // Save and refresh in background
+                scope.launch(Dispatchers.IO) {
+                    val success = metadataEditor.writeMetadata(
+                        trackPath, 
+                        newMetadata,
+                        onScanComplete = { viewModel.loadMusic() }
+                    )
+                    withContext(Dispatchers.Main) {
+                        if (success) {
+                            Toast.makeText(context, R.string.edit_success, Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, R.string.edit_error_saving, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        )
+
+    }
 
     var hasPermission by remember {
         mutableStateOf(
@@ -418,6 +471,7 @@ fun LocalMusicScreen(
                         onTrackClick = { track, list -> onTrackClick(track, list, localMusicTitle) },
                         onShare = { track -> shareTrack(track) },
                         onDelete = { track -> viewModel.requestDeleteTrack(track) },
+                        onEdit = { track -> trackToEdit = track },
                         onAddToPlaylist = { track -> trackForPlaylist = track },
                         totalStorage = totalStorage,
                         contentPadding = contentPadding
@@ -455,6 +509,7 @@ fun LocalTracksList(
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
     onShare: (LocalTrack) -> Unit,
     onDelete: (LocalTrack) -> Unit,
+    onEdit: (LocalTrack) -> Unit,
     onAddToPlaylist: (LocalTrack) -> Unit,
     totalStorage: Long,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp
@@ -534,6 +589,7 @@ fun LocalTracksList(
                         track = track,
                         onShare = { onShare(track) },
                         onDelete = { onDelete(track) },
+                        onEdit = { onEdit(track) },
                         onAddToPlaylist = { onAddToPlaylist(track) },
                         onClick = { onTrackClick(track, tracks) }
                     )
@@ -720,6 +776,7 @@ fun LocalTrackItem(
     track: LocalTrack,
     onShare: () -> Unit,
     onDelete: () -> Unit,
+    onEdit: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onClick: () -> Unit,
     deleteLabel: String = stringResource(R.string.action_delete)
@@ -835,6 +892,13 @@ fun LocalTrackItem(
                     onClick = { 
                         showMenu = false
                         showDetails = true
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_edit), color = Color.White) },
+                    onClick = { 
+                        showMenu = false
+                        onEdit()
                     }
                 )
                 DropdownMenuItem(

@@ -1,8 +1,12 @@
 package com.crowstar.deeztrackermobile.ui.screens
 
+import android.app.Activity
 import android.text.format.Formatter
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.IntentSenderRequest
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,7 +45,17 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.crowstar.deeztrackermobile.ui.components.AlphabeticalFastScroller
 import com.crowstar.deeztrackermobile.ui.components.MarqueeText
+import com.crowstar.deeztrackermobile.features.localmusic.MetadataEditor
+import com.crowstar.deeztrackermobile.features.localmusic.TrackMetadata
+import com.crowstar.deeztrackermobile.ui.components.EditTrackDialog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import androidx.core.content.FileProvider
+import java.io.File
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,6 +69,7 @@ fun DownloadsScreen(
 ) {
     val tracks by viewModel.tracks.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val deleteIntentSender by viewModel.deleteIntentSender.collectAsState()
     val context = LocalContext.current
     
     // Search Query State
@@ -83,8 +98,6 @@ fun DownloadsScreen(
         }
     }
 
-    val deleteIntentSender by viewModel.deleteIntentSender.collectAsState()
-    
     val deleteLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
@@ -104,6 +117,52 @@ fun DownloadsScreen(
     
     // Details Dialog State
     var trackDetails by remember { mutableStateOf<LocalTrack?>(null) }
+    
+    // Edit Metadata State
+    var trackToEdit by remember { mutableStateOf<LocalTrack?>(null) }
+    var metadataToEdit by remember { mutableStateOf<TrackMetadata?>(null) }
+    val metadataEditor = remember { MetadataEditor(context) }
+    val scope = rememberCoroutineScope()
+
+    if (trackToEdit != null && metadataToEdit == null) {
+        LaunchedEffect(trackToEdit) {
+            withContext(Dispatchers.IO) {
+                metadataToEdit = metadataEditor.readMetadata(trackToEdit!!.filePath)
+            }
+        }
+    }
+
+    if (trackToEdit != null && metadataToEdit != null) {
+        EditTrackDialog(
+            initialMetadata = metadataToEdit!!,
+            onDismiss = { 
+                trackToEdit = null
+                metadataToEdit = null
+            },
+            onSave = { newMetadata ->
+                val trackPath = trackToEdit!!.filePath
+                // Close dialog immediately
+                trackToEdit = null
+                metadataToEdit = null
+                
+                // Save and refresh in background
+                scope.launch(Dispatchers.IO) {
+                    val success = metadataEditor.writeMetadata(
+                        trackPath, 
+                        newMetadata,
+                        onScanComplete = { viewModel.loadDownloadedMusic() }
+                    )
+                    withContext(Dispatchers.Main) {
+                        if (success) {
+                            Toast.makeText(context, R.string.edit_success, Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, R.string.edit_error_saving, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        )
+    }
 
     if (trackDetails != null) {
         AlertDialog(
@@ -227,6 +286,7 @@ fun DownloadsScreen(
                                 onClick = { onTrackClick(track, tracks) },
                                 onDelete = { viewModel.deleteTrack(track) },
                                 onShare = { shareTrack(track) },
+                                onEdit = { trackToEdit = track },
                                 onDetails = { trackDetails = track }
                             )
                         }
@@ -280,6 +340,7 @@ fun DownloadedTrackItem(
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onShare: () -> Unit,
+    onEdit: () -> Unit,
     onDetails: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -345,6 +406,13 @@ fun DownloadedTrackItem(
                     onClick = { 
                         showMenu = false
                         onShare()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_edit), color = Color.White) },
+                    onClick = { 
+                        showMenu = false
+                        onEdit()
                     }
                 )
                 DropdownMenuItem(
