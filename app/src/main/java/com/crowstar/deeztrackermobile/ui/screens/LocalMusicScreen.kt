@@ -75,7 +75,6 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocalMusicScreen(
-    onBackClick: () -> Unit,
     onTrackClick: (LocalTrack, List<LocalTrack>, String?) -> Unit,
     onAlbumClick: (LocalAlbum) -> Unit,
     onArtistClick: (LocalArtist) -> Unit,
@@ -389,47 +388,15 @@ fun LocalMusicScreen(
             )
         }
 
-        if (showCreatePlaylistDialog) {
-             var newPlaylistName by remember { mutableStateOf("") }
-             AlertDialog(
-                 onDismissRequest = { showCreatePlaylistDialog = false },
-                 title = { Text(stringResource(R.string.new_playlist_title), color = Color.White) },
-                 text = {
-                     OutlinedTextField(
-                         value = newPlaylistName,
-                         onValueChange = { newPlaylistName = it },
-                         label = { Text(stringResource(R.string.new_playlist_name)) },
-                         singleLine = true,
-                         colors = TextFieldDefaults.outlinedTextFieldColors(
-                             focusedTextColor = Color.White,
-                             unfocusedTextColor = Color.White,
-                             focusedBorderColor = Primary,
-                             unfocusedBorderColor = TextGray,
-                             cursorColor = Primary
-                         )
-                     )
-                 },
-                 confirmButton = {
-                     Button(
-                         onClick = {
-                             if (newPlaylistName.isNotBlank()) {
-                                 viewModel.createPlaylist(newPlaylistName)
-                                 showCreatePlaylistDialog = false
-                             }
-                         },
-                         colors = ButtonDefaults.buttonColors(containerColor = Primary)
-                     ) {
-                         Text(stringResource(R.string.action_create))
-                     }
-                 },
-                 dismissButton = {
-                     TextButton(onClick = { showCreatePlaylistDialog = false }) {
-                         Text(stringResource(R.string.action_cancel), color = TextGray)
-                     }
-                 },
-                 containerColor = BackgroundDark
-             )
-        }
+    if (showCreatePlaylistDialog) {
+        com.crowstar.deeztrackermobile.ui.components.CreatePlaylistDialog(
+            onDismiss = { showCreatePlaylistDialog = false },
+            onCreate = { newPlaylistName ->
+                viewModel.createPlaylist(newPlaylistName)
+                showCreatePlaylistDialog = false
+            }
+        )
+    }
 
         if (!hasPermission) {
             Box(
@@ -913,36 +880,14 @@ fun LocalTrackItem(
     }
 
     if (showDetails) {
-        AlertDialog(
-            onDismissRequest = { showDetails = false },
-            title = { Text(text = stringResource(R.string.details_title), color = Color.White) },
-            text = {
-                Column {
-                    DetailRow(stringResource(R.string.details_path_label), track.filePath)
-                    DetailRow(stringResource(R.string.details_size_label), track.getFormattedSize())
-                    DetailRow(stringResource(R.string.details_format_label), track.mimeType)
-                    DetailRow(stringResource(R.string.details_bitrate_label), "Unknown") 
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showDetails = false }) {
-                    Text(stringResource(R.string.action_close), color = Primary)
-                }
-            },
-            containerColor = BackgroundDark,
-            titleContentColor = Color.White,
-            textContentColor = TextGray
+        com.crowstar.deeztrackermobile.ui.components.TrackDetailsDialog(
+            track = track,
+            onDismiss = { showDetails = false }
         )
     }
 }
 
-@Composable
-fun DetailRow(label: String, value: String) {
-    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-        Text(text = label, color = Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        Text(text = value, color = Color.White, fontSize = 14.sp)
-    }
-}
+
 
 @Composable
 fun FormatBadge(mimeType: String) {

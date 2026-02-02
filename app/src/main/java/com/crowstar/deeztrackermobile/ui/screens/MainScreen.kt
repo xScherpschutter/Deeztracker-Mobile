@@ -290,7 +290,6 @@ fun MainNavigation(
     bottomContentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     val downloadsTitle = stringResource(R.string.downloads_title)
-    val localMusicTitle = stringResource(R.string.local_music_title)
     NavHost(navController, startDestination = "library") {
         composable("search") { 
             SearchScreen(
@@ -303,7 +302,6 @@ fun MainNavigation(
         
         composable("library") { 
             LocalMusicScreen(
-                onBackClick = { /* No back action */ },
                 onTrackClick = { track, playlist, source -> 
                     playerController.playTrack(track, playlist, source = source)
                 },
