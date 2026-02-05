@@ -173,6 +173,7 @@ class MusicService : MediaLibraryService() {
                 return super.onCustomCommand(session, controller, customCommand, args)
             }
         })
+        .setBitmapLoader(CustomBitmapLoader(this))  // Use custom bitmap loader to prevent caching issues
         .setSessionActivity(
             PendingIntent.getActivity(
                 this,
