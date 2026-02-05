@@ -85,19 +85,13 @@ class MainActivity : ComponentActivity() {
                 val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
 
                 if (currentVol < maxVol) {
-                    // Let system handle normal volume up
-                    // But show our slider maybe? for consistency? 
-                    // To avoid fighting system UI, we might let system handle it
-                    // but usually users want one unified UI.
-                    // For now, let system handle normal volume, we handle boost.
-                    // If we want *custom* UI for everything, we consume all events.
-                    // Let's consume all events to show *our* UI.
                     audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, 0) // 0 flags to hide system UI?
                     showVolumeUI()
                 } else {
                     // System maxed, increase boost
-                    if (currentBoost < 1.25f) {
-                        updateBoost(currentBoost + 0.05f)
+                    if (currentBoost < 2.0f) {
+                        // Increase by 25% (0.25)
+                        updateBoost(currentBoost + 0.25f)
                     }
                     showVolumeUI()
                 }
@@ -105,9 +99,10 @@ class MainActivity : ComponentActivity() {
             return true
         } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
             if (action == KeyEvent.ACTION_DOWN) {
-                if (currentBoost > 1.0f) {
+                if (currentBoost > 1.01f) {
                     // Decrease boost first
-                    updateBoost(currentBoost - 0.05f)
+                    // Decrease by 25% (0.25)
+                    updateBoost(currentBoost - 0.25f)
                     showVolumeUI()
                 } else {
                     // Handle system volume
@@ -121,7 +116,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun updateBoost(newBoost: Float) {
-        val clamped = newBoost.coerceIn(1.0f, 1.25f)
+        val clamped = newBoost.coerceIn(1.0f, 2.0f)
         currentBoost = clamped
         PlayerController.getInstance(this).setVolume(clamped)
     }
@@ -142,15 +137,14 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun VolumeOverlay(
     isVisible: Boolean,
-    boostLevel: Float, // 1.0 to 1.25
+    boostLevel: Float, // 1.0 to 2.0
     systemVolumeRatio: Float // 0.0 to 1.0
 ) {
     AnimatedVisibility(
         visible = isVisible,
         enter = fadeIn(),
         exit = fadeOut(),
-        modifier = Modifier.fillMaxSize() // Takes full size to position content but allows clicks through if not blocking
-                                       // Actually simple Box default doesn't block clicks unless clickable.
+        modifier = Modifier.fillMaxSize()
     ) {
         Box(
             modifier = Modifier
@@ -198,13 +192,8 @@ fun VolumeOverlay(
                         .background(Color.Gray.copy(alpha = 0.3f)),
                     contentAlignment = Alignment.BottomCenter
                 ) {
-                    // Fill
-                    // If boost active, fill full + change color?
-                    // User image just shows white bar.
-                    // Let's say max height is 125%.
-                    // Height fraction = (effectivePercent / 125f)
-                    
-                    val fraction = (effectivePercent / 125f).coerceIn(0f, 1f)
+
+                    val fraction = (effectivePercent / 200f).coerceIn(0f, 1f)
                     
                     Box(
                         modifier = Modifier
