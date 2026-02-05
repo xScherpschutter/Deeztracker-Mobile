@@ -68,17 +68,10 @@ fun MiniPlayer(
                             .clip(RoundedCornerShape(8.dp))
                             .background(BackgroundDark)
                     ) {
-                        if (track.albumArtUri != null) {
-                            AsyncImage(
-                                model = track.albumArtUri,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            // Fallback
-                            Box(modifier = Modifier.fillMaxSize().background(TextGray))
-                        }
+                        com.crowstar.deeztrackermobile.ui.components.TrackArtwork(
+                            model = track.albumArtUri,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
 
                     Spacer(modifier = Modifier.width(12.dp))

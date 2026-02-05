@@ -191,7 +191,13 @@ class PlayerController(private val context: Context) {
                         .setTitle(localTrack.title)
                         .setArtist(localTrack.artist)
                         .setAlbumTitle(localTrack.album)
-                        .setArtworkUri(localTrack.albumArtUri?.let { Uri.parse(it) })
+                        .setArtworkUri(
+                            if (localTrack.albumArtUri != null && java.io.File(localTrack.albumArtUri).exists()) {
+                                Uri.parse(localTrack.albumArtUri)
+                            } else {
+                                Uri.parse("android.resource://${context.packageName}/${com.crowstar.deeztrackermobile.R.drawable.ic_app_icon}")
+                            }
+                        )
                         .build()
                 )
                 .build()

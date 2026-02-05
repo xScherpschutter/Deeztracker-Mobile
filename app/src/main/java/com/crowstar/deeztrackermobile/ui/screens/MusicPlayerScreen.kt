@@ -75,23 +75,14 @@ fun MusicPlayerScreen(
     // Background Layer
     Box(modifier = Modifier.fillMaxSize()) {
         // Blurry Background
-        if (track.albumArtUri != null) {
-            AsyncImage(
-                model = track.albumArtUri,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .blur(100.dp)
-                    .scale(1.5f),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.DarkGray)
-            )
-        }
+        com.crowstar.deeztrackermobile.ui.components.TrackArtwork(
+            model = track.albumArtUri,
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(100.dp)
+                .scale(1.5f),
+            contentScale = ContentScale.Crop
+        )
 
         // Gradient Overlay
         Box(
@@ -200,29 +191,16 @@ fun MusicPlayerScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth(0.75f) // Smaller cover art (was 0.85f)
+                                .fillMaxWidth(0.75f) 
                                 .aspectRatio(1f)
-                                .shadow(24.dp, RoundedCornerShape(20.dp)) // Softer shadow
+                                .shadow(24.dp, RoundedCornerShape(20.dp))
                                 .clip(RoundedCornerShape(20.dp))
-                                .background(Color.DarkGray)
+                                .background(Color.DarkGray) // Base background
                         ) {
-                            if (track.albumArtUri != null) {
-                                AsyncImage(
-                                    model = track.albumArtUri,
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Audiotrack,
-                                    contentDescription = null,
-                                    tint = TextGray,
-                                    modifier = Modifier
-                                        .size(64.dp)
-                                        .align(Alignment.Center)
-                                )
-                            }
+                             com.crowstar.deeztrackermobile.ui.components.TrackArtwork(
+                                model = track.albumArtUri,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
                     }
 

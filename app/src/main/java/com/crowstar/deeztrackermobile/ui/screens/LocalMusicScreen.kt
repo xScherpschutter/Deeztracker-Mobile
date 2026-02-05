@@ -642,21 +642,10 @@ fun AlbumGridItem(album: LocalAlbum, onClick: () -> Unit) {
                 .background(SurfaceDark),
             contentAlignment = Alignment.Center
         ) {
-            if (album.albumArtUri != null) {
-                AsyncImage(
-                    model = album.albumArtUri,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Icon(
-                    Icons.Default.MusicNote,
-                    contentDescription = null,
-                    tint = TextGray.copy(alpha = 0.5f),
-                    modifier = Modifier.size(48.dp)
-                )
-            }
+            com.crowstar.deeztrackermobile.ui.components.TrackArtwork(
+                model = album.albumArtUri,
+                modifier = Modifier.fillMaxSize()
+            )
         }
         Spacer(modifier = Modifier.height(8.dp))
         MarqueeText(
@@ -772,20 +761,10 @@ fun LocalTrackItem(
                 .background(SurfaceDark),
             contentAlignment = Alignment.Center
         ) {
-            if (track.albumArtUri != null) {
-                AsyncImage(
-                    model = track.albumArtUri,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Icon(
-                    Icons.Default.MusicNote,
-                    contentDescription = null,
-                    tint = TextGray.copy(alpha = 0.5f)
-                )
-            }
+            com.crowstar.deeztrackermobile.ui.components.TrackArtwork(
+                model = track.albumArtUri,
+                modifier = Modifier.fillMaxSize()
+            )
         }
 
         Spacer(modifier = Modifier.width(16.dp))
