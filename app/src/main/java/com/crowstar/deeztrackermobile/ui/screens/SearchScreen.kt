@@ -708,7 +708,9 @@ fun NoResultsView(query: String) {
                 text = stringResource(R.string.search_no_results_desc, query),
                 color = TextGray,
                 fontSize = 16.sp,
-                fontWeight = FontWeight.Normal
+                fontWeight = FontWeight.Normal,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 32.dp)
             )
         }
     }
