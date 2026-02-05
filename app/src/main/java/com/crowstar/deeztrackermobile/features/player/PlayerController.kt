@@ -183,6 +183,14 @@ class PlayerController(private val context: Context) {
         val startIndex = playlist.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
         
         val mediaItems = playlist.map { localTrack ->
+        
+            val albumArt = localTrack.albumArtUri?.trim()
+            val artworkUri = if (!albumArt.isNullOrEmpty()) {
+                Uri.parse(albumArt)
+            } else {
+                Uri.parse("android.resource://${context.packageName}/${com.crowstar.deeztrackermobile.R.drawable.ic_app_icon}")
+            }
+            
             MediaItem.Builder()
                 .setUri(Uri.fromFile(File(localTrack.filePath)))
                 .setMediaId(localTrack.id.toString())
@@ -191,13 +199,7 @@ class PlayerController(private val context: Context) {
                         .setTitle(localTrack.title)
                         .setArtist(localTrack.artist)
                         .setAlbumTitle(localTrack.album)
-                        .setArtworkUri(
-                            if (localTrack.albumArtUri != null && java.io.File(localTrack.albumArtUri).exists()) {
-                                Uri.parse(localTrack.albumArtUri)
-                            } else {
-                                Uri.parse("android.resource://${context.packageName}/${com.crowstar.deeztrackermobile.R.drawable.ic_app_icon}")
-                            }
-                        )
+                        .setArtworkUri(artworkUri)
                         .build()
                 )
                 .build()
