@@ -367,14 +367,11 @@ fun DownloadedTrackItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Album Art
-        AsyncImage(
+        com.crowstar.deeztrackermobile.ui.components.TrackArtwork(
             model = track.albumArtUri,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(50.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color.DarkGray)
         )
 
         Spacer(modifier = Modifier.width(12.dp))
