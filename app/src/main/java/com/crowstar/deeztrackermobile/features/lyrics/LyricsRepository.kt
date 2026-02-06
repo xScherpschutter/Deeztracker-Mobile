@@ -3,22 +3,64 @@ package com.crowstar.deeztrackermobile.features.lyrics
 import android.content.Context
 import android.util.Log
 import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
+import kotlinx.coroutines.delay
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 class LyricsRepository(private val context: Context) {
 
     private val api: LrcLibApi
+    
+    companion object {
+        private const val MAX_RETRIES = 3
+        private const val INITIAL_BACKOFF_MS = 500L
+    }
 
     init {
+        // Configure OkHttp with timeouts to prevent hanging connections
+        val okHttpClient = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+        
         val retrofit = Retrofit.Builder()
             .baseUrl("https://lrclib.net/")
+            .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 
         api = retrofit.create(LrcLibApi::class.java)
+    }
+    
+    /**
+     * Retry a suspending function with exponential backoff
+     */
+    private suspend fun <T> retryWithBackoff(
+        maxRetries: Int = MAX_RETRIES,
+        initialDelay: Long = INITIAL_BACKOFF_MS,
+        operation: String,
+        block: suspend () -> T
+    ): T? {
+        var currentDelay = initialDelay
+        repeat(maxRetries) { attempt ->
+            try {
+                return block()
+            } catch (e: Exception) {
+                if (attempt == maxRetries - 1) {
+                    Log.e("LyricsRepository", "$operation failed after $maxRetries attempts: ${e.message}", e)
+                    return null
+                }
+                Log.w("LyricsRepository", "$operation attempt ${attempt + 1} failed: ${e.message}. Retrying in ${currentDelay}ms...")
+                delay(currentDelay)
+                currentDelay *= 2 // Exponential backoff
+            }
+        }
+        return null
     }
 
     suspend fun getLyrics(track: LocalTrack): String? {
@@ -58,7 +100,6 @@ class LyricsRepository(private val context: Context) {
         }
 
         // Step B: Fuzzy Search (Fallback if strict failed or only had plain lyrics)
-        // User requested: "If get fails (or no synced), go directly to search"
         Log.d("LyricsRepository", "Exact match failed or unsynced. Trying Fuzzy Search...")
         
         val searchResults = safeSearch("${track.title} ${track.artist}")
@@ -88,13 +129,19 @@ class LyricsRepository(private val context: Context) {
     }
 
     private suspend fun safeSearch(query: String): List<LrcLibResponse> {
-        return try {
-            Log.d("LyricsRepository", "Fuzzy searching with query: '$query'")
-            val results = api.search(query = query)
+        Log.d("LyricsRepository", "Fuzzy searching with query: '$query'")
+        
+        val results = retryWithBackoff(
+            operation = "Fuzzy search for '$query'"
+        ) {
+            api.search(query = query)
+        }
+        
+        return if (results != null) {
             Log.d("LyricsRepository", "Fuzzy search found ${results.size} results")
             results
-        } catch (e: Exception) {
-            Log.e("LyricsRepository", "Fuzzy search failed: ${e.message}", e)
+        } else {
+            Log.e("LyricsRepository", "Fuzzy search failed after all retries")
             emptyList()
         }
     }
@@ -105,17 +152,15 @@ class LyricsRepository(private val context: Context) {
         albumName: String?, 
         duration: Double?
     ): LrcLibResponse? {
-        return try {
-            // Log.d("LyricsRepository", "Strategy check: $trackName, $artistName, $albumName, $duration")
+        return retryWithBackoff(
+            operation = "Exact match for '$trackName - $artistName'"
+        ) {
             api.getLyrics(
                 trackName = trackName, 
                 artistName = artistName, 
                 albumName = albumName, 
                 duration = duration
             )
-        } catch (e: Exception) {
-            Log.w("LyricsRepository", "Strict strategy failed: ${e.message}") 
-            null
         }
     }
 
