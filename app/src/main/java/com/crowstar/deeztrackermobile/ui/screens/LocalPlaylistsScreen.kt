@@ -30,6 +30,7 @@ import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.R
+import com.crowstar.deeztrackermobile.ui.components.EditPlaylistDialog
 
 @Composable
 fun LocalPlaylistsScreen(
@@ -37,6 +38,7 @@ fun LocalPlaylistsScreen(
     state: LazyListState = rememberLazyListState(),
     onPlaylistClick: (LocalPlaylist) -> Unit,
     onDeletePlaylist: (LocalPlaylist) -> Unit,
+    onEditPlaylist: (LocalPlaylist, String) -> Unit,
     onCreatePlaylist: () -> Unit,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
@@ -103,6 +105,7 @@ fun LocalPlaylistsScreen(
         
         items(playlists) { playlist ->
             var showMenu by remember { mutableStateOf(false) }
+            var showEditDialog by remember { mutableStateOf(false) }
             
             Row(
                 modifier = Modifier
@@ -143,6 +146,13 @@ fun LocalPlaylistsScreen(
                             modifier = Modifier.background(SurfaceDark)
                         ) {
                             DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_edit), color = Color.White) },
+                                onClick = {
+                                    showMenu = false
+                                    showEditDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_delete), color = Color.Red) },
                                 onClick = {
                                     showMenu = false
@@ -152,6 +162,18 @@ fun LocalPlaylistsScreen(
                         }
                     }
                 }
+            }
+            
+            // Edit Dialog
+            if (showEditDialog) {
+                EditPlaylistDialog(
+                    currentName = playlist.name,
+                    onDismiss = { showEditDialog = false },
+                    onEdit = { newName ->
+                        showEditDialog = false
+                        onEditPlaylist(playlist, newName)
+                    }
+                )
             }
         }
     }

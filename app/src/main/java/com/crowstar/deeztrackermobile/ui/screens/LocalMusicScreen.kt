@@ -457,6 +457,9 @@ fun LocalMusicScreen(
                         onDeletePlaylist = { playlist ->
                             viewModel.deletePlaylist(playlist)
                         },
+                        onEditPlaylist = { playlist, newName ->
+                            viewModel.editPlaylist(playlist, newName)
+                        },
                         onCreatePlaylist = {
                             showCreatePlaylistDialog = true
                         },

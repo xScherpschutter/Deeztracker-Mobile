@@ -169,6 +169,12 @@ class LocalMusicViewModel(
         }
     }
 
+    fun editPlaylist(playlist: LocalPlaylist, newName: String) {
+        viewModelScope.launch {
+            playlistRepository.renamePlaylist(playlist.id, newName)
+        }
+    }
+
     fun addTrackToPlaylist(playlist: LocalPlaylist, track: LocalTrack) {
         viewModelScope.launch {
             playlistRepository.addTrackToPlaylist(playlist.id, track.id)

@@ -116,6 +116,7 @@
     <string name="permission_required">Se requiere permiso para acceder a música local</string>
     <string name="permission_grant">Conceder Permiso</string>
     <string name="new_playlist_title">Nueva Playlist</string>
+    <string name="edit_playlist_title">Editar Playlist</string>
     <string name="new_playlist_name">Nombre de Playlist</string>
     <string name="artist_songs_count_format">%d canciones</string>
     
