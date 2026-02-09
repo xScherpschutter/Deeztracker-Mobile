@@ -77,6 +77,18 @@ class LocalPlaylistRepository(private val context: Context) {
         }
     }
 
+    suspend fun renamePlaylist(playlistId: String, newName: String) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val current = _playlists.value.map { playlist ->
+                if (playlist.id == playlistId) {
+                    playlist.copy(name = newName)
+                } else playlist
+            }
+            savePlaylistsToFile(current)
+            _playlists.value = current
+        }
+    }
+
     suspend fun addTrackToPlaylist(playlistId: String, trackId: Long) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val current = _playlists.value.map { playlist ->
