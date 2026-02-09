@@ -71,6 +71,7 @@
     <string name="action_cancel">Cancel</string>
     <string name="action_create">Create</string>
     <string name="action_add_to_playlist">Add to playlist</string>
+    <string name="toast_added_to_playlist">Track added to %s</string>
     
     <!-- Main Screen -->
     <string name="bottom_nav_library">Library</string>

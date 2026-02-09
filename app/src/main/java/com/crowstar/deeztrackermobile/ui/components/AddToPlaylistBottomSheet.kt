@@ -28,6 +28,8 @@ import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +39,8 @@ fun AddToPlaylistBottomSheet(
     onPlaylistClick: (LocalPlaylist) -> Unit,
     onCreateNewPlaylist: () -> Unit
 ) {
+    val context = LocalContext.current
+    
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF121212), // Dark Background
@@ -88,7 +92,14 @@ fun AddToPlaylistBottomSheet(
                     item {
                         PlaylistItem(
                             playlist = favorites, 
-                            onClick = { onPlaylistClick(favorites) },
+                            onClick = { 
+                                onPlaylistClick(favorites)
+                                Toast.makeText(
+                                    context, 
+                                    context.getString(R.string.toast_added_to_playlist, favorites.name),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            },
                             isFavorite = true
                         )
                     }
@@ -98,7 +109,14 @@ fun AddToPlaylistBottomSheet(
                 items(playlists.filter { it.id != "favorites" }) { playlist ->
                     PlaylistItem(
                         playlist = playlist, 
-                        onClick = { onPlaylistClick(playlist) },
+                        onClick = { 
+                            onPlaylistClick(playlist)
+                            Toast.makeText(
+                                context, 
+                                context.getString(R.string.toast_added_to_playlist, playlist.name),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        },
                         isFavorite = false
                     )
                 }
