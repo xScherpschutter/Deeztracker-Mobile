@@ -131,6 +131,20 @@ class LocalPlaylistRepository(private val context: Context) {
         }
     }
 
+    suspend fun removeTrackFromAllPlaylists(trackId: Long) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val current = _playlists.value.map { playlist ->
+                if (playlist.trackIds.contains(trackId)) {
+                    playlist.copy(trackIds = playlist.trackIds - trackId)
+                } else playlist
+            }
+            if (current != _playlists.value) {
+                savePlaylistsToFile(current)
+                _playlists.value = current
+            }
+        }
+    }
+
     private fun savePlaylistsToFile(playlists: List<LocalPlaylist>) {
         try {
             val jsonArray = JSONArray()

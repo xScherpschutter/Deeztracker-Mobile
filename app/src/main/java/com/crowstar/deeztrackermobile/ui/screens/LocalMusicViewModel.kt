@@ -53,6 +53,9 @@ class LocalMusicViewModel(
     
     private val _deleteIntentSender = MutableStateFlow<IntentSender?>(null)
     val deleteIntentSender: StateFlow<IntentSender?> = _deleteIntentSender
+    
+    // Track being deleted (to clean from playlists after user confirms deletion on Android 11+)
+    private var trackPendingDeletion: Long? = null
 
 
     // Master lists for filtering
@@ -196,11 +199,13 @@ class LocalMusicViewModel(
 
     fun requestDeleteTrack(track: LocalTrack) {
         viewModelScope.launch {
+            trackPendingDeletion = track.id
             val intentSender = repository.requestDeleteTrack(track.id)
             if (intentSender != null) {
                 _deleteIntentSender.value = intentSender
             } else {
-                // Deletion handled directly or failed, refresh list
+                // Deletion handled directly (Android 10-), playlists already cleaned by repository
+                trackPendingDeletion = null
                 loadMusic()
             }
         }
@@ -211,15 +216,20 @@ class LocalMusicViewModel(
     }
 
     fun onDeleteSuccess() {
-        loadMusic()
+        viewModelScope.launch {
+            // Android 11+ confirmation - clean playlists via repository
+            trackPendingDeletion?.let { repository.onTrackDeleted(it) }
+            trackPendingDeletion = null
+            loadMusic()
+        }
     }
     class LocalMusicViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(LocalMusicViewModel::class.java)) {
-                val repository = LocalMusicRepository(context.contentResolver)
                 // Use singleton repository from PlayerController to ensure sync
                 val playlistRepository = PlayerController.getInstance(context).playlistRepository
+                val repository = LocalMusicRepository(context.contentResolver, playlistRepository)
                 return LocalMusicViewModel(repository, playlistRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
