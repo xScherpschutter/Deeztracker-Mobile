@@ -30,6 +30,9 @@ class DownloadsViewModel(
     val deleteIntentSender: StateFlow<IntentSender?> = _deleteIntentSender
 
     private var allDownloadedTracks: List<LocalTrack> = emptyList()
+    
+    // Track being deleted (to clean from playlists after user confirms deletion on Android 11+)
+    private var trackPendingDeletion: Long? = null
 
     val playlists = playlistRepository.playlists
 
@@ -87,18 +90,25 @@ class DownloadsViewModel(
 
     fun deleteTrack(track: LocalTrack) {
         viewModelScope.launch {
+            trackPendingDeletion = track.id
             val intentSender = repository.requestDeleteTrack(track.id)
             if (intentSender != null) {
                 _deleteIntentSender.value = intentSender
             } else {
-                // Deletion happened immediately or failed silently (used in API < 30 or if permission already granted)
+                // Deletion happened immediately (Android 10-), playlists already cleaned by repository
+                trackPendingDeletion = null
                 onDeleteSuccess()
             }
         }
     }
 
     fun onDeleteSuccess() {
-        loadDownloadedMusic() // Reload list
+        viewModelScope.launch {
+            // Android 11+ confirmation - clean playlists via repository
+            trackPendingDeletion?.let { repository.onTrackDeleted(it) }
+            trackPendingDeletion = null
+            loadDownloadedMusic() // Reload list
+        }
     }
 
     fun resetDeleteIntentSender() {
@@ -109,11 +119,12 @@ class DownloadsViewModel(
 class DownloadsViewModelFactory(private val context: android.content.Context) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DownloadsViewModel::class.java)) {
+            val playlistRepository = com.crowstar.deeztrackermobile.features.player.PlayerController.getInstance(context).playlistRepository
             @Suppress("UNCHECKED_CAST")
             return DownloadsViewModel(
                 context.applicationContext as Application,
-                LocalMusicRepository(context.contentResolver),
-                com.crowstar.deeztrackermobile.features.player.PlayerController.getInstance(context).playlistRepository
+                LocalMusicRepository(context.contentResolver, playlistRepository),
+                playlistRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

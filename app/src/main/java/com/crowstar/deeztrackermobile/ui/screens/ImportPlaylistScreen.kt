@@ -499,7 +499,6 @@ fun findLocalMatch(query: String, tracks: List<LocalTrack>): LocalTrack? {
         val t = track.title.lowercase().replace(Regex("[^a-z0-9]"), "")
         val a = track.artist.lowercase().replace(Regex("[^a-z0-9]"), "")
         val full = "$a$t"
-        val fullReverse = "$t$a"
         
         // Check exact match of title
         if (t == normalizedQuery) return@find true

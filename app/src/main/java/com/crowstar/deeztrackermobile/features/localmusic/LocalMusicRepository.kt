@@ -14,7 +14,10 @@ import android.os.StatFs
 /**
  * Repository for accessing local music files using Android MediaStore API
  */
-class LocalMusicRepository(private val contentResolver: ContentResolver) {
+class LocalMusicRepository(
+    private val contentResolver: ContentResolver,
+    private val playlistRepository: LocalPlaylistRepository? = null
+) {
 
     /**
      * Get total storage space of the device
@@ -223,6 +226,7 @@ class LocalMusicRepository(private val contentResolver: ContentResolver) {
     /**
      * Request deletion of a track
      * Returns an IntentSender to ask for user permission if needed (Android 10+), or null if deleted directly/failed.
+     * If playlistRepository is provided, automatically removes the track from all playlists upon successful deletion.
      */
     suspend fun requestDeleteTrack(trackId: Long): IntentSender? = withContext(Dispatchers.IO) {
         val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, trackId)
@@ -234,7 +238,11 @@ class LocalMusicRepository(private val contentResolver: ContentResolver) {
         } else {
             // Android 10 and below
             try {
-                contentResolver.delete(uri, null, null)
+                val deleteResult = contentResolver.delete(uri, null, null)
+                if (deleteResult > 0) {
+                    // Successfully deleted, clean from playlists
+                    playlistRepository?.removeTrackFromAllPlaylists(trackId)
+                }
                 // If successful, return null (no intent needed)
                 return@withContext null
             } catch (securityException: android.app.RecoverableSecurityException) {
@@ -245,6 +253,14 @@ class LocalMusicRepository(private val contentResolver: ContentResolver) {
                 return@withContext null
             }
         }
+    }
+
+    /**
+     * Called after a track has been successfully deleted (typically after user confirms on Android 11+)
+     * Removes the track from all playlists
+     */
+    suspend fun onTrackDeleted(trackId: Long) = withContext(Dispatchers.IO) {
+        playlistRepository?.removeTrackFromAllPlaylists(trackId)
     }
 
 
