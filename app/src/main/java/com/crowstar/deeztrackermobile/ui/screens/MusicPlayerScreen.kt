@@ -349,30 +349,55 @@ fun MusicPlayerScreen(
                         .fillMaxSize()
                         .padding(top = 16.dp, bottom = 16.dp)
                  ) {
-                     // Centered Header for Lyrics Page
                      Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp)
-                            .height(48.dp) // Match button size/height roughly
+                            .padding(horizontal = 24.dp, vertical = 16.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                         IconButton(
-                            onClick = onCollapse,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(Color.White.copy(alpha = 0.05f), CircleShape)
-                                .align(Alignment.CenterStart)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
                         ) {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.player_collapse), tint = Color.White)
+                            // Artwork
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(com.crowstar.deeztrackermobile.ui.theme.BackgroundDark)
+                            ) {
+                                com.crowstar.deeztrackermobile.ui.components.TrackArtwork(
+                                    model = track.albumArtUri,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            // Track title and artist
+                            Column(
+                                modifier = Modifier.widthIn(max = 200.dp),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.Start
+                            ) {
+                                MarqueeText(
+                                    text = track.title,
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Start,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                MarqueeText(
+                                    text = track.artist,
+                                    color = TextGray,
+                                    fontSize = 14.sp,
+                                    textAlign = TextAlign.Start,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
-                        
-                        Text(
-                            text = stringResource(R.string.lyrics_title),
-                            color = Color.White,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
                      }
                      
                      LyricsScreen(
@@ -387,11 +412,6 @@ fun MusicPlayerScreen(
              }
         }
         
-        // Page Indicators (Optional but good for UX)
-        // Leaving out for now as user just asked for swipe, and minimalistic is key.
-
-        
-        // Playlist Sheet
         if (showAddToPlaylist) {
              com.crowstar.deeztrackermobile.ui.components.AddToPlaylistBottomSheet(
                 playlists = playlists,
@@ -410,7 +430,7 @@ fun MusicPlayerScreen(
              var newPlaylistName by remember { mutableStateOf("") }
              AlertDialog(
                  onDismissRequest = { showCreatePlaylistDialog = false },
-                 title = { Text(stringResource(R.string.new_playlist_title), color = Color.White) }, // Reusing strings from LocalMusicScreen.kt additions
+                 title = { Text(stringResource(R.string.new_playlist_title), color = Color.White) },
                  text = {
                      OutlinedTextField(
                          value = newPlaylistName,
