@@ -138,9 +138,7 @@
     <string name="player_next">Siguiente</string>
     <string name="player_play_pause">Reproducir/Pausar</string>
     <string name="player_repeat">Repetir</string>
-    <string name="player_lyrics">Letras</string>
     <string name="player_queue">Cola</string>
-    <string name="player_hifi">HI-FI</string> 
     
     <!-- Details Screens -->
     <string name="action_play_album">Reproducir Álbum</string>
