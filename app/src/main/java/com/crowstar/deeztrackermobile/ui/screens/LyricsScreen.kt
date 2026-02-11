@@ -40,66 +40,64 @@ fun LyricsScreen(
     }
 
     when {
-        isLoading -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    androidx.compose.material3.CircularProgressIndicator(
-                        color = com.crowstar.deeztrackermobile.ui.theme.Primary
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+            isLoading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            color = com.crowstar.deeztrackermobile.ui.theme.Primary
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(com.crowstar.deeztrackermobile.R.string.lyrics_loading),
+                            color = TextGray,
+                            fontSize = 16.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+            lyrics.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = androidx.compose.ui.res.stringResource(com.crowstar.deeztrackermobile.R.string.lyrics_loading),
+                        text = androidx.compose.ui.res.stringResource(com.crowstar.deeztrackermobile.R.string.lyrics_not_available),
                         color = TextGray,
-                        fontSize = 16.sp,
+                        fontSize = 18.sp,
                         textAlign = TextAlign.Center
                     )
                 }
             }
-        }
-        lyrics.isEmpty() -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = androidx.compose.ui.res.stringResource(com.crowstar.deeztrackermobile.R.string.lyrics_not_available),
-                    color = TextGray,
-                    fontSize = 18.sp,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-        else -> {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = 50.dp, horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                itemsIndexed(lyrics) { index, line ->
-                    val isActive = index == currentIndex
-                    val alpha = if (isActive) 1f else 0.5f
-                    val scale = if (isActive) 1.1f else 1f
-                    val color = if (isActive) Color.White else TextGray
-                    val fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
+            else -> {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 50.dp, horizontal = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    itemsIndexed(lyrics) { index, line ->
+                        val isActive = index == currentIndex
+                        val color = if (isActive) Color.White else TextGray
+                        val fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
 
-                    Text(
-                        text = line.text,
-                        color = color,
-                        fontSize = 20.sp, // Reduced font size for better fit
-                        fontWeight = fontWeight,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onLineClick(line.timeMs) },
-                        lineHeight = 30.sp
-                    )
+                        Text(
+                            text = line.text,
+                            color = color,
+                            fontSize = 20.sp, // Reduced font size for better fit
+                            fontWeight = fontWeight,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onLineClick(line.timeMs) },
+                            lineHeight = 30.sp
+                        )
+                    }
                 }
             }
         }
     }
-}
