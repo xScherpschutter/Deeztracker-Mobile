@@ -376,7 +376,6 @@ fun MusicPlayerScreen(
 
                             // Track title and artist
                             Column(
-                                modifier = Modifier.widthIn(max = 200.dp),
                                 verticalArrangement = Arrangement.Center,
                                 horizontalAlignment = Alignment.Start
                             ) {
@@ -385,16 +384,14 @@ fun MusicPlayerScreen(
                                     color = Color.White,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Start,
-                                    modifier = Modifier.fillMaxWidth()
+                                    textAlign = TextAlign.Start
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 MarqueeText(
                                     text = track.artist,
                                     color = TextGray,
                                     fontSize = 14.sp,
-                                    textAlign = TextAlign.Start,
-                                    modifier = Modifier.fillMaxWidth()
+                                    textAlign = TextAlign.Start
                                 )
                             }
                         }
