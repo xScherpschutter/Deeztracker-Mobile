@@ -193,35 +193,42 @@ class DownloadManager private constructor(
                         outputDir = downloadDirectory,
                         quality = currentQuality
                     )
+                    Log.d(TAG, "Track download completed: ${result.path}")
+                    
+                    // Scan and Link to Playlist BEFORE marking as completed
+                    val uri = scanFileSuspend(result.path)
+                    if (uri != null) {
+                        // Retry finding ID as MediaStore might have slight indexing delay
+                        var trackId: Long? = null
+                        // Increase retries to 5 and delay to 1s to be very robust
+                        for (i in 0..4) {
+                            trackId = musicRepository.getTrackIdByPath(result.path)
+                            if (trackId != null) break
+                            kotlinx.coroutines.delay(1000)
+                        }
+
+                        if (trackId != null) {
+                            // If this track should be added to a playlist, do it now
+                            if (request.playlistId != null) {
+                                Log.d(TAG, "Adding downloaded track $trackId to playlist ${request.playlistId}")
+                                playlistRepository.addTrackToPlaylist(request.playlistId, trackId)
+                            }
+                            
+                            // Trigger UI refresh after file is confirmed in MediaStore
+                            _downloadRefreshTrigger.value += 1
+                        } else {
+                            Log.e(TAG, "Could not find MediaStore ID for ${result.path} after retries")
+                        }
+                    } else {
+                        Log.e(TAG, "Failed to scan file into MediaStore: ${result.path}")
+                    }
+                    
+                    // Mark as completed AFTER scanning and adding to playlist
                     _downloadState.value = DownloadState.Completed(
                         type = DownloadType.TRACK,
                         title = request.title,
                         successCount = 1
                     )
-                    Log.d(TAG, "Track download completed: ${result.path}")
-                    
-                     // Scan and Link to Playlist
-                    val uri = scanFileSuspend(result.path)
-                    if (uri != null && request.playlistId != null) {
-                         // Retry finding ID as MediaStore might have slight indexing delay
-                         var trackId: Long? = null
-                         // Increase retries to 5 and delay to 1s to be very robust
-                         for (i in 0..4) {
-                             trackId = musicRepository.getTrackIdByPath(result.path)
-                             if (trackId != null) break
-                             kotlinx.coroutines.delay(1000)
-                         }
-
-                         if (trackId != null) {
-                             Log.d(TAG, "Adding downloaded track $trackId to playlist ${request.playlistId}")
-                             playlistRepository.addTrackToPlaylist(request.playlistId, trackId)
-                         } else {
-                             Log.e(TAG, "Could not find MediaStore ID for ${result.path} after retries")
-                         }
-                    }
-                    
-                    // Trigger UI refresh after file is confirmed in MediaStore
-                    _downloadRefreshTrigger.value += 1
                 }
                 is DownloadRequest.Album -> {
                     // Get album tracks first

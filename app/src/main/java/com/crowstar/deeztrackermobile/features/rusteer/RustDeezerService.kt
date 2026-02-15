@@ -93,6 +93,35 @@ class RustDeezerService(context: Context) {
     
     // ==================== DOWNLOAD METHODS ====================
     
+    // TODO: Uncomment after recompiling Rust bindings (run: cd rusteer && cargo build)
+    /*
+    /**
+     * Get streaming URL for a track (for online playback without downloading to storage).
+     * 
+     * @param trackId The Deezer track ID
+     * @param quality Streaming quality (FLAC, MP3_320, MP3_128)
+     * @return StreamingUrl containing URL, track ID, quality, and format
+     * @throws Exception if streaming URL retrieval fails or ARL is not set
+     */
+    suspend fun getStreamingUrl(
+        trackId: String,
+        quality: DownloadQuality
+    ): uniffi.rusteer.StreamingUrl = withContext(Dispatchers.IO) {
+        val arl = getSavedArl() ?: throw IllegalStateException("Not logged in - ARL not set")
+        
+        Log.d(TAG, "Getting streaming URL for track $trackId with quality $quality")
+        
+        try {
+            val result = service.getStreamingUrl(arl, trackId, quality)
+            Log.d(TAG, "Streaming URL obtained for track: $trackId")
+            result
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get streaming URL for track $trackId", e)
+            throw e
+        }
+    }
+    */
+    
     /**
      * Download a single track.
      * 

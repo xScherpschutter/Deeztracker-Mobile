@@ -83,6 +83,7 @@ import com.crowstar.deeztrackermobile.features.deezer.Playlist
 import com.crowstar.deeztrackermobile.features.deezer.Track
 import com.crowstar.deeztrackermobile.features.download.DownloadManager
 import com.crowstar.deeztrackermobile.features.download.DownloadState
+import com.crowstar.deeztrackermobile.features.player.PlayerController
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
@@ -116,8 +117,10 @@ fun SearchScreen(
 
     val context = LocalContext.current
     val downloadManager = remember { DownloadManager.getInstance(context) }
+    val playerController = remember { PlayerController.getInstance(context) }
     val downloadState by downloadManager.downloadState.collectAsState()
     val downloadRefreshTrigger by downloadManager.downloadRefreshTrigger.collectAsState()
+    val playerState by playerController.playerState.collectAsState()
 
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var artists by remember { mutableStateOf<List<Artist>>(emptyList()) }
@@ -419,6 +422,18 @@ fun SearchScreen(
                                         isDownloaded = isDownloaded,
                                         isDownloading = isDownloading && 
                                             (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString(),
+                                        isLoading = playerState.loadingTrackId == track.id.toString(),
+                                        onPlayClick = {
+                                            // Convert Deezer Track to uniffi Track
+                                            val deezerTrack = uniffi.rusteer.Track(
+                                                id = track.id.toString(),
+                                                title = track.title ?: "Unknown",
+                                                artist = track.artist?.name ?: "Unknown",
+                                                album = track.album?.title ?: "Unknown",
+                                                coverUrl = track.album?.coverMedium
+                                            )
+                                            playerController.playDeezerTrack(deezerTrack)
+                                        },
                                         onDownloadClick = {
                                             downloadManager.startTrackDownload(track.id, track.title)
                                         }
@@ -469,16 +484,20 @@ fun TrackItem(
     track: Track,
     isDownloaded: Boolean = false,
     isDownloading: Boolean = false,
+    isLoading: Boolean = false,
+    onPlayClick: () -> Unit = {},
     onDownloadClick: () -> Unit = {}
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable { /* Handle click */ }
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(SurfaceDark)
+                .clickable { onPlayClick() }
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
         AsyncImage(
             model = track.album?.coverMedium,
             contentDescription = null,
@@ -520,6 +539,7 @@ fun TrackItem(
             }
         }
         
+        // Download button
         IconButton(
             onClick = onDownloadClick,
             enabled = !isDownloading && !isDownloaded,
@@ -553,6 +573,18 @@ fun TrackItem(
                     )
                 }
             }
+        }
+    }
+        
+        // Loading progress bar
+        if (isLoading) {
+            androidx.compose.material3.LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp),
+                color = Primary,
+                trackColor = Color.Transparent
+            )
         }
     }
 }

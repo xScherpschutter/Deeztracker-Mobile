@@ -21,8 +21,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.ExecutionException
+import uniffi.rusteer.Track as DeezerTrack
 
 class PlayerController(private val context: Context) {
 
@@ -39,6 +41,7 @@ class PlayerController(private val context: Context) {
 
     val playlistRepository = LocalPlaylistRepository(context)
     private val lyricsRepository = com.crowstar.deeztrackermobile.features.lyrics.LyricsRepository(context)
+    private val streamingManager = StreamingManager.getInstance(context)
 
     private val _playerState = MutableStateFlow(PlayerState())
     val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
@@ -178,6 +181,10 @@ class PlayerController(private val context: Context) {
             return // Or queue command
         }
         
+        // Stop and clear current playback to avoid conflicts
+        player.stop()
+        player.clearMediaItems()
+        
         currentPlaylist = playlist
         
         val startIndex = playlist.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
@@ -212,6 +219,114 @@ class PlayerController(private val context: Context) {
         // Initial fetch for the starting track
         fetchLyrics(track)
         _playerState.update { it.copy(currentTrack = track, isPlaying = true, playingSource = resolvedSource) }
+    }
+    
+    /**
+     * Play an online track from Deezer (streams to cache and plays).
+     * Downloads to temporary cache and plays immediately.
+     * 
+     * @param deezerTrack The Deezer track to play
+     * @param trackList Optional list of Deezer tracks to queue
+     */
+    fun playDeezerTrack(deezerTrack: DeezerTrack, trackList: List<DeezerTrack> = listOf(deezerTrack)) {
+        kotlinx.coroutines.GlobalScope.launch {
+            try {
+                // Set loading state
+                _playerState.update { it.copy(loadingTrackId = deezerTrack.id) }
+                
+                // Stop any current playback first
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    val player = mediaController
+                    player?.stop()
+                    player?.clearMediaItems()
+                }
+                
+                _playerState.update { it.copy(playingSource = "Deezer (Streaming)") }
+                
+                // Stream all tracks in the list
+                val streamedTracks = mutableListOf<Pair<DeezerTrack, String>>()
+                
+                for (track in trackList) {
+                    val cachedPath = streamingManager.streamTrack(track.id)
+                    if (cachedPath != null) {
+                        streamedTracks.add(track to cachedPath)
+                    } else {
+                        android.util.Log.w("PlayerController", "Failed to stream track: ${track.title}")
+                    }
+                }
+                
+                if (streamedTracks.isEmpty()) {
+                    android.util.Log.e("PlayerController", "No tracks could be streamed")
+                    return@launch
+                }
+                
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    val player = mediaController ?: run {
+                        initializeController()
+                        return@withContext
+                    }
+                    
+                    // Find start index
+                    val startIndex = streamedTracks.indexOfFirst { it.first.id == deezerTrack.id }.coerceAtLeast(0)
+                    
+                    // Create media items from cached files
+                    val mediaItems = streamedTracks.map { (track, path) ->
+                        val albumArt = track.coverUrl
+                        val artworkUri = if (!albumArt.isNullOrEmpty()) {
+                            Uri.parse(albumArt)
+                        } else {
+                            Uri.parse("android.resource://${context.packageName}/${com.crowstar.deeztrackermobile.R.drawable.ic_app_icon}")
+                        }
+                        
+                        MediaItem.Builder()
+                            .setUri(Uri.fromFile(File(path)))
+                            .setMediaId(track.id)
+                            .setMediaMetadata(
+                                MediaMetadata.Builder()
+                                    .setTitle(track.title)
+                                    .setArtist(track.artist)
+                                    .setAlbumTitle(track.album)
+                                    .setArtworkUri(artworkUri)
+                                    .build()
+                            )
+                            .build()
+                    }
+                    
+                    player.setMediaItems(mediaItems, startIndex, 0L)
+                    player.prepare()
+                    player.play()
+                    
+                    // Create a temporary LocalTrack for state management
+                    val tempLocalTrack = LocalTrack(
+                        id = deezerTrack.id.hashCode().toLong(),
+                        title = deezerTrack.title,
+                        artist = deezerTrack.artist,
+                        album = deezerTrack.album,
+                        albumId = 0L,
+                        filePath = streamedTracks[startIndex].second,
+                        duration = 0L,
+                        size = 0L,
+                        mimeType = "audio/mpeg",
+                        dateAdded = System.currentTimeMillis(),
+                        dateModified = System.currentTimeMillis(),
+                        albumArtUri = deezerTrack.coverUrl
+                    )
+                    
+                    _playerState.update { 
+                        it.copy(
+                            currentTrack = tempLocalTrack, 
+                            isPlaying = true, 
+                            playingSource = "Deezer (Streaming)",
+                            loadingTrackId = null
+                        ) 
+                    }
+                }
+                
+            } catch (e: Exception) {
+                android.util.Log.e("PlayerController", "Error streaming Deezer track", e)
+                _playerState.update { it.copy(loadingTrackId = null) }
+            }
+        }
     }
 
     fun togglePlayPause() {

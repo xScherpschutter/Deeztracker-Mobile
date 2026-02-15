@@ -14,7 +14,8 @@ data class PlayerState(
     val isCurrentTrackFavorite: Boolean = false,
     val lyrics: List<com.crowstar.deeztrackermobile.features.lyrics.LrcLine> = emptyList(),
     val currentLyricIndex: Int = -1,
-    val isLoadingLyrics: Boolean = false
+    val isLoadingLyrics: Boolean = false,
+    val loadingTrackId: String? = null
 )
 
 enum class RepeatMode {

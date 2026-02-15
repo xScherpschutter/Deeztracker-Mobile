@@ -54,7 +54,7 @@ mod rusteer;
 pub mod tagging;
 
 // Main interface (recommended)
-pub use rusteer::{BatchDownloadResult, DownloadQuality, DownloadResult, Rusteer};
+pub use rusteer::{BatchDownloadResult, DownloadQuality, DownloadResult, Rusteer, StreamingUrl};
 
 // Low-level APIs
 pub use api::{DeezerApi, GatewayApi};

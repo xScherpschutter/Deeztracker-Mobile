@@ -65,6 +65,72 @@ fun ImportPlaylistScreen(
     var isProcessing by remember { mutableStateOf(false) }
     var progressMessage by remember { mutableStateOf("") }
     
+    // Download tracking state
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadedCount by remember { mutableStateOf(0) }
+    var totalToDownload by remember { mutableStateOf(0) }
+    var tracksToDownload by remember { mutableStateOf<List<Track>>(emptyList()) }
+    
+    // Monitor download progress
+    val downloadTrigger by downloadManager.downloadRefreshTrigger.collectAsState()
+    
+    LaunchedEffect(downloadTrigger) {
+        if (isDownloading && downloadedCount < totalToDownload) {
+            downloadedCount++
+            progressMessage = "Descargando $downloadedCount de $totalToDownload..."
+            
+            // When all downloads complete, create playlist
+            if (downloadedCount >= totalToDownload) {
+                isDownloading = false
+                progressMessage = "Creando playlist..."
+                
+                // Create playlist
+                val playlistId = viewModel.createPlaylistSync(playlistName)
+                
+                // Find and add all downloaded tracks
+                val allLocalTracks = localRepo.getAllTracks()
+                
+                // Add tracks that were already local
+                importedTracks.forEach { item ->
+                    if (item.status is ImportStatus.FoundLocally) {
+                        viewModel.addTrackToPlaylistId(playlistId, item.status.localTrack)
+                    }
+                }
+                
+                // Add newly downloaded tracks by matching title and artist
+                tracksToDownload.forEach { track ->
+                    val matchedTrack = allLocalTracks.find { localTrack ->
+                        val titleMatch = localTrack.title.equals(track.title, ignoreCase = true)
+                        val artistMatch = localTrack.artist.contains(track.artist, ignoreCase = true) ||
+                                        track.artist.contains(localTrack.artist, ignoreCase = true)
+                        titleMatch && artistMatch
+                    }
+                    
+                    if (matchedTrack != null) {
+                        viewModel.addTrackToPlaylistId(playlistId, matchedTrack)
+                    } else {
+                        Log.w("ImportPlaylist", "Could not find downloaded track: ${track.title} - ${track.artist}")
+                    }
+                }
+                
+                // Show completion message
+                snackbarHostState.showSnackbar(
+                    message = "Playlist '${playlistName}' creada con ${downloadedCount} canciones descargadas",
+                    duration = SnackbarDuration.Short
+                )
+                
+                // Reset state and go back
+                isProcessing = false
+                progressMessage = ""
+                downloadedCount = 0
+                totalToDownload = 0
+                tracksToDownload = emptyList()
+                
+                onBackClick()
+            }
+        }
+    }
+    
     // Resources for logic that needs string access
     val readingMsg = stringResource(R.string.import_playlist_reading)
     val checkingMsg = stringResource(R.string.import_playlist_checking_local)
@@ -239,41 +305,43 @@ fun ImportPlaylistScreen(
                     Button(
                         onClick = {
                             scope.launch {
-                                // Create Playlist in App
-                                val playlistId = viewModel.createPlaylistSync(playlistName)
-                                
-                                // Add found local tracks to playlist immediately
-                                importedTracks.forEach { item ->
-                                    if (item.status is ImportStatus.FoundLocally) {
-                                        viewModel.addTrackToPlaylistId(playlistId, item.status.localTrack)
-                                    }
-                                }
-
-                                // Trigger downloads for missing tracks AND link them to playlist
-                                val tracksToDownload = importedTracks.mapNotNull { 
+                                val toDownload = importedTracks.mapNotNull { 
                                     (it.status as? ImportStatus.FoundOnDeezer)?.track
                                 }
-                                tracksToDownload.forEach { track ->
-                                    downloadManager.startTrackDownload(
-                                        trackId = track.id.toLong(), 
-                                        title = track.title, 
-                                        targetPlaylistId = playlistId // Auto-add to playlist on completion
-                                    )
-                                }
                                 
-                                // Show snackbar confirmation
-                                val downloadCount = tracksToDownload.size
-                                if (downloadCount > 0) {
+                                if (toDownload.isEmpty()) {
+                                    // Only local tracks, create playlist immediately
+                                    val playlistId = viewModel.createPlaylistSync(playlistName)
+                                    importedTracks.forEach { item ->
+                                        if (item.status is ImportStatus.FoundLocally) {
+                                            viewModel.addTrackToPlaylistId(playlistId, item.status.localTrack)
+                                        }
+                                    }
                                     snackbarHostState.showSnackbar(
-                                        message = String.format(queuedMsg, downloadCount), // Use format directly here or context.getString
+                                        message = "Playlist '${playlistName}' creada",
                                         duration = SnackbarDuration.Short
                                     )
+                                    onBackClick()
+                                } else {
+                                    // Start download process
+                                    isDownloading = true
+                                    isProcessing = true
+                                    downloadedCount = 0
+                                    totalToDownload = toDownload.size
+                                    tracksToDownload = toDownload
+                                    progressMessage = "Iniciando descarga de ${toDownload.size} canciones..."
+                                    
+                                    // Queue all downloads (WITHOUT targetPlaylistId)
+                                    toDownload.forEach { track ->
+                                        downloadManager.startTrackDownload(
+                                            trackId = track.id.toLong(), 
+                                            title = track.title
+                                        )
+                                    }
                                 }
-                                
-                                onBackClick()
                             }
                         },
-                        enabled = canImport && !isProcessing,
+                        enabled = canImport && !isProcessing && !isDownloading,
                         colors = ButtonDefaults.buttonColors(containerColor = Primary)
                     ) {
                         val text = if (missingCount > 0) 
@@ -284,8 +352,11 @@ fun ImportPlaylistScreen(
                     }
                 }
                 
-                if (isProcessing) {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
+                if (isProcessing || isDownloading) {
+                    LinearProgressIndicator(
+                        progress = if (totalToDownload > 0) downloadedCount.toFloat() / totalToDownload.toFloat() else 0f,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    )
                     Text(progressMessage, color = TextGray, style = MaterialTheme.typography.bodySmall)
                     Spacer(modifier = Modifier.height(8.dp))
                 }
