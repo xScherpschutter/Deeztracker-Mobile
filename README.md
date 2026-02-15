@@ -16,7 +16,7 @@
 
 ---
 
-## 📱 Overview
+##  Overview
 
 Deeztracker Mobile is a feature-rich Android application that allows users to download music from Deezer for offline playback. Built with modern Android development practices using Kotlin and Jetpack Compose, it offers a sleek, intuitive interface with full offline music library management.
 
