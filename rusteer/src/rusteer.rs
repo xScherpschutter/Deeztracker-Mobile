@@ -67,6 +67,19 @@ pub struct DownloadResult {
     pub artist: String,
 }
 
+/// Streaming URL information without downloading
+#[derive(Debug, Clone)]
+pub struct StreamingUrl {
+    /// The streaming URL (encrypted audio)
+    pub url: String,
+    /// Track ID (needed for decryption key)
+    pub track_id: String,
+    /// Audio quality
+    pub quality: DownloadQuality,
+    /// Format string
+    pub format: String,
+}
+
 /// Result of a batch download (album/playlist).
 #[derive(Debug)]
 pub struct BatchDownloadResult {
@@ -486,6 +499,37 @@ impl Rusteer {
     // ==================
     // INTERNAL HELPERS
     // ==================
+
+    /// Get streaming URL for a track without downloading
+    /// Returns the URL, track ID (for decryption key generation), and quality
+    pub async fn get_streaming_url(
+        &self,
+        track_id: &str,
+    ) -> Result<StreamingUrl> {
+        // Get song data from gateway
+        let song_data = self.gateway_api.get_song_data(track_id).await?;
+
+        if !song_data.readable {
+            return Err(DeezerError::TrackNotFound(format!(
+                "Track {} is not readable",
+                track_id
+            )));
+        }
+
+        let track_token = song_data
+            .track_token
+            .ok_or_else(|| DeezerError::NoDataApi("No track token".to_string()))?;
+
+        // Find available quality
+        let (media_url, quality) = self.find_media_url(&track_token).await?;
+
+        Ok(StreamingUrl {
+            url: media_url.url,
+            track_id: track_id.to_string(),
+            quality,
+            format: media_url.format,
+        })
+    }
 
     /// Find an available media URL, trying different qualities.
     async fn find_media_url(

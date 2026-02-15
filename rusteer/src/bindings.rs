@@ -89,6 +89,47 @@ impl From<crate::error::DeezerError> for RusteerError {
     }
 }
 
+#[derive(uniffi::Record)]
+pub struct StreamingUrl {
+    pub url: String,
+    pub track_id: String,
+    pub quality: DownloadQuality,
+    pub format: String,
+}
+
+impl From<crate::rusteer::StreamingUrl> for StreamingUrl {
+    fn from(s: crate::rusteer::StreamingUrl) -> Self {
+        Self {
+            url: s.url,
+            track_id: s.track_id,
+            quality: s.quality.into(),
+            format: s.format,
+        }
+    }
+}
+
+#[derive(uniffi::Record)]
+pub struct Track {
+    pub id: String,
+    pub title: String,
+    pub artist: String,
+    pub album: String,
+    pub cover_url: Option<String>,
+}
+
+impl From<crate::models::Track> for Track {
+    fn from(t: crate::models::Track) -> Self {
+        let artist = t.artists_string(", ");
+        Self {
+            id: t.ids.deezer.unwrap_or_default(),
+            title: t.title,
+            artist,
+            album: t.album.title,
+            cover_url: t.album.images.first().map(|i| i.url.clone()),
+        }
+    }
+}
+
 /// Stateless Rusteer service - each method receives ARL as parameter
 #[derive(uniffi::Object)]
 pub struct RusteerService {}
@@ -118,6 +159,19 @@ impl RusteerService {
                     }
                 }
             }
+        })
+    }
+
+    /// Search for tracks
+    pub fn search_tracks(&self, arl: String, query: String) -> Result<Vec<Track>, RusteerError> {
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| RusteerError::DeezerError(format!("Failed to create runtime: {}", e)))?;
+
+        runtime.block_on(async {
+            let rusteer = Rusteer::new(&arl).await?;
+            // limit to 30 results for now
+            let tracks = rusteer.search_tracks(&query, 30).await?;
+            Ok(tracks.into_iter().map(Into::into).collect())
         })
     }
 
@@ -157,6 +211,24 @@ impl RusteerService {
             let result = rusteer
                 .download_album_to(&album_id, PathBuf::from(output_dir))
                 .await?;
+            Ok(result.into())
+        })
+    }
+
+    /// Get streaming URL for a track (for online playback)
+    pub fn get_streaming_url(
+        &self,
+        arl: String,
+        track_id: String,
+        quality: DownloadQuality,
+    ) -> Result<StreamingUrl, RusteerError> {
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| RusteerError::DeezerError(format!("Failed to create runtime: {}", e)))?;
+
+        runtime.block_on(async {
+            let mut rusteer = Rusteer::new(&arl).await?;
+            rusteer.set_quality(quality.into());
+            let result = rusteer.get_streaming_url(&track_id).await?;
             Ok(result.into())
         })
     }
