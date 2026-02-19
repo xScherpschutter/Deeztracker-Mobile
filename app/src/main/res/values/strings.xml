@@ -187,6 +187,11 @@
     <string name="import_playlist_error_corrupted">The file appears to be corrupted or invalid</string>
     <string name="import_playlist_error_read">Error reading file. Please try again</string>
     <string name="import_playlist_error_unknown">An unexpected error occurred</string>
+    <string name="import_playlist_downloading_progress">Downloading %1$d of %2$d...</string>
+    <string name="import_playlist_creating">Creating playlist...</string>
+    <string name="import_playlist_created_with_downloads">Playlist \u2018%1$s\u2019 created with %2$d downloaded songs</string>
+    <string name="import_playlist_created">Playlist \u2018%s\u2019 created</string>
+    <string name="import_playlist_starting_download">Starting download of %d songs...</string>
 
 
 </resources>
