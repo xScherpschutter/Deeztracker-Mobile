@@ -34,6 +34,9 @@ import com.crowstar.deeztrackermobile.ui.components.TrackPreviewButton
 import com.crowstar.deeztrackermobile.features.preview.PreviewPlayer
 import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.R
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -91,6 +94,16 @@ fun PlaylistScreen(
     // Stop preview when leaving this screen
     DisposableEffect(Unit) {
         onDispose { PreviewPlayer.stop() }
+    }
+
+    // Stop preview when app goes to background
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) PreviewPlayer.stop()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Scaffold(
@@ -171,29 +184,6 @@ fun PlaylistScreen(
                         }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
-                }
-
-                // Tracks Header
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = stringResource(R.string.action_queue),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextGray
-                        )
-                        Text(
-                            text = stringResource(R.string.action_date_added),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextGray
-                        )
-                    }
                 }
 
                 // Tracks List
