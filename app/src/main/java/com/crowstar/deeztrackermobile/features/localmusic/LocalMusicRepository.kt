@@ -200,7 +200,12 @@ class LocalMusicRepository(
      */
     suspend fun getTracksForAlbum(albumId: Long): List<LocalTrack> = withContext(Dispatchers.IO) {
         val tracks = getAllTracks()
-        tracks.filter { it.albumId == albumId }
+        tracks
+            .filter { it.albumId == albumId }
+            .sortedWith(compareBy(
+                { track -> val n = track.track ?: 0; if (n > 0) n / 1000 else Int.MAX_VALUE },
+                { track -> val n = track.track ?: 0; if (n > 0) n % 1000 else Int.MAX_VALUE }
+            ))
     }
 
     /**
