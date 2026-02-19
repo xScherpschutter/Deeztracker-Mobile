@@ -2,6 +2,7 @@ package com.crowstar.deeztrackermobile.ui.screens
 
 import android.net.Uri
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -65,18 +66,93 @@ fun ImportPlaylistScreen(
     var isProcessing by remember { mutableStateOf(false) }
     var progressMessage by remember { mutableStateOf("") }
     
+    // Download tracking state
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadedCount by remember { mutableStateOf(0) }
+    var totalToDownload by remember { mutableStateOf(0) }
+    var tracksToDownload by remember { mutableStateOf<List<Track>>(emptyList()) }
+    
+    // Block back navigation while downloading to prevent broken import state
+    BackHandler(enabled = isDownloading) { /* swallow back press */ }
+
     // Resources for logic that needs string access
     val readingMsg = stringResource(R.string.import_playlist_reading)
     val checkingMsg = stringResource(R.string.import_playlist_checking_local)
     val searchingMsg = stringResource(R.string.import_playlist_searching_deezer)
     val queuedMsg = stringResource(R.string.import_playlist_download_queued)
-    
+    val downloadingProgressTemplate = stringResource(R.string.import_playlist_downloading_progress)
+    val creatingMsg = stringResource(R.string.import_playlist_creating)
+    val createdWithDownloadsTemplate = stringResource(R.string.import_playlist_created_with_downloads)
+    val createdTemplate = stringResource(R.string.import_playlist_created)
+    val startingDownloadTemplate = stringResource(R.string.import_playlist_starting_download)
+
     // Error messages
     val errorInvalidFile = stringResource(R.string.import_playlist_error_invalid_file)
     val errorEmptyFile = stringResource(R.string.import_playlist_error_empty_file)
     val errorCorrupted = stringResource(R.string.import_playlist_error_corrupted)
     val errorRead = stringResource(R.string.import_playlist_error_read)
     val errorUnknown = stringResource(R.string.import_playlist_error_unknown)
+
+    // Monitor download progress
+    val downloadTrigger by downloadManager.downloadRefreshTrigger.collectAsState()
+    
+    LaunchedEffect(downloadTrigger) {
+        if (isDownloading && downloadedCount < totalToDownload) {
+            downloadedCount++
+            progressMessage = downloadingProgressTemplate.format(downloadedCount, totalToDownload)
+            
+            // When all downloads complete, create playlist
+            if (downloadedCount >= totalToDownload) {
+                isDownloading = false
+                progressMessage = creatingMsg
+                
+                // Create playlist
+                val playlistId = viewModel.createPlaylistSync(playlistName)
+                
+                // Find and add all downloaded tracks
+                val allLocalTracks = localRepo.getAllTracks()
+                
+                // Add tracks that were already local
+                importedTracks.forEach { item ->
+                    if (item.status is ImportStatus.FoundLocally) {
+                        viewModel.addTrackToPlaylistId(playlistId, item.status.localTrack)
+                    }
+                }
+                
+                // Add newly downloaded tracks by matching title and artist
+                tracksToDownload.forEach { track ->
+                    val matchedTrack = allLocalTracks.find { localTrack ->
+                        val titleMatch = localTrack.title.equals(track.title, ignoreCase = true)
+                        val artistMatch = localTrack.artist.contains(track.artist, ignoreCase = true) ||
+                                        track.artist.contains(localTrack.artist, ignoreCase = true)
+                        titleMatch && artistMatch
+                    }
+                    
+                    if (matchedTrack != null) {
+                        viewModel.addTrackToPlaylistId(playlistId, matchedTrack)
+                    } else {
+                        Log.w("ImportPlaylist", "Could not find downloaded track: ${track.title} - ${track.artist}")
+                    }
+                }
+                
+                // Show completion message
+                snackbarHostState.showSnackbar(
+                    message = createdWithDownloadsTemplate.format(playlistName, downloadedCount),
+                    duration = SnackbarDuration.Short
+                )
+                
+                // Reset state and go back
+                isProcessing = false
+                progressMessage = ""
+                downloadedCount = 0
+                totalToDownload = 0
+                tracksToDownload = emptyList()
+                
+                onBackClick()
+            }
+        }
+    }
+    
 
     // File Picker - Restrict to playlist MIME types
     val launcher = rememberLauncherForActivityResult(
@@ -170,8 +246,15 @@ fun ImportPlaylistScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.import_playlist_title), color = Color.White) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = Color.White)
+                    IconButton(
+                        onClick = onBackClick,
+                        enabled = !isDownloading
+                    ) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                            tint = if (isDownloading) Color.White.copy(alpha = 0.3f) else Color.White
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundDark)
@@ -239,41 +322,43 @@ fun ImportPlaylistScreen(
                     Button(
                         onClick = {
                             scope.launch {
-                                // Create Playlist in App
-                                val playlistId = viewModel.createPlaylistSync(playlistName)
-                                
-                                // Add found local tracks to playlist immediately
-                                importedTracks.forEach { item ->
-                                    if (item.status is ImportStatus.FoundLocally) {
-                                        viewModel.addTrackToPlaylistId(playlistId, item.status.localTrack)
-                                    }
-                                }
-
-                                // Trigger downloads for missing tracks AND link them to playlist
-                                val tracksToDownload = importedTracks.mapNotNull { 
+                                val toDownload = importedTracks.mapNotNull { 
                                     (it.status as? ImportStatus.FoundOnDeezer)?.track
                                 }
-                                tracksToDownload.forEach { track ->
-                                    downloadManager.startTrackDownload(
-                                        trackId = track.id.toLong(), 
-                                        title = track.title, 
-                                        targetPlaylistId = playlistId // Auto-add to playlist on completion
-                                    )
-                                }
                                 
-                                // Show snackbar confirmation
-                                val downloadCount = tracksToDownload.size
-                                if (downloadCount > 0) {
+                                if (toDownload.isEmpty()) {
+                                    // Only local tracks, create playlist immediately
+                                    val playlistId = viewModel.createPlaylistSync(playlistName)
+                                    importedTracks.forEach { item ->
+                                        if (item.status is ImportStatus.FoundLocally) {
+                                            viewModel.addTrackToPlaylistId(playlistId, item.status.localTrack)
+                                        }
+                                    }
                                     snackbarHostState.showSnackbar(
-                                        message = String.format(queuedMsg, downloadCount), // Use format directly here or context.getString
+                                        message = createdTemplate.format(playlistName),
                                         duration = SnackbarDuration.Short
                                     )
+                                    onBackClick()
+                                } else {
+                                    // Start download process
+                                    isDownloading = true
+                                    isProcessing = true
+                                    downloadedCount = 0
+                                    totalToDownload = toDownload.size
+                                    tracksToDownload = toDownload
+                                    progressMessage = startingDownloadTemplate.format(toDownload.size)
+                                    
+                                    // Queue all downloads (WITHOUT targetPlaylistId)
+                                    toDownload.forEach { track ->
+                                        downloadManager.startTrackDownload(
+                                            trackId = track.id.toLong(), 
+                                            title = track.title
+                                        )
+                                    }
                                 }
-                                
-                                onBackClick()
                             }
                         },
-                        enabled = canImport && !isProcessing,
+                        enabled = canImport && !isProcessing && !isDownloading,
                         colors = ButtonDefaults.buttonColors(containerColor = Primary)
                     ) {
                         val text = if (missingCount > 0) 
@@ -284,8 +369,11 @@ fun ImportPlaylistScreen(
                     }
                 }
                 
-                if (isProcessing) {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
+                if (isProcessing || isDownloading) {
+                    LinearProgressIndicator(
+                        progress = if (totalToDownload > 0) downloadedCount.toFloat() / totalToDownload.toFloat() else 0f,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    )
                     Text(progressMessage, color = TextGray, style = MaterialTheme.typography.bodySmall)
                     Spacer(modifier = Modifier.height(8.dp))
                 }
