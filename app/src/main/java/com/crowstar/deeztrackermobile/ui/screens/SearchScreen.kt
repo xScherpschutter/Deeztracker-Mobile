@@ -94,6 +94,9 @@ import com.crowstar.deeztrackermobile.ui.components.MarqueeText
 import com.crowstar.deeztrackermobile.ui.components.TrackPreviewButton
 import com.crowstar.deeztrackermobile.features.preview.PreviewPlayer
 import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -140,6 +143,7 @@ fun SearchScreen(
         if (query.isBlank()) return
         scope.launch {
             if (isNewSearch) {
+                PreviewPlayer.stop()
                 isLoading = true
                 tracks = emptyList()
                 artists = emptyList()
@@ -203,11 +207,24 @@ fun SearchScreen(
         }
     }
 
-    // Trigger search when tab changes
+    // Trigger search when tab changes, and stop any running preview
     LaunchedEffect(selectedTabIndex) {
+        PreviewPlayer.stop()
         if (query.isNotEmpty() && hasSearched) {
             performSearch(isNewSearch = true)
         }
+    }
+
+    // Stop preview when app goes to background (minimized)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                PreviewPlayer.stop()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     // Infinite Scroll Logic
@@ -281,8 +298,10 @@ fun SearchScreen(
                             value = query,
                             onValueChange = { 
                                 query = it
-                                if (it.isEmpty()) hasSearched = false
-                                hasSearched = false
+                                if (it.isEmpty()) {
+                                    hasSearched = false
+                                    PreviewPlayer.stop()
+                                }
                             },
                             modifier = Modifier
                                 .fillMaxWidth(),
