@@ -23,6 +23,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.crowstar.deeztrackermobile.features.player.PlayerController
+import com.crowstar.deeztrackermobile.features.preview.PreviewPlayer
 import com.crowstar.deeztrackermobile.navigation.AppNavigation
 import com.crowstar.deeztrackermobile.ui.utils.LocaleHelper
 import com.crowstar.deeztrackermobile.ui.theme.DeeztrackerMobileTheme
@@ -45,6 +46,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        PreviewPlayer.init(this)
         setContent {
             DeeztrackerMobileTheme {
                 Surface(
@@ -131,6 +133,11 @@ class MainActivity : ComponentActivity() {
         val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
         val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         return if (max > 0) current.toFloat() / max else 0f
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        PreviewPlayer.release()
     }
 }
 

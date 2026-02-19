@@ -50,6 +50,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -64,6 +65,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -89,6 +91,8 @@ import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.theme.TextWhite
 import com.crowstar.deeztrackermobile.ui.components.MarqueeText
+import com.crowstar.deeztrackermobile.ui.components.TrackPreviewButton
+import com.crowstar.deeztrackermobile.features.preview.PreviewPlayer
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -224,6 +228,11 @@ fun SearchScreen(
                     performSearch(isNewSearch = false)
                 }
             }
+    }
+
+    // Stop preview when leaving this screen
+    DisposableEffect(Unit) {
+        onDispose { PreviewPlayer.stop() }
     }
 
     Scaffold(
@@ -519,38 +528,64 @@ fun TrackItem(
                 }
             }
         }
-        
-        IconButton(
-            onClick = onDownloadClick,
-            enabled = !isDownloading && !isDownloaded,
+
+        TrackPreviewButton(previewUrl = track.preview)
+
+        Spacer(modifier = Modifier.width(6.dp))
+
+        Box(
+            contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(40.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.05f))
+                .drawBehind {
+                    val stroke = 2.5.dp.toPx()
+                    val inset = stroke / 2f
+                    drawArc(
+                        color = Color.White.copy(alpha = 0.12f),
+                        startAngle = -90f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        topLeft = androidx.compose.ui.geometry.Offset(inset, inset),
+                        size = androidx.compose.ui.geometry.Size(
+                            size.width - inset * 2,
+                            size.height - inset * 2
+                        ),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = stroke,
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        )
+                    )
+                }
         ) {
-            when {
-                isDownloaded -> {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Downloaded",
-                        tint = Color.Green,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                isDownloading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Primary,
-                        strokeWidth = 2.dp
-                    )
-                }
-                else -> {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = "Download",
-                        tint = Primary,
-                        modifier = Modifier.size(20.dp)
-                    )
+            IconButton(
+                onClick = onDownloadClick,
+                enabled = !isDownloading && !isDownloaded,
+                modifier = Modifier.size(40.dp)
+            ) {
+                when {
+                    isDownloaded -> {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Downloaded",
+                            tint = Color.Green,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    isDownloading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Primary,
+                            strokeWidth = 2.dp
+                        )
+                    }
+                    else -> {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = "Download",
+                            tint = Primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
         }
