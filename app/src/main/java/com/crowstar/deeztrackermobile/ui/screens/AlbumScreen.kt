@@ -31,6 +31,8 @@ import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.utils.formatDuration
 import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.ui.components.MarqueeText
+import com.crowstar.deeztrackermobile.ui.components.TrackPreviewButton
+import com.crowstar.deeztrackermobile.features.preview.PreviewPlayer
 import com.crowstar.deeztrackermobile.R
 
 
@@ -83,6 +85,12 @@ fun AlbumScreen(
             else -> { /* Idle or Downloading - no snackbar */ }
         }
     }
+
+    // Stop preview when leaving this screen
+    DisposableEffect(Unit) {
+        onDispose { PreviewPlayer.stop() }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -305,6 +313,9 @@ private fun TrackListItem(
             color = TextGray,
             modifier = Modifier.padding(horizontal = 12.dp)
         )
+
+        // Preview Button
+        TrackPreviewButton(previewUrl = track.preview)
 
         // Download Button
         IconButton(

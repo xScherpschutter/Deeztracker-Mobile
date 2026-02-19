@@ -35,6 +35,8 @@ import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.components.MarqueeText
+import com.crowstar.deeztrackermobile.ui.components.TrackPreviewButton
+import com.crowstar.deeztrackermobile.features.preview.PreviewPlayer
 import com.crowstar.deeztrackermobile.ui.utils.formatDuration
 
 
@@ -93,8 +95,11 @@ fun ArtistScreen(
             else -> { /* Idle or Downloading - no snackbar */ }
         }
     }
-    
 
+    // Stop preview when leaving this screen
+    DisposableEffect(Unit) {
+        onDispose { PreviewPlayer.stop() }
+    }
 
     Scaffold(
         containerColor = BackgroundDark,
@@ -366,7 +371,10 @@ private fun ArtistTrackItem(
             color = TextGray
         )
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(4.dp))
+
+        // Preview Button
+        TrackPreviewButton(previewUrl = track.preview)
 
         // Download Button
         IconButton(
