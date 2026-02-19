@@ -94,6 +94,7 @@ import com.crowstar.deeztrackermobile.ui.components.MarqueeText
 import com.crowstar.deeztrackermobile.ui.components.TrackPreviewButton
 import com.crowstar.deeztrackermobile.features.preview.PreviewPlayer
 import kotlinx.coroutines.launch
+import com.crowstar.deeztrackermobile.ui.utils.formatDuration
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -535,12 +536,12 @@ fun TrackItem(
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.weight(1f, fill = false)
                 )
-                if (track.album != null) {
+                if (track.duration != null) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(Color.Gray))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = stringResource(R.string.label_song),
+                        text = formatDuration(track.duration),
                         color = TextGray,
                         fontSize = 12.sp
                     )
