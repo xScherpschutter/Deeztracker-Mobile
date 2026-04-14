@@ -191,6 +191,7 @@ fun SettingsScreen(
                         )
 
                         val displayMode = when(lyricMode) {
+                            LyricMode.NORMAL -> stringResource(R.string.settings_lyric_mode_normal)
                             LyricMode.CLASSIC -> stringResource(R.string.settings_lyric_mode_classic)
                             LyricMode.FADE -> stringResource(R.string.settings_lyric_mode_fade)
                             LyricMode.SINGLE_LINE -> stringResource(R.string.settings_lyric_mode_single)
@@ -208,6 +209,7 @@ fun SettingsScreen(
                             ) {
                                 LyricMode.values().forEach { mode ->
                                     val modeLabel = when(mode) {
+                                        LyricMode.NORMAL -> stringResource(R.string.settings_lyric_mode_normal)
                                         LyricMode.CLASSIC -> stringResource(R.string.settings_lyric_mode_classic)
                                         LyricMode.FADE -> stringResource(R.string.settings_lyric_mode_fade)
                                         LyricMode.SINGLE_LINE -> stringResource(R.string.settings_lyric_mode_single)

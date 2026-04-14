@@ -96,7 +96,6 @@ fun LocalMusicScreen(
     
     val context = LocalContext.current
     val snackbarController = LocalSnackbarController.current
-    val scope = rememberCoroutineScope()
     val localMusicTitle = stringResource(R.string.local_music_title)
     
     // Search Query State - Persist across navigation
