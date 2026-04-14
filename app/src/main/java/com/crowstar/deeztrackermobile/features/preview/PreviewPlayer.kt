@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -11,36 +12,34 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
+import javax.inject.Singleton
 
-/**
- * Singleton player for 30-second Deezer track previews.
- * Completely independent from PlayerController.
- *
- * Exposes:
- * - [playingUrl] — URL currently playing, or null if stopped.
- * - [positionMs] — real playback position polled from ExoPlayer every 100ms.
- */
-object PreviewPlayer {
+@Singleton
+class PreviewPlayer @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
 
     private var player: ExoPlayer? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var pollJob: Job? = null
 
     private val _playingUrl = MutableStateFlow<String?>(null)
-    val playingUrl: StateFlow<String?> = _playingUrl
+    val playingUrl: StateFlow<String?> = _playingUrl.asStateFlow()
 
     private val _positionMs = MutableStateFlow(0L)
-    /** Real ExoPlayer position in milliseconds, updated every 100ms while playing. */
-    val positionMs: StateFlow<Long> = _positionMs
+    val positionMs: StateFlow<Long> = _positionMs.asStateFlow()
 
-    fun init(context: Context) {
+    private fun ensurePlayer() {
         if (player == null) {
-            player = ExoPlayer.Builder(context.applicationContext).build()
+            player = ExoPlayer.Builder(context).build()
         }
     }
 
     fun toggle(url: String) {
+        ensurePlayer()
         val p = player ?: return
 
         if (_playingUrl.value == url && p.isPlaying) {

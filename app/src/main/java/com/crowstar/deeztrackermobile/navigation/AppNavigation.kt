@@ -6,7 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.ViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -14,27 +14,39 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.crowstar.deeztrackermobile.features.rusteer.RustDeezerService
-import com.crowstar.deeztrackermobile.ui.screens.AlbumScreen
-import com.crowstar.deeztrackermobile.ui.screens.ArtistScreen
-import com.crowstar.deeztrackermobile.ui.screens.LoginScreen
-import com.crowstar.deeztrackermobile.ui.screens.MainScreen
-import com.crowstar.deeztrackermobile.ui.screens.PlaylistScreen
+import com.crowstar.deeztrackermobile.features.player.PlayerController
+import com.crowstar.deeztrackermobile.ui.album.AlbumScreen
+import com.crowstar.deeztrackermobile.ui.artist.ArtistScreen
+import com.crowstar.deeztrackermobile.ui.login.LoginScreen
+import com.crowstar.deeztrackermobile.ui.main.MainScreen
+import com.crowstar.deeztrackermobile.ui.playlist.PlaylistScreen
+import com.crowstar.deeztrackermobile.ui.playlist.ImportPlaylistScreen
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import androidx.hilt.navigation.compose.hiltViewModel
+
+@HiltViewModel
+class NavigationViewModel @Inject constructor(
+    private val rustService: RustDeezerService,
+    private val playerController: PlayerController
+) : ViewModel() {
+    fun isLoggedIn() = rustService.isLoggedIn()
+    fun logout() {
+        playerController.stop()
+    }
+}
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    viewModel: NavigationViewModel = hiltViewModel()
+) {
     val navController = rememberNavController()
-    val context = LocalContext.current
+    val startDestination = if (viewModel.isLoggedIn()) "main" else "login"
     
-    // Check if user is already logged in
-    val rustService = remember { RustDeezerService(context) }
-    val startDestination = if (rustService.isLoggedIn()) "main" else "login"
-    
-    // Navigation guard to prevent double-clicks causing invalid state
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     var isNavigating by remember { mutableStateOf(false) }
     
-    // Safe popBackStack that prevents rapid successive calls
     val safePopBackStack: () -> Unit = remember(navController) {
         {
             if (!isNavigating && navController.previousBackStackEntry != null) {
@@ -44,7 +56,6 @@ fun AppNavigation() {
         }
     }
     
-    // Reset navigation guard when route changes
     LaunchedEffect(currentRoute) {
         isNavigating = false
     }
@@ -73,7 +84,7 @@ fun AppNavigation() {
                     navController.navigate("import_playlist")
                 },
                 onLogout = {
-                    com.crowstar.deeztrackermobile.features.player.PlayerController.getInstance(context).stop()
+                    viewModel.logout()
                     navController.navigate("login") {
                         popUpTo("main") { inclusive = true }
                     }
@@ -118,7 +129,7 @@ fun AppNavigation() {
         }
 
         composable("import_playlist") {
-            com.crowstar.deeztrackermobile.ui.screens.ImportPlaylistScreen(
+            ImportPlaylistScreen(
                 onBackClick = safePopBackStack
             )
         }
