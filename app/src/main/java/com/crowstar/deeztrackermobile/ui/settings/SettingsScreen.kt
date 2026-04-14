@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import com.crowstar.deeztrackermobile.features.player.LyricMode
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
@@ -42,11 +43,13 @@ fun SettingsScreen(
 ) {
     val audioQuality by viewModel.audioQuality.collectAsState()
     val language by viewModel.language.collectAsState()
+    val lyricMode by viewModel.lyricMode.collectAsState()
     val context = LocalContext.current
 
     var showQualityDropdown by remember { mutableStateOf(false) }
     var showLanguageDropdown by remember { mutableStateOf(false) }
     var showLocationDropdown by remember { mutableStateOf(false) }
+    var showLyricModeDropdown by remember { mutableStateOf(false) }
 
     val downloadLocation by viewModel.downloadLocation.collectAsState()
 
@@ -168,6 +171,52 @@ fun SettingsScreen(
                                             viewModel.setLanguage(lang)
                                             showLanguageDropdown = false
                                             (context as? android.app.Activity)?.recreate()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    // Lyrics Style Setting
+                    item {
+                        Text(
+                            text = stringResource(R.string.settings_lyrics_header),
+                            color = Primary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        val displayMode = when(lyricMode) {
+                            LyricMode.CLASSIC -> stringResource(R.string.settings_lyric_mode_classic)
+                            LyricMode.FADE -> stringResource(R.string.settings_lyric_mode_fade)
+                            LyricMode.SINGLE_LINE -> stringResource(R.string.settings_lyric_mode_single)
+                        }
+
+                        SettingItem(
+                            title = stringResource(R.string.settings_lyric_mode_title),
+                            value = displayMode,
+                            onClick = { showLyricModeDropdown = true }
+                        ) {
+                            DropdownMenu(
+                                expanded = showLyricModeDropdown,
+                                onDismissRequest = { showLyricModeDropdown = false },
+                                modifier = Modifier.background(SurfaceDark)
+                            ) {
+                                LyricMode.values().forEach { mode ->
+                                    val modeLabel = when(mode) {
+                                        LyricMode.CLASSIC -> stringResource(R.string.settings_lyric_mode_classic)
+                                        LyricMode.FADE -> stringResource(R.string.settings_lyric_mode_fade)
+                                        LyricMode.SINGLE_LINE -> stringResource(R.string.settings_lyric_mode_single)
+                                    }
+                                    DropdownMenuItem(
+                                        text = { Text(modeLabel, color = Color.White) },
+                                        onClick = {
+                                            viewModel.setLyricMode(mode)
+                                            showLyricModeDropdown = false
                                         }
                                     )
                                 }

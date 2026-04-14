@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.crowstar.deeztrackermobile.features.player.LyricMode
 import com.crowstar.deeztrackermobile.features.rusteer.RustDeezerService
 import com.crowstar.deeztrackermobile.ui.utils.LanguageHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,6 +33,9 @@ class SettingsViewModel @Inject constructor(
     private val _downloadLocation = MutableStateFlow("MUSIC")
     val downloadLocation: StateFlow<String> = _downloadLocation.asStateFlow()
 
+    private val _lyricMode = MutableStateFlow(LyricMode.CLASSIC)
+    val lyricMode: StateFlow<LyricMode> = _lyricMode.asStateFlow()
+
     init {
         loadSettings()
     }
@@ -52,6 +56,14 @@ class SettingsViewModel @Inject constructor(
         // Load Download Location
         val savedLocation = prefs.getString("download_location", "MUSIC")
         _downloadLocation.value = savedLocation ?: "MUSIC"
+
+        // Load Lyric Mode
+        val savedLyricMode = prefs.getString("lyric_mode", LyricMode.CLASSIC.name)
+        _lyricMode.value = try {
+            LyricMode.valueOf(savedLyricMode ?: LyricMode.CLASSIC.name)
+        } catch (e: Exception) {
+            LyricMode.CLASSIC
+        }
     }
 
     fun setAudioQuality(quality: DownloadQuality) {
@@ -69,6 +81,11 @@ class SettingsViewModel @Inject constructor(
     fun setDownloadLocation(location: String) {
         _downloadLocation.value = location
         prefs.edit().putString("download_location", location).apply()
+    }
+
+    fun setLyricMode(mode: LyricMode) {
+        _lyricMode.value = mode
+        prefs.edit().putString("lyric_mode", mode.name).apply()
     }
 
     fun logout() {
