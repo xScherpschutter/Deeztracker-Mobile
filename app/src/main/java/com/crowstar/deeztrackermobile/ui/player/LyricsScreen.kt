@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -105,25 +106,40 @@ fun LyricsScreen(
                     val isPast = index < currentIndex
                     
                     val blurValue by animateFloatAsState(
-                        targetValue = if (isActive || !isSynchronized) 0f else 8f,
-                        animationSpec = tween(durationMillis = 500),
+                        targetValue = when {
+                            !isSynchronized || isActive || lyricMode == LyricMode.NORMAL -> 0f
+                            else -> 8f
+                        },
+                        animationSpec = tween(durationMillis = 800),
                         label = "blur"
                     )
                     
                     val alphaValue by animateFloatAsState(
                         targetValue = when {
                             !isSynchronized || isActive -> 1f
-                            lyricMode == LyricMode.FADE && isPast -> 0.3f
-                            else -> 0.5f
+                            lyricMode == LyricMode.NORMAL -> 0.7f
+                            lyricMode == LyricMode.FADE && isPast -> 0f // "Dust" effect: completely gone
+                            else -> 0.4f
                         },
-                        animationSpec = tween(durationMillis = 500),
+                        animationSpec = tween(durationMillis = 800),
                         label = "alpha"
                     )
 
                     val scaleValue by animateFloatAsState(
-                        targetValue = if (isActive) 1.05f else 1f,
-                        animationSpec = tween(durationMillis = 500),
+                        targetValue = when {
+                            isActive -> 1.05f
+                            lyricMode == LyricMode.FADE && isPast -> 0.9f // Shrink slightly as it fades
+                            else -> 1f
+                        },
+                        animationSpec = tween(durationMillis = 800),
                         label = "scale"
+                    )
+
+                    // Vertical offset for "floating away" effect in Fade mode
+                    val yOffset by animateFloatAsState(
+                        targetValue = if (lyricMode == LyricMode.FADE && isPast) -20f else 0f,
+                        animationSpec = tween(durationMillis = 1000),
+                        label = "yOffset"
                     )
 
                     Text(
@@ -134,9 +150,13 @@ fun LyricsScreen(
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .scale(scaleValue)
-                            .alpha(alphaValue)
-                            .blur(blurValue.dp)
+                            .graphicsLayer {
+                                translationY = yOffset
+                                scaleX = scaleValue
+                                scaleY = scaleValue
+                                alpha = alphaValue
+                            }
+                            .let { if (blurValue > 0f) it.blur(blurValue.dp) else it }
                             .clickable(enabled = isSynchronized) { 
                                 if (isSynchronized) onLineClick(line.timeMs) 
                             },

@@ -56,6 +56,7 @@
     <string name="settings_location_downloads">Downloads Folder</string>
     <string name="settings_lyrics_header">LYRICS</string>
     <string name="settings_lyric_mode_title">Lyric Style</string>
+    <string name="settings_lyric_mode_normal">Normal</string>
     <string name="settings_lyric_mode_classic">Classic (Blur)</string>
     <string name="settings_lyric_mode_fade">Fade (Dust)</string>
     <string name="settings_lyric_mode_single">Single Line</string>
