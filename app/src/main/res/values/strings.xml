@@ -54,6 +54,11 @@
     <string name="settings_download_location_title">Download Location</string>
     <string name="settings_location_music">Music Folder</string>
     <string name="settings_location_downloads">Downloads Folder</string>
+    <string name="settings_lyrics_header">LYRICS</string>
+    <string name="settings_lyric_mode_title">Lyric Style</string>
+    <string name="settings_lyric_mode_classic">Classic (Blur)</string>
+    <string name="settings_lyric_mode_fade">Fade (Dust)</string>
+    <string name="settings_lyric_mode_single">Single Line</string>
     <string name="settings_permissions_header">PERMISSIONS</string>
     <string name="settings_all_files_access">All Files Access</string>
     <string name="settings_permission_granted">✓ Granted</string>

@@ -54,6 +54,11 @@
     <string name="settings_download_location_title">Ubicación de descarga</string>
     <string name="settings_location_music">Carpeta de Música</string>
     <string name="settings_location_downloads">Carpeta de Descargas</string>
+    <string name="settings_lyrics_header">LETRAS</string>
+    <string name="settings_lyric_mode_title">Estilo de Letra</string>
+    <string name="settings_lyric_mode_classic">Clásico (Desenfoque)</string>
+    <string name="settings_lyric_mode_fade">Desvanecimiento (Polvo)</string>
+    <string name="settings_lyric_mode_single">Solo línea actual</string>
     <string name="settings_permissions_header">PERMISOS</string>
     <string name="settings_all_files_access">Acceso a Todos los Archivos</string>
     <string name="settings_permission_granted">✓ Concedido</string>
