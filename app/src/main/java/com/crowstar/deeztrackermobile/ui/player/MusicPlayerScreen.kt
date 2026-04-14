@@ -43,7 +43,9 @@ import coil.compose.AsyncImage
 import com.crowstar.deeztrackermobile.features.player.PlayerController
 import com.crowstar.deeztrackermobile.features.player.RepeatMode
 import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
+import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
+import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import kotlinx.coroutines.launch
 import com.crowstar.deeztrackermobile.ui.utils.formatTime
@@ -73,12 +75,14 @@ fun MusicPlayerScreen(
 ) {
     val playerController = viewModel.playerController
     val playerState by playerController.playerState.collectAsState()
+    val currentQueue by playerController.currentQueue.collectAsState()
     val track = playerState.currentTrack ?: return
     
-    // Playlist State
+    // UI State
     val playlists by playerController.playlistRepository.playlists.collectAsState()
     var showAddToPlaylist by remember { mutableStateOf(false) }
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
+    var showQueue by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -89,7 +93,7 @@ fun MusicPlayerScreen(
     val pagerState = rememberPagerState(pageCount = { 2 })
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Background Layer (Arte borroso)
+        // Blurred background artwork
         com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
             model = track.albumArtUri,
             modifier = Modifier
@@ -125,7 +129,7 @@ fun MusicPlayerScreen(
              if (page == 0) {
                  // Player Page
                  Column(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(bottom = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -133,8 +137,8 @@ fun MusicPlayerScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 16.dp)
-                            .padding(horizontal = 24.dp), 
+                            .padding(top = 12.dp)
+                            .padding(horizontal = 20.dp), 
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -149,7 +153,7 @@ fun MusicPlayerScreen(
 
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
                         ) {
                             Text(
                                 text = stringResource(R.string.player_playing_from),
@@ -158,12 +162,13 @@ fun MusicPlayerScreen(
                                 color = TextGray,
                                 letterSpacing = 1.sp
                             )
-                            Text(
+                            MarqueeText(
                                 text = track.album,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = Color.White,
-                                maxLines = 1
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
 
@@ -177,42 +182,40 @@ fun MusicPlayerScreen(
                         }
                     }
 
-                    // Album Art (Centro)
+                    // Album Art
                     com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
                         model = track.albumArtUri,
                         modifier = Modifier
-                            .size(320.dp)
-                            .clip(RoundedCornerShape(24.dp))
-                            .shadow(20.dp, RoundedCornerShape(24.dp))
+                            .size(300.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .shadow(12.dp, RoundedCornerShape(20.dp))
                     )
 
-                    // Info y Controles (Abajo)
+                    // Info and Controls
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 32.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         // Track Info
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 32.dp),
+                                .padding(horizontal = 28.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 MarqueeText(
                                     text = track.title,
-                                    fontSize = 24.sp,
+                                    fontSize = 22.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
                                 )
                                 MarqueeText(
                                     text = track.artist,
-                                    fontSize = 18.sp,
+                                    fontSize = 17.sp,
                                     color = TextGray,
-                                    modifier = Modifier.padding(top = 4.dp)
+                                    modifier = Modifier.padding(top = 2.dp)
                                 )
                             }
                             
@@ -221,17 +224,17 @@ fun MusicPlayerScreen(
                                     imageVector = if (playerState.isCurrentTrackFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = stringResource(R.string.player_like),
                                     tint = if (playerState.isCurrentTrackFavorite) Primary else Color.White,
-                                    modifier = Modifier.size(28.dp)
+                                    modifier = Modifier.size(26.dp)
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                        // Progress y Playback
+                        // Progress and Playback
                         PlayerControls(playerController, playerState)
                         
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         
                         // Footer Controls
                         Row(
@@ -249,7 +252,7 @@ fun MusicPlayerScreen(
                                 )
                             }
                             
-                            IconButton(onClick = { /* Queue action */ }) {
+                            IconButton(onClick = { showQueue = true }) {
                                 Icon(Icons.Default.List, contentDescription = stringResource(R.string.player_queue), tint = Color.White.copy(alpha = 0.6f))
                             }
                             
@@ -270,29 +273,31 @@ fun MusicPlayerScreen(
                 }
              } else {
                  // Lyrics Page
-                 Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp)) {
-                    // Banner Centrado (Restaurado)
+                 Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 12.dp)) {
+                    // Centered Banner
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
                             model = track.albumArtUri,
-                            modifier = Modifier.size(60.dp).clip(RoundedCornerShape(12.dp))
+                            modifier = Modifier.size(56.dp).clip(RoundedCornerShape(10.dp))
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         MarqueeText(
                             text = track.title,
                             color = Color.White,
-                            fontSize = 18.sp,
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
                         )
                         MarqueeText(
                             text = track.artist,
                             color = TextGray,
-                            fontSize = 14.sp,
-                            textAlign = TextAlign.Center
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                     
@@ -310,7 +315,7 @@ fun MusicPlayerScreen(
              }
         }
 
-        // Dialogos y Sheets (Fuera del pager)
+        // Dialogs and Sheets (Outside pager)
         if (showMenu) {
             ModalBottomSheet(
                 onDismissRequest = { showMenu = false },
@@ -344,6 +349,23 @@ fun MusicPlayerScreen(
                     showAddToPlaylist = false
                 },
                 onCreateNewPlaylist = { showCreatePlaylistDialog = true }
+            )
+        }
+
+        if (showQueue) {
+            QueueBottomSheet(
+                queue = currentQueue,
+                currentTrack = playerState.currentTrack,
+                onDismiss = { showQueue = false },
+                onTrackClick = { index ->
+                    playerController.seekToQueueIndex(index)
+                },
+                onMoveTrack = { from, to ->
+                    playerController.moveTrack(from, to)
+                },
+                onRemoveTrack = { index ->
+                    playerController.removeTrack(index)
+                }
             )
         }
         
@@ -390,7 +412,7 @@ fun MusicPlayerScreen(
                          Text(stringResource(R.string.action_cancel), color = TextGray)
                      }
                  },
-                 containerColor = com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
+                 containerColor = BackgroundDark
              )
          }
     }
@@ -429,7 +451,7 @@ fun PlayerControls(
             Text(text = formatTime(playerState.duration), fontSize = 12.sp, color = TextGray)
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -440,7 +462,7 @@ fun PlayerControls(
                 onClick = { playerController.previous() },
                 modifier = Modifier.size(48.dp)
             ) {
-                Icon(Icons.Default.SkipPrevious, contentDescription = stringResource(R.string.player_previous), tint = Color.White, modifier = Modifier.size(36.dp))
+                Icon(Icons.Default.SkipPrevious, contentDescription = stringResource(R.string.player_previous), tint = Color.White, modifier = Modifier.size(32.dp))
             }
 
             val playPauseScale by animateFloatAsState(if (playerState.isPlaying) 1.1f else 1f, label = "playPauseScale")
@@ -448,7 +470,7 @@ fun PlayerControls(
             IconButton(
                 onClick = { playerController.togglePlayPause() },
                 modifier = Modifier
-                    .size(72.dp)
+                    .size(64.dp)
                     .scale(playPauseScale)
                     .background(Color.White, CircleShape)
             ) {
@@ -456,7 +478,7 @@ fun PlayerControls(
                     imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = stringResource(R.string.player_play_pause),
                     tint = Color.Black,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(36.dp)
                 )
             }
 
@@ -464,7 +486,7 @@ fun PlayerControls(
                 onClick = { playerController.next() },
                 modifier = Modifier.size(48.dp)
             ) {
-                Icon(Icons.Default.SkipNext, contentDescription = stringResource(R.string.player_next), tint = Color.White, modifier = Modifier.size(36.dp))
+                Icon(Icons.Default.SkipNext, contentDescription = stringResource(R.string.player_next), tint = Color.White, modifier = Modifier.size(32.dp))
             }
         }
     }

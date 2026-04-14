@@ -149,6 +149,8 @@
     <string name="action_play_album">Reproducir Álbum</string>
     <string name="action_play_artist">Reproducir Artista</string>
     <string name="action_remove">Quitar</string>
+    <string name="action_move_up">Mover arriba</string>
+    <string name="action_move_down">Mover abajo</string>
     <string name="action_back">Atrás</string>
     
     <!-- Playlist Details -->

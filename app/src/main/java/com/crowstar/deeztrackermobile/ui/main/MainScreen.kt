@@ -178,7 +178,7 @@ fun MainScreen(
                 hostState = snackbarHostState,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = if (isMiniPlayerVisible) 80.dp else 16.dp)
+                    .padding(bottom = floatingUIHeight + 16.dp)
                     .padding(horizontal = 16.dp)
             )
         }

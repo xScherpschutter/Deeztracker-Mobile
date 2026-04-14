@@ -149,6 +149,8 @@
     <string name="action_play_album">Play Album</string>
     <string name="action_play_artist">Play Artist</string>
     <string name="action_remove">Remove</string>
+    <string name="action_move_up">Move up</string>
+    <string name="action_move_down">Move down</string>
     <string name="action_back">Back</string>
     
     <!-- Playlist Details -->

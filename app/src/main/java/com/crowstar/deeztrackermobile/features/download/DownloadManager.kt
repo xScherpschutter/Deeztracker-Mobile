@@ -23,10 +23,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
 
-/**
- * Manager managed by Hilt for handling music downloads.
- * Annotated with @Singleton to ensure only one instance exists.
- */
 @Singleton
 class DownloadManager @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -35,17 +31,16 @@ class DownloadManager @Inject constructor(
     private val rustService: RustDeezerService,
     private val deezerRepository: DeezerRepository
 ) {
-    
     private val TAG = "DownloadManager"
-    
-    // Internal scope that survives navigation
     private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    
-    // Queue for sequential processing
     private val downloadChannel = kotlinx.coroutines.channels.Channel<DownloadRequest>(20)
     
     private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
+    
+    // FAST CACHE: Memory set for O(1) download checks during scroll
+    private val _downloadedKeys = MutableStateFlow<Set<String>>(emptySet())
+    val downloadedKeys: StateFlow<Set<String>> = _downloadedKeys.asStateFlow()
     
     private val _downloadRefreshTrigger = MutableStateFlow(0)
     val downloadRefreshTrigger: StateFlow<Int> = _downloadRefreshTrigger.asStateFlow()
@@ -53,12 +48,37 @@ class DownloadManager @Inject constructor(
     private val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
 
     init {
-        // Start processing the queue
+        // Initial cache load
+        refreshDownloadedKeys()
+        
         managerScope.launch {
             for (request in downloadChannel) {
                 processRequest(request)
             }
         }
+    }
+
+    private fun refreshDownloadedKeys() {
+        managerScope.launch {
+            try {
+                val keys = musicRepository.getAllTracks().map { 
+                    generateTrackKey(it.title, it.artist)
+                }.toSet()
+                _downloadedKeys.value = keys
+            } catch (e: Exception) {
+                Log.e(TAG, "Error refreshing keys", e)
+            }
+        }
+    }
+
+    private fun generateTrackKey(title: String, artist: String): String {
+        val t = title.lowercase().replace(Regex("[^a-z0-9]"), "")
+        val a = artist.lowercase().replace(Regex("[^a-z0-9]"), "")
+        return "$t|$a"
+    }
+
+    fun isTrackDownloadedFast(title: String, artist: String): Boolean {
+        return _downloadedKeys.value.contains(generateTrackKey(title, artist))
     }
 
     val currentQuality: DownloadQuality
@@ -112,32 +132,7 @@ class DownloadManager @Inject constructor(
     }
     
     suspend fun isTrackDownloaded(trackTitle: String, artistName: String): Boolean {
-        return try {
-            val localTracks = musicRepository.getAllTracks()
-            
-            fun normalizeTitle(input: String): String {
-                val withoutFeat = input.replace(Regex("(?i)[\\(\\[]?(?:feat\\.|ft\\.|featuring|with).*"), "")
-                return withoutFeat.lowercase().replace(Regex("[^a-z0-9]"), "")
-            }
-
-            fun normalizeArtist(input: String): String {
-                return input.lowercase().replace(Regex("[^a-z0-9]"), "")
-            }
-            
-            val normalizedTitle = normalizeTitle(trackTitle)
-            val normalizedArtist = normalizeArtist(artistName)
-            
-            localTracks.any { track ->
-                val localTitle = normalizeTitle(track.title)
-                val localArtist = normalizeArtist(track.artist)
-                val titleMatch = localTitle == normalizedTitle
-                val artistMatch = localArtist.contains(normalizedArtist) || normalizedArtist.contains(localArtist)
-                titleMatch && artistMatch
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error checking if track is downloaded", e)
-            false
-        }
+        return isTrackDownloadedFast(trackTitle, artistName)
     }
 
     private suspend fun processRequest(request: DownloadRequest) {
@@ -162,19 +157,8 @@ class DownloadManager @Inject constructor(
                     
                     val uri = scanFileSuspend(result.path)
                     if (uri != null) {
-                        var trackId: Long? = null
-                        for (i in 0..4) {
-                            trackId = musicRepository.getTrackIdByPath(result.path)
-                            if (trackId != null) break
-                            kotlinx.coroutines.delay(1000)
-                        }
-
-                        if (trackId != null) {
-                            if (request.playlistId != null) {
-                                playlistRepository.addTrackToPlaylist(request.playlistId, trackId)
-                            }
-                            _downloadRefreshTrigger.value += 1
-                        }
+                        refreshDownloadedKeys()
+                        _downloadRefreshTrigger.value += 1
                     }
                     
                     _downloadState.value = DownloadState.Completed(
@@ -195,8 +179,7 @@ class DownloadManager @Inject constructor(
                     var skippedCount = 0
                     
                     for (track in albumTracks) {
-                        val isAlreadyDownloaded = isTrackDownloaded(track.title, track.artist?.name ?: "")
-                        if (isAlreadyDownloaded) {
+                        if (isTrackDownloadedFast(track.title, track.artist?.name ?: "")) {
                             skippedCount++
                         } else {
                             try {
@@ -206,13 +189,13 @@ class DownloadManager @Inject constructor(
                                     itemId = request.id.toString(),
                                     currentTrackId = track.id.toString()
                                 )
-                                val result = rustService.downloadTrack(
+                                rustService.downloadTrack(
                                     trackId = track.id.toString(),
                                     outputDir = downloadDirectory,
                                     quality = currentQuality
                                 )
                                 successCount++
-                                scanFileSuspend(result.path)
+                                refreshDownloadedKeys()
                                 _downloadRefreshTrigger.value += 1
                             } catch (e: Exception) {
                                 failedCount++
@@ -240,8 +223,7 @@ class DownloadManager @Inject constructor(
                     var skippedCount = 0
                     
                     for (track in playlistTracks) {
-                        val isAlreadyDownloaded = isTrackDownloaded(track.title, track.artist?.name ?: "")
-                        if (isAlreadyDownloaded) {
+                        if (isTrackDownloadedFast(track.title, track.artist?.name ?: "")) {
                             skippedCount++
                         } else {
                             try {
@@ -251,13 +233,13 @@ class DownloadManager @Inject constructor(
                                     itemId = request.id.toString(),
                                     currentTrackId = track.id.toString()
                                 )
-                                val result = rustService.downloadTrack(
+                                rustService.downloadTrack(
                                     trackId = track.id.toString(),
                                     outputDir = downloadDirectory,
                                     quality = currentQuality
                                 )
                                 successCount++
-                                scanFileSuspend(result.path)
+                                refreshDownloadedKeys()
                                 _downloadRefreshTrigger.value += 1
                             } catch (e: Exception) {
                                 failedCount++
