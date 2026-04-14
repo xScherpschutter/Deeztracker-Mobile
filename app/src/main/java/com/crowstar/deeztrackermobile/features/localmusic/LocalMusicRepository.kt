@@ -6,35 +6,23 @@ import android.content.IntentSender
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import com.crowstar.deeztrackermobile.features.deezer.Track
+import com.crowstar.deeztrackermobile.features.download.DownloadManager
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import android.os.Environment
-import android.os.StatFs
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Repository for accessing local music files using Android MediaStore API
- */
 @Singleton
 class LocalMusicRepository @Inject constructor(
-    private val contentResolver: ContentResolver,
-    private val playlistRepository: LocalPlaylistRepository
+    @ApplicationContext private val context: android.content.Context
 ) {
+    private val contentResolver: ContentResolver = context.contentResolver
 
     /**
-     * Get total storage space of the device
-     */
-    suspend fun getTotalStorageSpace(): Long = withContext(Dispatchers.IO) {
-        val path = Environment.getExternalStorageDirectory()
-        val stat = StatFs(path.path)
-        val blockSize = stat.blockSizeLong
-        val totalBlocks = stat.blockCountLong
-        totalBlocks * blockSize
-    }
-
-    /**
-     * Get all music tracks from device storage
+     * Get all tracks from local music
      */
     suspend fun getAllTracks(): List<LocalTrack> = withContext(Dispatchers.IO) {
         val tracks = mutableListOf<LocalTrack>()
@@ -44,20 +32,18 @@ class LocalMusicRepository @Inject constructor(
             MediaStore.Audio.Media.TITLE,
             MediaStore.Audio.Media.ARTIST,
             MediaStore.Audio.Media.ALBUM,
-            MediaStore.Audio.Media.ALBUM_ID,
             MediaStore.Audio.Media.DURATION,
             MediaStore.Audio.Media.DATA,
             MediaStore.Audio.Media.SIZE,
+            MediaStore.Audio.Media.ALBUM_ID,
             MediaStore.Audio.Media.MIME_TYPE,
-            MediaStore.Audio.Media.DATE_ADDED,
-            MediaStore.Audio.Media.DATE_MODIFIED,
             MediaStore.Audio.Media.TRACK,
-            MediaStore.Audio.Media.YEAR
+            MediaStore.Audio.Media.DATE_ADDED,
+            MediaStore.Audio.Media.DATE_MODIFIED
         )
 
-        // Filter: only music files (not notifications, ringtones, etc.)
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
-        val sortOrder = "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC"
+        val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 
         contentResolver.query(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -70,39 +56,44 @@ class LocalMusicRepository @Inject constructor(
             val titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
             val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
             val albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
-            val albumIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
             val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
             val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
             val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
+            val albumIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
             val mimeTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
+            val trackColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
             val dateAddedColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
             val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
-            val trackColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
-            val yearColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
+                val title = cursor.getString(titleColumn) ?: "Unknown"
+                val artist = cursor.getString(artistColumn) ?: "Unknown Artist"
+                val album = cursor.getString(albumColumn) ?: "Unknown Album"
+                val duration = cursor.getLong(durationColumn)
+                val filePath = cursor.getString(dataColumn)
+                val size = cursor.getLong(sizeColumn)
                 val albumId = cursor.getLong(albumIdColumn)
-                
-                // Get album art URI
-                val albumArtUri = getAlbumArtUri(albumId)
+                val mimeType = cursor.getString(mimeTypeColumn) ?: "audio/mpeg"
+                val trackNumber = cursor.getInt(trackColumn)
+                val dateAdded = cursor.getLong(dateAddedColumn)
+                val dateModified = cursor.getLong(dateModifiedColumn)
 
                 tracks.add(
                     LocalTrack(
                         id = id,
-                        title = cursor.getString(titleColumn) ?: "Unknown",
-                        artist = cursor.getString(artistColumn) ?: "Unknown Artist",
-                        album = cursor.getString(albumColumn) ?: "Unknown Album",
+                        title = title,
+                        artist = artist,
+                        album = album,
+                        duration = duration,
+                        filePath = filePath,
+                        size = size,
                         albumId = albumId,
-                        duration = cursor.getLong(durationColumn),
-                        filePath = cursor.getString(dataColumn) ?: "",
-                        size = cursor.getLong(sizeColumn),
-                        mimeType = cursor.getString(mimeTypeColumn) ?: "",
-                        dateAdded = cursor.getLong(dateAddedColumn),
-                        dateModified = cursor.getLong(dateModifiedColumn),
-                        albumArtUri = albumArtUri,
-                        track = cursor.getInt(trackColumn),
-                        year = cursor.getInt(yearColumn)
+                        albumArtUri = getAlbumArtUri(albumId),
+                        mimeType = mimeType,
+                        track = trackNumber,
+                        dateAdded = dateAdded,
+                        dateModified = dateModified
                     )
                 )
             }
@@ -124,7 +115,7 @@ class LocalMusicRepository @Inject constructor(
             MediaStore.Audio.Albums.NUMBER_OF_SONGS
         )
 
-        val sortOrder = "${MediaStore.Audio.Albums.ALBUM} COLLATE NOCASE ASC"
+        val sortOrder = "${MediaStore.Audio.Albums.ALBUM} ASC"
 
         contentResolver.query(
             MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
@@ -136,17 +127,16 @@ class LocalMusicRepository @Inject constructor(
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums._ID)
             val albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM)
             val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ARTIST)
-            val numberOfSongsColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.NUMBER_OF_SONGS)
+            val countColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.NUMBER_OF_SONGS)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
-                
                 albums.add(
                     LocalAlbum(
                         id = id,
                         title = cursor.getString(albumColumn) ?: "Unknown Album",
                         artist = cursor.getString(artistColumn) ?: "Unknown Artist",
-                        trackCount = cursor.getInt(numberOfSongsColumn),
+                        trackCount = cursor.getInt(countColumn),
                         albumArtUri = getAlbumArtUri(id)
                     )
                 )
@@ -156,6 +146,9 @@ class LocalMusicRepository @Inject constructor(
         albums
     }
 
+    /**
+     * Get all artists from local music
+     */
     suspend fun getAllArtists(): List<LocalArtist> = withContext(Dispatchers.IO) {
         val artists = mutableListOf<LocalArtist>()
         
@@ -180,8 +173,7 @@ class LocalMusicRepository @Inject constructor(
             val numberOfTracksColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Artists.NUMBER_OF_TRACKS)
             val numberOfAlbumsColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Artists.NUMBER_OF_ALBUMS)
 
-            // Cache album arts for artists
-            val artistArtMap = getArtistArtMap()
+            val artistArtMap = getEfficientArtistArtMap()
 
             while (cursor.moveToNext()) {
                 val artistName = cursor.getString(artistColumn) ?: "Unknown Artist"
@@ -200,31 +192,25 @@ class LocalMusicRepository @Inject constructor(
         artists
     }
 
-    /**
-     * Map each artist name to the album art URI of one of their albums
-     */
-    private fun getArtistArtMap(): Map<String, String> {
+    private fun getEfficientArtistArtMap(): Map<String, String> {
         val artMap = mutableMapOf<String, String>()
         val projection = arrayOf(
-            MediaStore.Audio.Media.ARTIST,
-            MediaStore.Audio.Media.ALBUM_ID
+            MediaStore.Audio.Albums.ARTIST,
+            MediaStore.Audio.Albums._ID
         )
-        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
-
+        
         contentResolver.query(
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
             projection,
-            selection,
-            null,
-            null
+            null, null, null
         )?.use { cursor ->
-            val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
-            val albumIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
-
+            val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ARTIST)
+            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums._ID)
+            
             while (cursor.moveToNext()) {
-                val artist = cursor.getString(artistColumn) ?: "Unknown Artist"
+                val artist = cursor.getString(artistCol) ?: continue
                 if (!artMap.containsKey(artist)) {
-                    val albumId = cursor.getLong(albumIdColumn)
+                    val albumId = cursor.getLong(idCol)
                     getAlbumArtUri(albumId)?.let { artMap[artist] = it }
                 }
             }
@@ -232,101 +218,74 @@ class LocalMusicRepository @Inject constructor(
         return artMap
     }
 
-    /**
-     * Get tracks for a specific album
-     */
+    private fun getAlbumArtUri(albumId: Long): String? {
+        return try {
+            ContentUris.withAppendedId(
+                Uri.parse("content://media/external/audio/albumart"),
+                albumId
+            ).toString()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     suspend fun getTracksForAlbum(albumId: Long): List<LocalTrack> = withContext(Dispatchers.IO) {
         val tracks = getAllTracks()
         tracks.filter { it.albumId == albumId }
     }
 
-    /**
-     * Get tracks for a specific artist
-     */
     suspend fun getTracksForArtist(artistName: String): List<LocalTrack> = withContext(Dispatchers.IO) {
         val tracks = getAllTracks()
         tracks.filter { it.artist == artistName }
     }
 
-    /**
-     * Search tracks by query (title, artist, or album)
-     */
-    suspend fun searchTracks(query: String): List<LocalTrack> = withContext(Dispatchers.IO) {
-        val tracks = getAllTracks()
-        tracks.filter {
-            it.title.contains(query, ignoreCase = true) ||
-            it.artist.contains(query, ignoreCase = true) ||
+    suspend fun searchLocalMusic(query: String): List<LocalTrack> = withContext(Dispatchers.IO) {
+        val allTracks = getAllTracks()
+        if (query.isBlank()) return@withContext allTracks
+        
+        allTracks.filter { 
+            it.title.contains(query, ignoreCase = true) || 
+            it.artist.contains(query, ignoreCase = true) || 
             it.album.contains(query, ignoreCase = true)
         }
     }
 
-    /**
-     * Request deletion of a track
-     * Returns an IntentSender to ask for user permission if needed (Android 10+), or null if deleted directly/failed.
-     * If playlistRepository is provided, automatically removes the track from all playlists upon successful deletion.
-     */
-    suspend fun requestDeleteTrack(trackId: Long): IntentSender? = withContext(Dispatchers.IO) {
-        val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, trackId)
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Android 11+ (API 30+)
-            val pendingIntent = MediaStore.createDeleteRequest(contentResolver, listOf(uri))
-            return@withContext pendingIntent.intentSender
-        } else {
-            // Android 10 and below
-            try {
-                val deleteResult = contentResolver.delete(uri, null, null)
-                if (deleteResult > 0) {
-                    // Successfully deleted, clean from playlists
-                    playlistRepository.removeTrackFromAllPlaylists(trackId)
-                }
-                // If successful, return null (no intent needed)
-                return@withContext null
-            } catch (securityException: android.app.RecoverableSecurityException) {
-                // Android 10 specific scoped storage exception
-                return@withContext securityException.userAction.actionIntent.intentSender
-            } catch (e: Exception) {
-                e.printStackTrace()
-                return@withContext null
-            }
-        }
-    }
-
-    /**
-     * Called after a track has been successfully deleted (typically after user confirms on Android 11+)
-     * Removes the track from all playlists
-     */
-    suspend fun onTrackDeleted(trackId: Long) = withContext(Dispatchers.IO) {
-        playlistRepository.removeTrackFromAllPlaylists(trackId)
-    }
-
-
-    /**
-     * Get album art URI for an album
-     */
-    private fun getAlbumArtUri(albumId: Long): String? {
-        return try {
-            val artworkUri = Uri.parse("content://media/external/audio/albumart")
-            ContentUris.withAppendedId(artworkUri, albumId).toString()
-        } catch (e: Exception) {
-            null
-        }
-    }
-    /**
-     * Get tracks located in the specific download directories
-     * This uses in-memory filtering for simplicity as getAllTracks is already optimal.
-     */
     suspend fun getDownloadedTracks(downloadPaths: List<String>): List<LocalTrack> = withContext(Dispatchers.IO) {
         val allTracks = getAllTracks()
-        allTracks.filter { track ->
-            downloadPaths.any { path -> track.filePath.startsWith(path) }
+        allTracks.filter { track -> downloadPaths.any { path -> track.filePath.endsWith(path) } }
+    }
+
+    suspend fun deleteTrack(track: LocalTrack): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val file = File(track.filePath)
+            if (file.exists()) {
+                val deleted = file.delete()
+                if (deleted) {
+                    contentResolver.delete(
+                        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                        "${MediaStore.Audio.Media._ID} = ?",
+                        arrayOf(track.id.toString())
+                    )
+                }
+                deleted
+            } else false
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 
     /**
-     * Get track ID by file path
+     * For Android 10+ delete requests
      */
-    suspend fun getTrackIdByPath(path: String): Long? = withContext(Dispatchers.IO) {
+    suspend fun requestDeleteTrack(id: Long): IntentSender? = withContext(Dispatchers.IO) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
+            MediaStore.createDeleteRequest(contentResolver, listOf(uri)).intentSender
+        } else null
+    }
+
+    suspend fun findIdForPath(path: String): Long? = withContext(Dispatchers.IO) {
         val projection = arrayOf(MediaStore.Audio.Media._ID)
         val selection = "${MediaStore.Audio.Media.DATA} = ?"
         val selectionArgs = arrayOf(path)
@@ -344,5 +303,17 @@ class LocalMusicRepository @Inject constructor(
             }
         }
         return@withContext null
+    }
+
+    /**
+     * Alias for findIdForPath to support older calls
+     */
+    suspend fun getTrackIdByPath(path: String): Long? = findIdForPath(path)
+
+    /**
+     * Get total storage space on the device
+     */
+    fun getTotalStorageSpace(): Long {
+        return context.getExternalFilesDir(null)?.totalSpace ?: 0L
     }
 }

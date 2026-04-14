@@ -81,15 +81,12 @@ fun LocalAlbumDetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (album.albumArtUri != null) {
-                         AsyncImage(
-                             model = album.albumArtUri,
-                             contentDescription = null,
-                             modifier = Modifier.size(200.dp).clip(RoundedCornerShape(8.dp)),
-                             contentScale = ContentScale.Crop
-                         )
-                         Spacer(modifier = Modifier.height(16.dp))
-                    }
+                    com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
+                        model = album.albumArtUri,
+                        modifier = Modifier.size(200.dp).clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                     
                     MarqueeText(
                         text = album.title,

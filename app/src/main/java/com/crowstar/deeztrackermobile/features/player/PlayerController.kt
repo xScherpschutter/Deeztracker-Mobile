@@ -45,9 +45,11 @@ class PlayerController @Inject constructor(
     private val _playerState = MutableStateFlow(PlayerState())
     val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
 
+    private val _currentQueue = MutableStateFlow<List<LocalTrack>>(emptyList())
+    val currentQueue: StateFlow<List<LocalTrack>> = _currentQueue.asStateFlow()
+
     private var mediaController: MediaController? = null
     private var controllerFuture: ListenableFuture<MediaController>? = null
-    private var currentPlaylist: List<LocalTrack> = emptyList()
     private var positionUpdateJob: kotlinx.coroutines.Job? = null
     private var lyricsJob: kotlinx.coroutines.Job? = null
 
@@ -103,7 +105,7 @@ class PlayerController @Inject constructor(
         val itemToSync = targetMediaItem ?: player.currentMediaItem ?: return
         val mediaId = itemToSync.mediaId.toLongOrNull() ?: return
         
-        val track = currentPlaylist.find { it.id == mediaId }
+        val track = _currentQueue.value.find { it.id == mediaId }
         
         if (track != null) {
             if (_playerState.value.currentTrack?.id != track.id || _playerState.value.lyrics.isEmpty()) {
@@ -164,7 +166,7 @@ class PlayerController @Inject constructor(
             return
         }
         
-        currentPlaylist = playlist
+        _currentQueue.value = playlist
         val startIndex = playlist.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
         
         val mediaItems = playlist.map { localTrack ->
@@ -244,6 +246,47 @@ class PlayerController @Inject constructor(
         }
     }
 
+    /**
+     * Move a track within the queue
+     */
+    fun moveTrack(fromIndex: Int, toIndex: Int) {
+        val player = mediaController ?: return
+        if (fromIndex !in 0 until _currentQueue.value.size || toIndex !in 0 until _currentQueue.value.size) return
+
+        player.moveMediaItem(fromIndex, toIndex)
+        
+        // Update internal queue flow
+        val updatedQueue = _currentQueue.value.toMutableList()
+        val item = updatedQueue.removeAt(fromIndex)
+        updatedQueue.add(toIndex, item)
+        _currentQueue.value = updatedQueue
+    }
+
+    /**
+     * Remove a track from the queue
+     */
+    fun removeTrack(index: Int) {
+        val player = mediaController ?: return
+        if (index !in 0 until _currentQueue.value.size) return
+
+        player.removeMediaItem(index)
+        
+        // Update internal queue flow
+        val updatedQueue = _currentQueue.value.toMutableList()
+        updatedQueue.removeAt(index)
+        _currentQueue.value = updatedQueue
+    }
+
+    /**
+     * Jump to a specific track in the queue by its index
+     */
+    fun seekToQueueIndex(index: Int) {
+        val player = mediaController ?: return
+        if (index !in 0 until _currentQueue.value.size) return
+        
+        player.seekToDefaultPosition(index)
+        player.play()
+    }
 
     private fun startPositionUpdates() {
         stopPositionUpdates()
@@ -308,5 +351,6 @@ class PlayerController @Inject constructor(
         controllerFuture = null
         stopPositionUpdates()
         _playerState.update { PlayerState() }
+        _currentQueue.value = emptyList()
     }
 }
