@@ -8,8 +8,9 @@ import androidx.media3.common.util.BitmapLoader
 import androidx.media3.common.util.UnstableApi
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
@@ -18,6 +19,8 @@ import kotlinx.coroutines.launch
  */
 @UnstableApi
 class CustomBitmapLoader(private val context: Context) : BitmapLoader {
+    
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     
     private val defaultIcon by lazy {
         BitmapFactory.decodeResource(
@@ -28,7 +31,7 @@ class CustomBitmapLoader(private val context: Context) : BitmapLoader {
     
     override fun decodeBitmap(data: ByteArray): ListenableFuture<Bitmap> {
         val future = SettableFuture.create<Bitmap>()
-        GlobalScope.launch(Dispatchers.IO) {
+        scope.launch {
             try {
                 val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size)
                 future.set(bitmap ?: defaultIcon)
@@ -42,7 +45,7 @@ class CustomBitmapLoader(private val context: Context) : BitmapLoader {
     override fun loadBitmap(uri: Uri, options: BitmapFactory.Options?): ListenableFuture<Bitmap> {
         val future = SettableFuture.create<Bitmap>()
         
-        GlobalScope.launch(Dispatchers.IO) {
+        scope.launch {
             try {
                 val bitmap = when (uri.scheme) {
                     "content" -> {

@@ -59,5 +59,6 @@ data class LocalArtist(
     val id: Long,
     val name: String,
     val numberOfTracks: Int,
-    val numberOfAlbums: Int
+    val numberOfAlbums: Int,
+    val artistArtUri: String? = null
 )

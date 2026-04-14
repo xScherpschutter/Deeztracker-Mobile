@@ -1,6 +1,7 @@
 package com.crowstar.deeztrackermobile.features.localmusic
 
 import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,18 +11,22 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class LocalPlaylistRepository(private val context: Context) {
+@Singleton
+class LocalPlaylistRepository @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
 
     private val playlistsFile = File(context.filesDir, "playlists.json")
-    private val mutex = kotlinx.coroutines.sync.Mutex()
+    private val mutex = Mutex()
     
     private val _playlists = MutableStateFlow<List<LocalPlaylist>>(emptyList())
     val playlists: StateFlow<List<LocalPlaylist>> = _playlists
 
     suspend fun loadPlaylists() = withContext(Dispatchers.IO) {
         if (!playlistsFile.exists()) {
-            // Create default Favorites playlist
             val initialPlaylists = listOf(LocalPlaylist(id = "favorites", name = "Favorites"))
             savePlaylistsToFile(initialPlaylists)
             _playlists.value = initialPlaylists
@@ -45,7 +50,6 @@ class LocalPlaylistRepository(private val context: Context) {
                 loadedPlaylists.add(LocalPlaylist(id, name, trackIds))
             }
             
-            // Ensure Favorites exists
             if (loadedPlaylists.none { it.id == "favorites" }) {
                 loadedPlaylists.add(0, LocalPlaylist(id = "favorites", name = "Favorites"))
                 savePlaylistsToFile(loadedPlaylists)
@@ -118,7 +122,6 @@ class LocalPlaylistRepository(private val context: Context) {
     }
 
     fun isFavorite(trackId: Long): Boolean {
-        // Can be called from UI thread, so suspend is okay or just run on StateFlow
         return _playlists.value.find { it.id == "favorites" }?.trackIds?.contains(trackId) == true
     }
 

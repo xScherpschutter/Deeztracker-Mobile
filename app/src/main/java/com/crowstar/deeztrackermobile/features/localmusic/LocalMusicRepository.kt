@@ -10,13 +10,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.os.Environment
 import android.os.StatFs
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Repository for accessing local music files using Android MediaStore API
  */
-class LocalMusicRepository(
+@Singleton
+class LocalMusicRepository @Inject constructor(
     private val contentResolver: ContentResolver,
-    private val playlistRepository: LocalPlaylistRepository? = null
+    private val playlistRepository: LocalPlaylistRepository
 ) {
 
     /**
@@ -153,9 +156,6 @@ class LocalMusicRepository(
         albums
     }
 
-     /**
-     * Get all artists from local music
-     */
     suspend fun getAllArtists(): List<LocalArtist> = withContext(Dispatchers.IO) {
         val artists = mutableListOf<LocalArtist>()
         
@@ -180,19 +180,56 @@ class LocalMusicRepository(
             val numberOfTracksColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Artists.NUMBER_OF_TRACKS)
             val numberOfAlbumsColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Artists.NUMBER_OF_ALBUMS)
 
+            // Cache album arts for artists
+            val artistArtMap = getArtistArtMap()
+
             while (cursor.moveToNext()) {
+                val artistName = cursor.getString(artistColumn) ?: "Unknown Artist"
                 artists.add(
                     LocalArtist(
                         id = cursor.getLong(idColumn),
-                        name = cursor.getString(artistColumn) ?: "Unknown Artist",
+                        name = artistName,
                         numberOfTracks = cursor.getInt(numberOfTracksColumn),
-                        numberOfAlbums = cursor.getInt(numberOfAlbumsColumn)
+                        numberOfAlbums = cursor.getInt(numberOfAlbumsColumn),
+                        artistArtUri = artistArtMap[artistName]
                     )
                 )
             }
         }
 
         artists
+    }
+
+    /**
+     * Map each artist name to the album art URI of one of their albums
+     */
+    private fun getArtistArtMap(): Map<String, String> {
+        val artMap = mutableMapOf<String, String>()
+        val projection = arrayOf(
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.ALBUM_ID
+        )
+        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+
+        contentResolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            selection,
+            null,
+            null
+        )?.use { cursor ->
+            val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+            val albumIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+
+            while (cursor.moveToNext()) {
+                val artist = cursor.getString(artistColumn) ?: "Unknown Artist"
+                if (!artMap.containsKey(artist)) {
+                    val albumId = cursor.getLong(albumIdColumn)
+                    getAlbumArtUri(albumId)?.let { artMap[artist] = it }
+                }
+            }
+        }
+        return artMap
     }
 
     /**
@@ -241,7 +278,7 @@ class LocalMusicRepository(
                 val deleteResult = contentResolver.delete(uri, null, null)
                 if (deleteResult > 0) {
                     // Successfully deleted, clean from playlists
-                    playlistRepository?.removeTrackFromAllPlaylists(trackId)
+                    playlistRepository.removeTrackFromAllPlaylists(trackId)
                 }
                 // If successful, return null (no intent needed)
                 return@withContext null
@@ -260,7 +297,7 @@ class LocalMusicRepository(
      * Removes the track from all playlists
      */
     suspend fun onTrackDeleted(trackId: Long) = withContext(Dispatchers.IO) {
-        playlistRepository?.removeTrackFromAllPlaylists(trackId)
+        playlistRepository.removeTrackFromAllPlaylists(trackId)
     }
 
 
