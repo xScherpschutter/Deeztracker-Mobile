@@ -18,8 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.crowstar.deeztrackermobile.features.player.PlayerController
@@ -27,16 +25,22 @@ import com.crowstar.deeztrackermobile.features.preview.PreviewPlayer
 import com.crowstar.deeztrackermobile.navigation.AppNavigation
 import com.crowstar.deeztrackermobile.ui.utils.LocaleHelper
 import com.crowstar.deeztrackermobile.ui.theme.DeeztrackerMobileTheme
-import com.crowstar.deeztrackermobile.ui.theme.Primary
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var playerController: PlayerController
+
+    @Inject
+    lateinit var previewPlayer: PreviewPlayer
 
     private var currentBoost by mutableStateOf(1.0f)
     private var showVolumeSlider by mutableStateOf(false)
-    // We'll use a timestamp to auto-hide
     private var lastVolumeChangeTime by mutableStateOf(0L)
 
     override fun attachBaseContext(newBase: Context) {
@@ -46,7 +50,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
-        PreviewPlayer.init(this)
+        
         setContent {
             DeeztrackerMobileTheme {
                 Surface(
@@ -56,7 +60,6 @@ class MainActivity : ComponentActivity() {
                     Box(modifier = Modifier.fillMaxSize()) {
                         AppNavigation()
                         
-                        // Volume Overlay
                         VolumeOverlay(
                             isVisible = showVolumeSlider,
                             boostLevel = currentBoost,
@@ -66,7 +69,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
             
-            // Auto-hide logic
             LaunchedEffect(lastVolumeChangeTime) {
                 if (showVolumeSlider) {
                     delay(3000)
@@ -87,12 +89,10 @@ class MainActivity : ComponentActivity() {
                 val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
 
                 if (currentVol < maxVol) {
-                    audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, 0) // 0 flags to hide system UI?
+                    audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, 0)
                     showVolumeUI()
                 } else {
-                    // System maxed, increase boost
                     if (currentBoost < 2.0f) {
-                        // Increase by 25% (0.25)
                         updateBoost(currentBoost + 0.25f)
                     }
                     showVolumeUI()
@@ -102,12 +102,9 @@ class MainActivity : ComponentActivity() {
         } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
             if (action == KeyEvent.ACTION_DOWN) {
                 if (currentBoost > 1.01f) {
-                    // Decrease boost first
-                    // Decrease by 25% (0.25)
                     updateBoost(currentBoost - 0.25f)
                     showVolumeUI()
                 } else {
-                    // Handle system volume
                     audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, 0)
                     showVolumeUI()
                 }
@@ -120,7 +117,7 @@ class MainActivity : ComponentActivity() {
     private fun updateBoost(newBoost: Float) {
         val clamped = newBoost.coerceIn(1.0f, 2.0f)
         currentBoost = clamped
-        PlayerController.getInstance(this).setVolume(clamped)
+        playerController.setVolume(clamped)
     }
 
     private fun showVolumeUI() {
@@ -137,15 +134,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        PreviewPlayer.release()
+        previewPlayer.release()
     }
 }
 
 @Composable
 fun VolumeOverlay(
     isVisible: Boolean,
-    boostLevel: Float, // 1.0 to 2.0
-    systemVolumeRatio: Float // 0.0 to 1.0
+    boostLevel: Float,
+    systemVolumeRatio: Float
 ) {
     AnimatedVisibility(
         visible = isVisible,
@@ -156,10 +153,9 @@ fun VolumeOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(end = 16.dp), // Check side
+                .padding(end = 16.dp),
             contentAlignment = Alignment.CenterEnd
         ) {
-            // Slider Container
             Column(
                 modifier = Modifier
                     .width(48.dp)
@@ -170,12 +166,6 @@ fun VolumeOverlay(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Percentage Text
-                // Calc total percentage.
-                // If boost > 1.0, we are at 100% system + boost.
-                // Logic: 
-                // If system < 100%, percent = system * 100
-                // If boost > 1.0, percent = 100 * boost
                 val effectivePercent = if (boostLevel > 1.01f) {
                     (boostLevel * 100).toInt()
                 } else {
@@ -190,7 +180,6 @@ fun VolumeOverlay(
                 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Bar
                 Box(
                     modifier = Modifier
                         .width(6.dp)
@@ -199,14 +188,12 @@ fun VolumeOverlay(
                         .background(Color.Gray.copy(alpha = 0.3f)),
                     contentAlignment = Alignment.BottomCenter
                 ) {
-
                     val fraction = (effectivePercent / 200f).coerceIn(0f, 1f)
-                    
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .fillMaxHeight(fraction)
-                            .background(if (boostLevel > 1.01f) Color(0xFF00E5FF) else Color.White) // Cyan for boost
+                            .background(if (boostLevel > 1.01f) Color(0xFF00E5FF) else Color.White)
                     )
                 }
             }

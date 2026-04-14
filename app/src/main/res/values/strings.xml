@@ -72,6 +72,10 @@
     <string name="action_create">Create</string>
     <string name="action_add_to_playlist">Add to playlist</string>
     <string name="toast_added_to_playlist">Track added to %s</string>
+    <string name="notification_download_completed">Downloaded: %s</string>
+    <string name="notification_download_failed">Download failed: %s</string>
+    <string name="notification_download_summary">Downloaded %1$d tracks, %2$d failed</string>
+    <string name="notification_already_downloaded">%s already exists</string>
     
     <!-- Main Screen -->
     <string name="bottom_nav_library">Library</string>
@@ -119,6 +123,7 @@
     <string name="new_playlist_title">New Playlist</string>
     <string name="edit_playlist_title">Edit Playlist</string>
     <string name="new_playlist_name">Playlist Name</string>
+    <string name="toast_playlist_created">Playlist \u2018%s\u2019 created</string>
     <string name="artist_songs_count_format">%d songs</string>
     
     <!-- Search Screen -->
@@ -153,6 +158,7 @@
 
     <!-- Intents & Accessibility -->
     <string name="intent_share_track">Share Track</string>
+    <string name="desc_downloaded">Downloaded</string>
     <string name="desc_download_track">Download track</string>
     <string name="action_download_album">Download Album</string>
     <string name="action_downloading">Downloading...</string>
