@@ -34,11 +34,15 @@ fun MarqueeText(
     minLines: Int = 1,
     style: TextStyle = LocalTextStyle.current
 ) {
-    var isOverflown by remember(text) { mutableStateOf(false) }
-
+    // Optimization: basicMarquee only animates if the text exceeds available space.
+    // By removing the manual check, we save one full recomposition cycle per item.
     Text(
         text = text,
-        modifier = if (isOverflown) modifier.basicMarquee() else modifier,
+        modifier = modifier.basicMarquee(
+            iterations = Int.MAX_VALUE,
+            delayMillis = 2000,
+            initialDelayMillis = 1000
+        ),
         color = color,
         fontSize = fontSize,
         fontStyle = fontStyle,
@@ -52,11 +56,6 @@ fun MarqueeText(
         softWrap = false,
         maxLines = 1,
         minLines = minLines,
-        onTextLayout = { textLayoutResult ->
-            if (textLayoutResult.hasVisualOverflow) {
-                isOverflown = true
-            }
-        },
         style = style
     )
 }

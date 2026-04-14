@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import android.os.Environment
 import javax.inject.Inject
 
@@ -78,6 +79,7 @@ class DownloadsViewModel @Inject constructor(
     }
 
     fun filter(query: String) {
+        // Optimized filtering: runs instantly without isLoading
         if (query.isBlank()) {
             _tracks.value = allDownloadedTracks
         } else {
@@ -104,7 +106,6 @@ class DownloadsViewModel @Inject constructor(
 
     fun onDeleteSuccess() {
         viewModelScope.launch {
-            trackPendingDeletion?.let { repository.onTrackDeleted(it) }
             trackPendingDeletion = null
             loadDownloadedMusic()
         }

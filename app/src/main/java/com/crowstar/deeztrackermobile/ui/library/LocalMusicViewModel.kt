@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import android.content.IntentSender
 import javax.inject.Inject
 
@@ -68,19 +69,23 @@ class LocalMusicViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                playlistRepository.loadPlaylists()
+                // Parallel loading
+                val playlistsJob = launch { playlistRepository.loadPlaylists() }
+                val tracksDeferred = async { repository.getAllTracks() }
+                val albumsDeferred = async { repository.getAllAlbums() }
+                val artistsDeferred = async { repository.getAllArtists() }
+                val storageDeferred = async { repository.getTotalStorageSpace() }
 
-                allTracks = repository.getAllTracks()
-                allAlbums = repository.getAllAlbums()
-                allArtists = repository.getAllArtists()
+                playlistsJob.join()
+                allTracks = tracksDeferred.await()
+                allAlbums = albumsDeferred.await()
+                allArtists = artistsDeferred.await()
 
                 _tracks.value = allTracks
                 _unfilteredTracks.value = allTracks
                 _albums.value = allAlbums
                 _artists.value = allArtists
-                
-                val storage = repository.getTotalStorageSpace()
-                _totalStorage.value = storage
+                _totalStorage.value = storageDeferred.await()
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -106,33 +111,25 @@ class LocalMusicViewModel @Inject constructor(
     }
 
     fun searchTracks(query: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                if (query.isBlank()) {
-                    _tracks.value = allTracks
-                    _albums.value = allAlbums
-                    _artists.value = allArtists
-                } else {
-                    _tracks.value = allTracks.filter { 
-                        it.title.contains(query, ignoreCase = true) ||
-                        it.artist.contains(query, ignoreCase = true) ||
-                        it.album.contains(query, ignoreCase = true)
-                    }
+        // Optimized search: No isLoading, runs instantly
+        if (query.isBlank()) {
+            _tracks.value = allTracks
+            _albums.value = allAlbums
+            _artists.value = allArtists
+        } else {
+            _tracks.value = allTracks.filter { 
+                it.title.contains(query, ignoreCase = true) ||
+                it.artist.contains(query, ignoreCase = true) ||
+                it.album.contains(query, ignoreCase = true)
+            }
 
-                    _albums.value = allAlbums.filter { 
-                        it.title.contains(query, ignoreCase = true) ||
-                        it.artist.contains(query, ignoreCase = true)
-                    }
+            _albums.value = allAlbums.filter { 
+                it.title.contains(query, ignoreCase = true) || 
+                it.artist.contains(query, ignoreCase = true)
+            }
 
-                    _artists.value = allArtists.filter { 
-                        it.name.contains(query, ignoreCase = true)
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                _isLoading.value = false
+            _artists.value = allArtists.filter { 
+                it.name.contains(query, ignoreCase = true)
             }
         }
     }
@@ -145,12 +142,6 @@ class LocalMusicViewModel @Inject constructor(
 
     suspend fun createPlaylistSync(name: String): String {
         return playlistRepository.createPlaylist(name)
-    }
-
-    fun addTrackToPlaylistId(playlistId: String, track: LocalTrack) {
-        viewModelScope.launch {
-            playlistRepository.addTrackToPlaylist(playlistId, track.id)
-        }
     }
 
     fun deletePlaylist(playlist: LocalPlaylist) {
@@ -168,12 +159,6 @@ class LocalMusicViewModel @Inject constructor(
     fun addTrackToPlaylist(playlist: LocalPlaylist, track: LocalTrack) {
         viewModelScope.launch {
             playlistRepository.addTrackToPlaylist(playlist.id, track.id)
-        }
-    }
-
-    fun toggleFavorite(track: LocalTrack) {
-        viewModelScope.launch {
-            playlistRepository.toggleFavorite(track.id)
         }
     }
 
@@ -202,7 +187,6 @@ class LocalMusicViewModel @Inject constructor(
 
     fun onDeleteSuccess() {
         viewModelScope.launch {
-            trackPendingDeletion?.let { repository.onTrackDeleted(it) }
             trackPendingDeletion = null
             loadMusic()
         }
