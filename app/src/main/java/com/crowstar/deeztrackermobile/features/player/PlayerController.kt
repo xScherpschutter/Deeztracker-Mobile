@@ -48,6 +48,8 @@ class PlayerController @Inject constructor(
     private val _currentQueue = MutableStateFlow<List<LocalTrack>>(emptyList())
     val currentQueue: StateFlow<List<LocalTrack>> = _currentQueue.asStateFlow()
 
+    private var originalQueue: List<LocalTrack>? = null
+
     private var mediaController: MediaController? = null
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var positionUpdateJob: kotlinx.coroutines.Job? = null
@@ -60,6 +62,30 @@ class PlayerController @Inject constructor(
             playlistRepository.playlists.collect {
                  checkFavoriteStatus()
             }
+        }
+    }
+
+    private fun createMediaItems(tracks: List<LocalTrack>): List<MediaItem> {
+        return tracks.map { localTrack ->
+            val albumArt = localTrack.albumArtUri?.trim()
+            val artworkUri = if (!albumArt.isNullOrEmpty()) {
+                Uri.parse(albumArt)
+            } else {
+                Uri.parse("android.resource://${context.packageName}/${com.crowstar.deeztrackermobile.R.drawable.ic_app_icon}")
+            }
+            
+            MediaItem.Builder()
+                .setUri(Uri.fromFile(File(localTrack.filePath)))
+                .setMediaId(localTrack.id.toString())
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(localTrack.title)
+                        .setArtist(localTrack.artist)
+                        .setAlbumTitle(localTrack.album)
+                        .setArtworkUri(artworkUri)
+                        .build()
+                )
+                .build()
         }
     }
 
@@ -166,30 +192,24 @@ class PlayerController @Inject constructor(
             return
         }
         
-        _currentQueue.value = playlist
-        val startIndex = playlist.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
-        
-        val mediaItems = playlist.map { localTrack ->
-            val albumArt = localTrack.albumArtUri?.trim()
-            val artworkUri = if (!albumArt.isNullOrEmpty()) {
-                Uri.parse(albumArt)
-            } else {
-                Uri.parse("android.resource://${context.packageName}/${com.crowstar.deeztrackermobile.R.drawable.ic_app_icon}")
+        var finalPlaylist = playlist
+        var startIndex = playlist.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
+
+        if (_playerState.value.isShuffleEnabled) {
+            originalQueue = playlist.toList()
+            val toShuffle = playlist.toMutableList()
+            if (startIndex in toShuffle.indices) {
+                toShuffle.removeAt(startIndex)
             }
-            
-            MediaItem.Builder()
-                .setUri(Uri.fromFile(File(localTrack.filePath)))
-                .setMediaId(localTrack.id.toString())
-                .setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle(localTrack.title)
-                        .setArtist(localTrack.artist)
-                        .setAlbumTitle(localTrack.album)
-                        .setArtworkUri(artworkUri)
-                        .build()
-                )
-                .build()
+            toShuffle.shuffle()
+            finalPlaylist = listOf(track) + toShuffle
+            startIndex = 0
+        } else {
+            originalQueue = null
         }
+
+        _currentQueue.value = finalPlaylist
+        val mediaItems = createMediaItems(finalPlaylist)
 
         player.setMediaItems(mediaItems, startIndex, 0L)
         player.prepare()
@@ -221,7 +241,65 @@ class PlayerController @Inject constructor(
     }
 
     fun setShuffle(enabled: Boolean) {
-        mediaController?.shuffleModeEnabled = enabled
+        val player = mediaController ?: return
+        val currentQueueList = _currentQueue.value
+        if (currentQueueList.isEmpty()) return
+
+        val currentIndex = player.currentMediaItemIndex
+        val currentTrackId = player.currentMediaItem?.mediaId ?: return
+        
+        if (enabled) {
+            // Store original queue if we don't have it
+            if (originalQueue == null) {
+                originalQueue = currentQueueList.toList()
+            }
+            
+            val targetQueue = currentQueueList.toMutableList()
+            val playingTrack = targetQueue.find { it.id.toString() == currentTrackId }
+            
+            if (playingTrack != null) {
+                // 1. Move playing track to top gaplessly
+                if (currentIndex != 0) {
+                    player.moveMediaItem(currentIndex, 0)
+                }
+                
+                // 2. Shuffle rest of queue
+                targetQueue.remove(playingTrack)
+                targetQueue.shuffle()
+                val finalQueue = listOf(playingTrack) + targetQueue
+                
+                _currentQueue.value = finalQueue
+                // 3. Replace only the items after the first one (shuffled)
+                if (finalQueue.size > 1) {
+                    player.replaceMediaItems(1, player.mediaItemCount, createMediaItems(targetQueue))
+                }
+            }
+        } else {
+            // Restore original order
+            originalQueue?.let { original ->
+                val targetIndexInOriginal = original.indexOfFirst { it.id.toString() == currentTrackId }.coerceAtLeast(0)
+                
+                // 1. Move current to its original position gaplessly
+                if (currentIndex != targetIndexInOriginal) {
+                    player.moveMediaItem(currentIndex, targetIndexInOriginal)
+                }
+                
+                // 2. Restore range before current track
+                if (targetIndexInOriginal > 0) {
+                    player.replaceMediaItems(0, targetIndexInOriginal, createMediaItems(original.subList(0, targetIndexInOriginal)))
+                }
+                
+                // 3. Restore range after current track
+                if (targetIndexInOriginal < original.size - 1) {
+                    player.replaceMediaItems(targetIndexInOriginal + 1, player.mediaItemCount, createMediaItems(original.subList(targetIndexInOriginal + 1, original.size)))
+                }
+                
+                _currentQueue.value = original
+            }
+            originalQueue = null
+        }
+        
+        _playerState.update { it.copy(isShuffleEnabled = enabled) }
         updateState()
     }
 
@@ -269,12 +347,16 @@ class PlayerController @Inject constructor(
         val player = mediaController ?: return
         if (index !in 0 until _currentQueue.value.size) return
 
+        val removedTrack = _currentQueue.value[index]
         player.removeMediaItem(index)
         
         // Update internal queue flow
         val updatedQueue = _currentQueue.value.toMutableList()
         updatedQueue.removeAt(index)
         _currentQueue.value = updatedQueue
+
+        // Update original queue if it exists
+        originalQueue = originalQueue?.filter { it.id != removedTrack.id }
     }
 
     /**
@@ -316,15 +398,19 @@ class PlayerController @Inject constructor(
         }
 
         val currentPos = player.currentPosition
+        // Prevent duration flicker during transitions by keeping old duration if new one is invalid
+        val playerDuration = player.duration
+        val duration = if (playerDuration > 0) playerDuration else _playerState.value.duration
+        
         val lyrics = _playerState.value.lyrics
         val lyricIndex = LrcParser.getActiveLineIndex(lyrics, currentPos)
 
         _playerState.update { 
             it.copy(
                 isPlaying = player.isPlaying,
-                duration = player.duration.coerceAtLeast(0L),
+                duration = duration,
                 currentPosition = currentPos,
-                isShuffleEnabled = player.shuffleModeEnabled,
+                // isShuffleEnabled remains as managed manually by setShuffle and playTrack
                 repeatMode = appRepeatMode,
                 volume = player.volume,
                 currentLyricIndex = lyricIndex
