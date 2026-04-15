@@ -119,4 +119,42 @@ class RustDeezerService @Inject constructor(
             throw e
         }
     }
+
+    // =====================================
+    // STREAMING
+    // =====================================
+
+    suspend fun preloadTrack(
+        trackId: String,
+        quality: DownloadQuality
+    ) = withContext(Dispatchers.IO) {
+        val arl = getSavedArl() ?: throw IllegalStateException("Not logged in - ARL not set")
+        try {
+            service.preloadTrack(arl, trackId, quality)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to preload track $trackId", e)
+            throw e
+        }
+    }
+
+    suspend fun readAudioChunk(
+        trackId: String,
+        offset: ULong,
+        size: UInt
+    ): ByteArray = withContext(Dispatchers.IO) {
+        try {
+            service.readAudioChunk(trackId, offset, size)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to read audio chunk for track $trackId", e)
+            ByteArray(0)
+        }
+    }
+
+    fun cancelPreload(trackId: String) {
+        try {
+            service.cancelPreload(trackId)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to cancel preload for track $trackId", e)
+        }
+    }
 }
