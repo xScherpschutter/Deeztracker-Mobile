@@ -28,7 +28,10 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Info 
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PlayArrow
+import android.content.Intent
+import com.crowstar.deeztrackermobile.features.rusteer.AudioStreamService 
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -354,7 +357,13 @@ fun SearchScreen(
                                         isPlaying = playingUrl == track.preview,
                                         previewPosition = previewPosition,
                                         onTogglePreview = { viewModel.togglePreview(it) },
-                                        onDownloadClick = { downloadManager.startTrackDownload(track.id, track.title) }
+                                        onDownloadClick = { downloadManager.startTrackDownload(track.id, track.title) },
+                                        onStreamClick = {
+                                            val intent = Intent(context, AudioStreamService::class.java).apply {
+                                                putExtra("track_id", track.id.toString())
+                                            }
+                                            context.startForegroundService(intent)
+                                        }
                                     )
                                 }
                             }
@@ -380,20 +389,37 @@ fun TrackItem(
     isPlaying: Boolean = false,
     previewPosition: Long = 0,
     onTogglePreview: (String) -> Unit = {},
-    onDownloadClick: () -> Unit = {}
+    onDownloadClick: () -> Unit = {},
+    onStreamClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .clickable { /* Click action */ }
+            .clickable { onStreamClick() }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TrackArtwork(
-            model = track.album?.coverMedium,
-            modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp))
-        )
+        Box(contentAlignment = Alignment.Center) {
+            TrackArtwork(
+                model = track.album?.coverMedium,
+                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp))
+            )
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Stream",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
         
         Spacer(modifier = Modifier.width(16.dp))
         
