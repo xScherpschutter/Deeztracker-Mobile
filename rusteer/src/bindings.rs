@@ -89,6 +89,28 @@ impl From<crate::error::DeezerError> for RusteerError {
     }
 }
 
+#[derive(uniffi::Record)]
+pub struct Track {
+    pub id: String,
+    pub title: String,
+    pub artist: String,
+    pub album: String,
+    pub cover_url: Option<String>,
+}
+
+impl From<crate::models::Track> for Track {
+    fn from(t: crate::models::Track) -> Self {
+        let artist = t.artists_string(", ");
+        Self {
+            id: t.ids.deezer.clone().unwrap_or_default(),
+            title: t.title,
+            artist,
+            album: t.album.title,
+            cover_url: t.album.images.first().map(|i| i.url.clone()),
+        }
+    }
+}
+
 /// Stateless Rusteer service - each method receives ARL as parameter
 #[derive(uniffi::Object)]
 pub struct RusteerService {}
@@ -98,6 +120,22 @@ impl RusteerService {
     #[uniffi::constructor]
     pub fn new() -> Self {
         Self {}
+    }
+
+    /// Search for tracks
+    pub fn search_tracks(
+        &self,
+        arl: String,
+        query: String,
+    ) -> Result<Vec<Track>, RusteerError> {
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| RusteerError::DeezerError(format!("Failed to create runtime: {}", e)))?;
+
+        runtime.block_on(async {
+            let rusteer = Rusteer::new(&arl).await?;
+            let results = rusteer.search_tracks(&query, 20).await?;
+            Ok(results.into_iter().map(Into::into).collect())
+        })
     }
 
     /// Verify if an ARL token is valid (for login)
@@ -179,5 +217,37 @@ impl RusteerService {
                 .await?;
             Ok(result.into())
         })
+    }
+
+    // =====================================
+    // STREAMING
+    // =====================================
+
+    pub fn preload_track(
+        &self,
+        arl: String,
+        track_id: String,
+        quality: DownloadQuality,
+    ) -> Result<(), RusteerError> {
+        crate::streaming::RUNTIME.block_on(async {
+            crate::streaming::preload_track(&arl, &track_id, quality.into()).await?;
+            Ok(())
+        })
+    }
+
+    pub fn read_audio_chunk(
+        &self,
+        track_id: String,
+        offset: u64,
+        size: u32,
+    ) -> Result<Vec<u8>, RusteerError> {
+        crate::streaming::RUNTIME.block_on(async {
+            let chunk = crate::streaming::read_audio_chunk(&track_id, offset, size).await?;
+            Ok(chunk)
+        })
+    }
+
+    pub fn cancel_preload(&self, track_id: String) {
+        crate::streaming::cancel_preload(&track_id);
     }
 }

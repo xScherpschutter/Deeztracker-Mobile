@@ -51,6 +51,7 @@ pub mod crypto;
 pub mod error;
 pub mod models;
 mod rusteer;
+pub mod streaming;
 pub mod tagging;
 
 // Main interface (recommended)
