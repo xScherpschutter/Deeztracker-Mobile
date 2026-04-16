@@ -8,6 +8,7 @@ import com.crowstar.deeztrackermobile.features.deezer.Artist
 import com.crowstar.deeztrackermobile.features.deezer.Track
 import com.crowstar.deeztrackermobile.features.download.DownloadManager
 import com.crowstar.deeztrackermobile.features.preview.PreviewPlayer
+import com.crowstar.deeztrackermobile.features.player.PlayerController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +20,8 @@ import javax.inject.Inject
 class ArtistViewModel @Inject constructor(
     private val repository: DeezerRepository,
     val downloadManager: DownloadManager,
-    private val previewPlayer: PreviewPlayer
+    private val previewPlayer: PreviewPlayer,
+    val playerController: PlayerController
 ) : ViewModel() {
     
     private val _artist = MutableStateFlow<Artist?>(null)
@@ -62,6 +64,11 @@ class ArtistViewModel @Inject constructor(
                 _isLoading.value = false
             }
         }
+    }
+
+    fun playArtistTopTracks() {
+        val artistData = _artist.value ?: return
+        playerController.playDeezerArtist(artistData.id, artistData.name)
     }
 
     fun startTrackDownload(trackId: Long, title: String) {

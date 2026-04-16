@@ -204,7 +204,8 @@ fun ArtistScreen(
                                 onTogglePreview = { viewModel.togglePreview(it) },
                                 onDownloadClick = {
                                     viewModel.startTrackDownload(track.id, track.title)
-                                }
+                                },
+                                onClick = { viewModel.playArtistTopTracks() }
                             )
                         }
                     }
@@ -329,11 +330,13 @@ private fun ArtistTrackItem(
     isPlaying: Boolean = false,
     previewPosition: Long = 0,
     onTogglePreview: (String) -> Unit = {},
-    onDownloadClick: () -> Unit = {}
+    onDownloadClick: () -> Unit = {},
+    onClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

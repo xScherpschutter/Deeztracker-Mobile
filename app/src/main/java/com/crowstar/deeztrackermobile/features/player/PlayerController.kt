@@ -32,11 +32,18 @@ import java.util.concurrent.ExecutionException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.crowstar.deeztrackermobile.features.deezer.DeezerRepository
+import com.crowstar.deeztrackermobile.features.download.DownloadManager
+import com.crowstar.deeztrackermobile.features.localmusic.LocalMusicRepository
+
 @Singleton
 class PlayerController @Inject constructor(
     @ApplicationContext private val context: Context,
     val playlistRepository: LocalPlaylistRepository,
-    private val lyricsRepository: LyricsRepository
+    private val lyricsRepository: LyricsRepository,
+    private val deezerRepository: DeezerRepository,
+    private val downloadManager: DownloadManager,
+    private val localMusicRepository: LocalMusicRepository
 ) {
 
     private val TAG = "PlayerController"
@@ -65,34 +72,48 @@ class PlayerController @Inject constructor(
         }
     }
 
-    private fun createMediaItems(tracks: List<LocalTrack>): List<MediaItem> {
-        return tracks.map { localTrack ->
-            val albumArt = localTrack.albumArtUri?.trim()
-            val artworkUri = if (!albumArt.isNullOrEmpty()) {
-                Uri.parse(albumArt)
+    private suspend fun createMediaItems(tracks: List<LocalTrack>): List<MediaItem> {
+        val allLocalTracks = localMusicRepository.getAllTracks()
+        val localTracksMap = allLocalTracks.associateBy { 
+            generateTrackKey(it.title, it.artist)
+        }
+        
+        return tracks.map { track ->
+            val artworkUri = if (!track.albumArtUri.isNullOrEmpty()) {
+                Uri.parse(track.albumArtUri)
             } else {
                 Uri.parse("android.resource://${context.packageName}/${com.crowstar.deeztrackermobile.R.drawable.ic_app_icon}")
             }
             
-            val uri = if (localTrack.isStreaming) {
-                Uri.parse("rusteer://${localTrack.id}")
-            } else {
-                Uri.fromFile(File(localTrack.filePath))
+            // Local-First Logic: Check if track is already downloaded
+            val trackKey = generateTrackKey(track.title, track.artist)
+            val localVersion = if (track.isStreaming) localTracksMap[trackKey] else null
+
+            val finalUri = when {
+                localVersion != null -> Uri.fromFile(File(localVersion.filePath))
+                track.isStreaming -> Uri.parse("rusteer://${track.id}")
+                else -> Uri.fromFile(File(track.filePath))
             }
             
             MediaItem.Builder()
-                .setUri(uri)
-                .setMediaId(localTrack.id.toString())
+                .setUri(finalUri)
+                .setMediaId(track.id.toString())
                 .setMediaMetadata(
                     MediaMetadata.Builder()
-                        .setTitle(localTrack.title)
-                        .setArtist(localTrack.artist)
-                        .setAlbumTitle(localTrack.album)
+                        .setTitle(track.title)
+                        .setArtist(track.artist)
+                        .setAlbumTitle(track.album)
                         .setArtworkUri(artworkUri)
                         .build()
                 )
                 .build()
         }
+    }
+
+    private fun generateTrackKey(title: String, artist: String): String {
+        val t = title.lowercase().replace(Regex("[^a-z0-9]"), "")
+        val a = artist.lowercase().replace(Regex("[^a-z0-9]"), "")
+        return "$t|$a"
     }
 
     private fun initializeController() {
@@ -210,57 +231,123 @@ class PlayerController @Inject constructor(
     }
 
     fun playDeezerTrack(track: com.crowstar.deeztrackermobile.features.deezer.Track, source: String? = null) {
-        val localTrack = LocalTrack(
-            id = track.id,
-            title = track.title,
-            artist = track.artist?.name ?: "Unknown Artist",
-            album = track.album?.title ?: "Unknown Album",
-            albumId = track.album?.id ?: 0L,
-            duration = (track.duration ?: 0).toLong() * 1000,
+        val localTrack = track.toLocalTrack()
+        playTrack(localTrack, listOf(localTrack), source ?: "Deezer Search")
+    }
+
+    fun playDeezerTrackWithRadio(track: com.crowstar.deeztrackermobile.features.deezer.Track) {
+        controllerScope.launch {
+            try {
+                val currentTrack = track.toLocalTrack()
+                val radioResponse = deezerRepository.getArtistRadio(track.artist?.id ?: 0L)
+                val recommendations = radioResponse.data
+                    .filter { it.id != track.id }
+                    .map { it.toLocalTrack() }
+                
+                playTrack(currentTrack, listOf(currentTrack) + recommendations, "Deezer Radio")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load radio", e)
+                playDeezerTrack(track)
+            }
+        }
+    }
+
+    fun playDeezerAlbum(albumId: Long, albumTitle: String, startIndex: Int = 0) {
+        controllerScope.launch {
+            try {
+                val tracks = deezerRepository.getAlbumTracks(albumId).data.map { it.toLocalTrack() }
+                if (tracks.isNotEmpty()) {
+                    val startTrack = if (startIndex in tracks.indices) tracks[startIndex] else tracks[0]
+                    playTrack(startTrack, tracks, albumTitle)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load album tracks", e)
+            }
+        }
+    }
+
+    fun playDeezerPlaylist(playlistId: Long, playlistTitle: String, startIndex: Int = 0) {
+        controllerScope.launch {
+            try {
+                val tracks = deezerRepository.getPlaylistTracks(playlistId).data
+                    .filter { it.id > 0 } // Filter corrupt/invalid IDs
+                    .map { it.toLocalTrack() }
+                if (tracks.isNotEmpty()) {
+                    val startTrack = if (startIndex in tracks.indices) tracks[startIndex] else tracks[0]
+                    playTrack(startTrack, tracks, playlistTitle)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load playlist tracks", e)
+            }
+        }
+    }
+
+    fun playDeezerArtist(artistId: Long, artistName: String) {
+        controllerScope.launch {
+            try {
+                val tracks = deezerRepository.getArtistTopTracks(artistId, 50).data.map { it.toLocalTrack() }
+                if (tracks.isNotEmpty()) {
+                    playTrack(tracks[0], tracks, "$artistName Top Tracks")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load artist tracks", e)
+            }
+        }
+    }
+
+    private fun com.crowstar.deeztrackermobile.features.deezer.Track.toLocalTrack(): LocalTrack {
+        return LocalTrack(
+            id = this.id,
+            title = this.title,
+            artist = this.artist?.name ?: "Unknown Artist",
+            album = this.album?.title ?: "Unknown Album",
+            albumId = this.album?.id ?: 0L,
+            duration = (this.duration ?: 0).toLong() * 1000,
             filePath = "",
             size = 0,
             mimeType = "audio/mpeg",
             dateAdded = System.currentTimeMillis(),
             dateModified = System.currentTimeMillis(),
-            albumArtUri = track.album?.coverBig ?: track.album?.coverMedium,
+            albumArtUri = this.album?.coverBig ?: this.album?.coverMedium,
             isStreaming = true
         )
-        playTrack(localTrack, listOf(localTrack), source ?: "Deezer Streaming")
     }
 
     fun playTrack(track: LocalTrack, playlist: List<LocalTrack>, source: String? = null) {
-        val resolvedSource = source ?: context.getString(com.crowstar.deeztrackermobile.R.string.local_music_title)
-        val player = mediaController
-        if (player == null) {
-            initializeController()
-            return
-        }
-        
-        var finalPlaylist = playlist
-        var startIndex = playlist.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
-
-        if (_playerState.value.isShuffleEnabled) {
-            originalQueue = playlist.toList()
-            val toShuffle = playlist.toMutableList()
-            if (startIndex in toShuffle.indices) {
-                toShuffle.removeAt(startIndex)
+        controllerScope.launch {
+            val resolvedSource = source ?: context.getString(com.crowstar.deeztrackermobile.R.string.local_music_title)
+            val player = mediaController
+            if (player == null) {
+                initializeController()
+                return@launch
             }
-            toShuffle.shuffle()
-            finalPlaylist = listOf(track) + toShuffle
-            startIndex = 0
-        } else {
-            originalQueue = null
+            
+            var finalPlaylist = playlist
+            var startIndex = playlist.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
+
+            if (_playerState.value.isShuffleEnabled) {
+                originalQueue = playlist.toList()
+                val toShuffle = playlist.toMutableList()
+                if (startIndex in toShuffle.indices) {
+                    toShuffle.removeAt(startIndex)
+                }
+                toShuffle.shuffle()
+                finalPlaylist = listOf(track) + toShuffle
+                startIndex = 0
+            } else {
+                originalQueue = null
+            }
+
+            _currentQueue.value = finalPlaylist
+            val mediaItems = createMediaItems(finalPlaylist)
+
+            player.setMediaItems(mediaItems, startIndex, 0L)
+            player.prepare()
+            player.play()
+            
+            fetchLyrics(track)
+            _playerState.update { it.copy(currentTrack = track, isPlaying = true, playingSource = resolvedSource) }
         }
-
-        _currentQueue.value = finalPlaylist
-        val mediaItems = createMediaItems(finalPlaylist)
-
-        player.setMediaItems(mediaItems, startIndex, 0L)
-        player.prepare()
-        player.play()
-        
-        fetchLyrics(track)
-        _playerState.update { it.copy(currentTrack = track, isPlaying = true, playingSource = resolvedSource) }
     }
 
     fun togglePlayPause() {
@@ -292,59 +379,61 @@ class PlayerController @Inject constructor(
         val currentIndex = player.currentMediaItemIndex
         val currentTrackId = player.currentMediaItem?.mediaId ?: return
         
-        if (enabled) {
-            // Store original queue if we don't have it
-            if (originalQueue == null) {
-                originalQueue = currentQueueList.toList()
+        controllerScope.launch {
+            if (enabled) {
+                // Store original queue if we don't have it
+                if (originalQueue == null) {
+                    originalQueue = currentQueueList.toList()
+                }
+                
+                val targetQueue = currentQueueList.toMutableList()
+                val playingTrack = targetQueue.find { it.id.toString() == currentTrackId }
+                
+                if (playingTrack != null) {
+                    // 1. Move playing track to top gaplessly
+                    if (currentIndex != 0) {
+                        player.moveMediaItem(currentIndex, 0)
+                    }
+                    
+                    // 2. Shuffle rest of queue
+                    targetQueue.remove(playingTrack)
+                    targetQueue.shuffle()
+                    val finalQueue = listOf(playingTrack) + targetQueue
+                    
+                    _currentQueue.value = finalQueue
+                    // 3. Replace only the items after the first one (shuffled)
+                    if (finalQueue.size > 1) {
+                        player.replaceMediaItems(1, player.mediaItemCount, createMediaItems(targetQueue))
+                    }
+                }
+            } else {
+                // Restore original order
+                originalQueue?.let { original ->
+                    val targetIndexInOriginal = original.indexOfFirst { it.id.toString() == currentTrackId }.coerceAtLeast(0)
+                    
+                    // 1. Move current to its original position gaplessly
+                    if (currentIndex != targetIndexInOriginal) {
+                        player.moveMediaItem(currentIndex, targetIndexInOriginal)
+                    }
+                    
+                    // 2. Restore range before current track
+                    if (targetIndexInOriginal > 0) {
+                        player.replaceMediaItems(0, targetIndexInOriginal, createMediaItems(original.subList(0, targetIndexInOriginal)))
+                    }
+                    
+                    // 3. Restore range after current track
+                    if (targetIndexInOriginal < original.size - 1) {
+                        player.replaceMediaItems(targetIndexInOriginal + 1, player.mediaItemCount, createMediaItems(original.subList(targetIndexInOriginal + 1, original.size)))
+                    }
+                    
+                    _currentQueue.value = original
+                }
+                originalQueue = null
             }
             
-            val targetQueue = currentQueueList.toMutableList()
-            val playingTrack = targetQueue.find { it.id.toString() == currentTrackId }
-            
-            if (playingTrack != null) {
-                // 1. Move playing track to top gaplessly
-                if (currentIndex != 0) {
-                    player.moveMediaItem(currentIndex, 0)
-                }
-                
-                // 2. Shuffle rest of queue
-                targetQueue.remove(playingTrack)
-                targetQueue.shuffle()
-                val finalQueue = listOf(playingTrack) + targetQueue
-                
-                _currentQueue.value = finalQueue
-                // 3. Replace only the items after the first one (shuffled)
-                if (finalQueue.size > 1) {
-                    player.replaceMediaItems(1, player.mediaItemCount, createMediaItems(targetQueue))
-                }
-            }
-        } else {
-            // Restore original order
-            originalQueue?.let { original ->
-                val targetIndexInOriginal = original.indexOfFirst { it.id.toString() == currentTrackId }.coerceAtLeast(0)
-                
-                // 1. Move current to its original position gaplessly
-                if (currentIndex != targetIndexInOriginal) {
-                    player.moveMediaItem(currentIndex, targetIndexInOriginal)
-                }
-                
-                // 2. Restore range before current track
-                if (targetIndexInOriginal > 0) {
-                    player.replaceMediaItems(0, targetIndexInOriginal, createMediaItems(original.subList(0, targetIndexInOriginal)))
-                }
-                
-                // 3. Restore range after current track
-                if (targetIndexInOriginal < original.size - 1) {
-                    player.replaceMediaItems(targetIndexInOriginal + 1, player.mediaItemCount, createMediaItems(original.subList(targetIndexInOriginal + 1, original.size)))
-                }
-                
-                _currentQueue.value = original
-            }
-            originalQueue = null
+            _playerState.update { it.copy(isShuffleEnabled = enabled) }
+            updateState()
         }
-        
-        _playerState.update { it.copy(isShuffleEnabled = enabled) }
-        updateState()
     }
 
     fun toggleRepeatMode() {
