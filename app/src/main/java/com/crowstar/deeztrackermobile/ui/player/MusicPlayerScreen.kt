@@ -1,5 +1,7 @@
 package com.crowstar.deeztrackermobile.ui.player
 
+import com.crowstar.deeztrackermobile.features.localmusic.toPlaylistTrack
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -341,10 +343,7 @@ fun MusicPlayerScreen(
                 onDismiss = { showAddToPlaylist = false },
                 onPlaylistClick = { playlist ->
                     scope.launch {
-                        playerController.playlistRepository.addTrackToPlaylist(playlist.id, track.id)
-                        snackbarController.showSnackbar(
-                            context.getString(R.string.toast_added_to_playlist, playlist.name)
-                        )
+                        playerController.playlistRepository.addTrackToPlaylist(playlist.id, track.toPlaylistTrack())
                     }
                     showAddToPlaylist = false
                 },

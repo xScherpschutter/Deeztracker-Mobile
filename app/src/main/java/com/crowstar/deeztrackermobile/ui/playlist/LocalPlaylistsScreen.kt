@@ -124,7 +124,7 @@ fun LocalPlaylistsScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = stringResource(R.string.stats_playlist_tracks_format, playlist.trackIds.size),
+                        text = stringResource(R.string.stats_playlist_tracks_format, playlist.tracks.size),
                         color = TextGray,
                         fontSize = 14.sp
                     )

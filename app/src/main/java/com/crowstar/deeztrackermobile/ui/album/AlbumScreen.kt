@@ -29,6 +29,7 @@ import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.utils.formatDuration
 import androidx.compose.ui.res.stringResource
+import com.crowstar.deeztrackermobile.ui.common.TrackOptionsMenu
 import com.crowstar.deeztrackermobile.ui.common.MarqueeText
 import com.crowstar.deeztrackermobile.ui.common.TrackPreviewButton
 import com.crowstar.deeztrackermobile.R
@@ -38,6 +39,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
+
+import com.crowstar.deeztrackermobile.features.localmusic.toPlaylistTrack
+import com.crowstar.deeztrackermobile.ui.utils.LocalSnackbarController
+import com.crowstar.deeztrackermobile.ui.utils.SnackbarController
+import androidx.compose.runtime.CompositionLocalProvider
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,9 +61,14 @@ fun AlbumScreen(
     val downloadState by viewModel.downloadState.collectAsState()
     val downloadRefreshTrigger by viewModel.downloadRefreshTrigger.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val snackbarController = remember { SnackbarController(snackbarHostState, scope) }
 
     val playingUrl by viewModel.playingUrl.collectAsState()
     val previewPosition by viewModel.previewPosition.collectAsState()
+    var trackToAddToPlaylist by remember { mutableStateOf<com.crowstar.deeztrackermobile.features.deezer.Track?>(null) }
+    var showCreatePlaylistDialog by remember { mutableStateOf(false) }
+    val localPlaylists by viewModel.playlists.collectAsState()
 
     LaunchedEffect(albumId) {
         viewModel.loadAlbum(albumId)
@@ -97,127 +109,164 @@ fun AlbumScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, stringResource(R.string.action_back), tint = Color.White)
-                    }
-                },
-                actions = {
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
-            )
-        },
-
-        containerColor = BackgroundDark,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { padding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = Primary)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                // Album Header
-                item {
-                    album?.let { albumData ->
-                        AlbumHeader(albumData)
-                    }
-                }
-
-                // Download Album Button
-                item {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    val isDownloading = downloadState is DownloadState.Downloading
-                    Button(
-                        onClick = {
-                            album?.let { albumData ->
-                                viewModel.startAlbumDownload(albumData.id, albumData.title)
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Primary
-                        ),
-                        shape = RoundedCornerShape(24.dp)
-                    ) {
-                        if (isDownloading && (downloadState as? DownloadState.Downloading)?.itemId == albumId.toString()) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = Color.White,
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.action_downloading), fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                        } else {
-                            Icon(
-                                Icons.Default.Download,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.action_download_album), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+    CompositionLocalProvider(LocalSnackbarController provides snackbarController) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("") },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.Default.ArrowBack, stringResource(R.string.action_back), tint = Color.White)
                         }
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-
-                // Tracks List
-                items(tracks.size) { index ->
-                    val track = tracks[index]
-                    var isDownloaded by remember { mutableStateOf(false) }
-                    
-                    // Check if track is downloaded, re-check when refresh trigger changes
-                    LaunchedEffect(track.id, downloadRefreshTrigger) {
-                        viewModel.isTrackDownloaded(
-                            track.title,
-                            track.artist?.name ?: ""
-                        ) { result ->
-                            isDownloaded = result
-                        }
-                    }
-                    
-                    TrackListItem(
-                        track = track,
-                        index = index + 1,
-                        isDownloaded = isDownloaded,
-                        isDownloading = (downloadState is DownloadState.Downloading) && (
-                            // Individual track download
-                            (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString() ||
-                            // Part of bulk album download - check if this is the current track being downloaded
-                            (downloadState as? DownloadState.Downloading)?.currentTrackId == track.id.toString()
-                        ),
-                        isPlaying = playingUrl == track.preview,
-                        previewPosition = previewPosition,
-                        onTogglePreview = { viewModel.togglePreview(it) },
-                        onDownloadClick = {
-                            viewModel.startTrackDownload(track.id, track.title)
-                        },
-                        onClick = { viewModel.playAlbum(index) }
+                    },
+                    actions = {
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
                     )
-                }
+                )
+            },
 
-                item {
-                    Spacer(modifier = Modifier.height(100.dp))
+            containerColor = BackgroundDark,
+            snackbarHost = { SnackbarHost(snackbarHostState) }
+        ) { padding ->
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Primary)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                ) {
+                    // Album Header
+                    item {
+                        album?.let { albumData ->
+                            AlbumHeader(albumData)
+                        }
+                    }
+
+                    // Download Album Button
+                    item {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        val isDownloading = downloadState is DownloadState.Downloading
+                        Button(
+                            onClick = {
+                                album?.let { albumData ->
+                                    viewModel.startAlbumDownload(albumData.id, albumData.title)
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Primary
+                            ),
+                            shape = RoundedCornerShape(24.dp)
+                        ) {
+                            if (isDownloading && (downloadState as? DownloadState.Downloading)?.itemId == albumId.toString()) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.action_downloading), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            } else {
+                                Icon(
+                                    Icons.Default.Download,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.action_download_album), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    // Tracks List
+                    items(tracks.size) { index ->
+                        val track = tracks[index]
+                        var isDownloaded by remember { mutableStateOf(false) }
+                        
+                        // Check if track is downloaded, re-check when refresh trigger changes
+                        LaunchedEffect(track.id, downloadRefreshTrigger) {
+                            viewModel.isTrackDownloaded(
+                                track.title,
+                                track.artist?.name ?: ""
+                            ) { result ->
+                                isDownloaded = result
+                            }
+                        }
+                        
+                        TrackListItem(
+                            track = track,
+                            index = index + 1,
+                            isDownloaded = isDownloaded,
+                            isDownloading = (downloadState is DownloadState.Downloading) && (
+                                // Individual track download
+                                (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString() ||
+                                // Part of bulk album download - check if this is the current track being downloaded
+                                (downloadState as? DownloadState.Downloading)?.currentTrackId == track.id.toString()
+                            ),
+                            isPlaying = playingUrl == track.preview,
+                            previewPosition = previewPosition,
+                            onTogglePreview = { viewModel.togglePreview(it) },
+                            onDownloadClick = {
+                                viewModel.startTrackDownload(track.id, track.title)
+                            },
+                            onClick = { viewModel.playAlbum(index) },
+                            onAddToPlaylist = { trackToAddToPlaylist = track }
+                        )
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(100.dp))
+                    }
                 }
             }
+        }
+
+        if (trackToAddToPlaylist != null) {
+            com.crowstar.deeztrackermobile.ui.playlist.AddToPlaylistBottomSheet(
+                playlists = localPlaylists,
+                onDismiss = { trackToAddToPlaylist = null },
+                onPlaylistClick = { playlist ->
+                    val trackToSave = trackToAddToPlaylist
+                    val albumArt = album?.coverBig ?: album?.coverMedium
+                    scope.launch {
+                        viewModel.playlistRepository.addTrackToPlaylist(
+                            playlist.id, 
+                            trackToSave?.toPlaylistTrack(albumArtUri = albumArt) ?: return@launch
+                        )
+                    }
+                    trackToAddToPlaylist = null
+                },
+                onCreateNewPlaylist = { showCreatePlaylistDialog = true }
+            )
+        }
+
+        if (showCreatePlaylistDialog) {
+            com.crowstar.deeztrackermobile.ui.playlist.CreatePlaylistDialog(
+                onDismiss = { showCreatePlaylistDialog = false },
+                onCreate = { newPlaylistName ->
+                    scope.launch {
+                        viewModel.playlistRepository.createPlaylist(newPlaylistName)
+                        snackbarController.showSnackbar(
+                            context.getString(R.string.toast_playlist_created, newPlaylistName)
+                        )
+                    }
+                    showCreatePlaylistDialog = false
+                }
+            )
         }
     }
 }
@@ -284,7 +333,8 @@ private fun TrackListItem(
     previewPosition: Long = 0,
     onTogglePreview: (String) -> Unit = {},
     onDownloadClick: () -> Unit = {},
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onAddToPlaylist: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -370,5 +420,7 @@ private fun TrackListItem(
                 }
             }
         }
+
+        TrackOptionsMenu(onAddToPlaylist = onAddToPlaylist)
     }
 }

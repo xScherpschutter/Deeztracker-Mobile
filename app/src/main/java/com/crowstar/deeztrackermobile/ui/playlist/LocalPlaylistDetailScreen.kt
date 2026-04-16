@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist
 import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
+import com.crowstar.deeztrackermobile.features.localmusic.toLocalTrack
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
@@ -45,9 +46,7 @@ fun LocalPlaylistDetailScreen(
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     // Filter tracks belonging to this playlist
-    val playlistTracks = playlist.trackIds.mapNotNull { id -> 
-        allTracks.find { it.id == id }
-    }
+    val playlistTracks = playlist.tracks.map { it.toLocalTrack() }.map { track -> allTracks.find { it.title.lowercase() == track.title.lowercase() && it.artist.lowercase() == track.artist.lowercase() } ?: track }
     
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     
