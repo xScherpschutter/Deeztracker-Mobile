@@ -50,6 +50,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import com.crowstar.deeztrackermobile.features.localmusic.LocalAlbum
 import com.crowstar.deeztrackermobile.features.localmusic.LocalArtist
 import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist
+import com.crowstar.deeztrackermobile.features.localmusic.toLocalTrack
 import com.crowstar.deeztrackermobile.ui.playlist.LocalPlaylistDetailScreen
 import com.crowstar.deeztrackermobile.ui.playlist.LocalPlaylistsScreen
 import androidx.compose.material3.Tab
@@ -187,9 +188,7 @@ fun LocalMusicScreen(
         }
     }
 
-    val selectedPlaylist = remember(selectedPlaylistId, playlists) {
-        playlists.find { it.id == selectedPlaylistId }
-    }
+    val selectedPlaylist = playlists.find { it.id == selectedPlaylistId }
 
     if (selectedPlaylist != null) {
         BackHandler(enabled = selectedPlaylistId != null) {
@@ -206,17 +205,17 @@ fun LocalMusicScreen(
                     onBackClick = { selectedPlaylistId = null },
                     onTrackClick = { track ->
                          // Filter tracks to match playlist content context
-                         val playlistTracks = selectedPlaylist.trackIds.mapNotNull { id -> unfilteredTracks.find { it.id == id } }
+                         val playlistTracks = selectedPlaylist.tracks.map { it.toLocalTrack() }.map { track -> unfilteredTracks.find { it.title.lowercase() == track.title.lowercase() && it.artist.lowercase() == track.artist.lowercase() } ?: track }
                          onTrackClick(track, playlistTracks, selectedPlaylist.name)
                     },
                     onPlayPlaylist = {
-                         val playlistTracks = selectedPlaylist.trackIds.mapNotNull { id -> unfilteredTracks.find { it.id == id } }
+                         val playlistTracks = selectedPlaylist.tracks.map { it.toLocalTrack() }.map { track -> unfilteredTracks.find { it.title.lowercase() == track.title.lowercase() && it.artist.lowercase() == track.artist.lowercase() } ?: track }
                          if (playlistTracks.isNotEmpty()) {
                              onTrackClick(playlistTracks.first(), playlistTracks, selectedPlaylist.name)
                          }
                     },
                     onShufflePlaylist = {
-                        val playlistTracks = selectedPlaylist.trackIds.mapNotNull { id -> unfilteredTracks.find { it.id == id } }
+                        val playlistTracks = selectedPlaylist.tracks.map { it.toLocalTrack() }.map { track -> unfilteredTracks.find { it.title.lowercase() == track.title.lowercase() && it.artist.lowercase() == track.artist.lowercase() } ?: track }
                         if (playlistTracks.isNotEmpty()) {
                             val shuffled = playlistTracks.shuffled()
                             onTrackClick(shuffled.first(), shuffled, selectedPlaylist.name)

@@ -1,5 +1,7 @@
 package com.crowstar.deeztrackermobile.ui.playlist
 
+import com.crowstar.deeztrackermobile.features.localmusic.toPlaylistTrack
+
 import android.content.Context
 import android.net.Uri
 import android.util.Log
@@ -162,7 +164,7 @@ class ImportPlaylistViewModel @Inject constructor(
 
         _importedTracks.value.forEach { item ->
             if (item.status is ImportStatus.FoundLocally) {
-                playlistRepository.addTrackToPlaylist(playlistId, item.status.localTrack.id)
+                playlistRepository.addTrackToPlaylist(playlistId, item.status.localTrack.toPlaylistTrack())
             }
         }
 
@@ -174,7 +176,7 @@ class ImportPlaylistViewModel @Inject constructor(
                 titleMatch && artistMatch
             }
             if (matchedTrack != null) {
-                playlistRepository.addTrackToPlaylist(playlistId, matchedTrack.id)
+                playlistRepository.addTrackToPlaylist(playlistId, matchedTrack.toPlaylistTrack())
             }
         }
         

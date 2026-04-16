@@ -1,5 +1,6 @@
 package com.crowstar.deeztrackermobile.features.player
 
+import com.crowstar.deeztrackermobile.features.localmusic.toPlaylistTrack
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
@@ -457,7 +458,7 @@ class PlayerController @Inject constructor(
     fun toggleFavorite() {
         val track = _playerState.value.currentTrack ?: return
         controllerScope.launch {
-            withContext(Dispatchers.IO) { playlistRepository.toggleFavorite(track.id) }
+            withContext(Dispatchers.IO) { playlistRepository.toggleFavorite(track.toPlaylistTrack()) }
             val isFav = withContext(Dispatchers.IO) { playlistRepository.isFavorite(track.id) }
             _playerState.update { it.copy(isCurrentTrackFavorite = isFav) }
         }
