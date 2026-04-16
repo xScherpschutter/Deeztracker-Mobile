@@ -17,7 +17,8 @@ data class LocalTrack(
     val dateModified: Long, // timestamp
     val albumArtUri: String? = null,
     val track: Int? = null, // Track number
-    val year: Int? = null
+    val year: Int? = null,
+    val isStreaming: Boolean = false
 ) {
     /**
      * Formatted duration in MM:SS format
