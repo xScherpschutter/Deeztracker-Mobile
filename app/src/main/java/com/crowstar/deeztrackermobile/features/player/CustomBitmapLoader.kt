@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Log
 import androidx.media3.common.util.BitmapLoader
 import androidx.media3.common.util.UnstableApi
 import com.google.common.util.concurrent.ListenableFuture
@@ -12,6 +13,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
  * Custom BitmapLoader for Media3 that prevents artwork caching issues
@@ -61,6 +64,19 @@ class CustomBitmapLoader(private val context: Context) : BitmapLoader {
                     "android.resource" -> {
                         // This is our default icon - use the pre-loaded one
                         defaultIcon
+                    }
+                    "http", "https" -> {
+                        // Load from network
+                        val connection = java.net.URL(uri.toString()).openConnection()
+                        connection.connectTimeout = 5000
+                        connection.readTimeout = 5000
+                        connection.getInputStream().use { inputStream ->
+                            if (options != null) {
+                                BitmapFactory.decodeStream(inputStream, null, options)
+                            } else {
+                                BitmapFactory.decodeStream(inputStream)
+                            }
+                        }
                     }
                     else -> null
                 }

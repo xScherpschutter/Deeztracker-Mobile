@@ -274,7 +274,7 @@ private fun ArtistHeader(artist: Artist) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             MarqueeText(
-                text = artist.name,
+                text = artist.name ?: "",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
@@ -307,7 +307,7 @@ private fun AlbumCard(album: Album, onAlbumClick: (Long) -> Unit) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         MarqueeText(
-            text = album.title,
+            text = album.title ?: "",
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             color = Color.White,
@@ -365,7 +365,7 @@ private fun ArtistTrackItem(
         // Track Info
         Column(modifier = Modifier.weight(1f)) {
             MarqueeText(
-                text = track.title,
+                text = track.title ?: "",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color.White,

@@ -75,7 +75,7 @@ fun LocalArtistDetailScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     MarqueeText(
-                        text = artistName,
+                        text = artistName ?: "",
                         color = Color.White,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
@@ -128,8 +128,8 @@ private fun ArtistTrackItem(track: LocalTrack, onClick: () -> Unit) {
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            MarqueeText(text = track.title, color = Color.White, fontSize = 16.sp, modifier = Modifier.fillMaxWidth())
-            MarqueeText(text = track.artist, color = TextGray, fontSize = 12.sp, modifier = Modifier.fillMaxWidth())
+            MarqueeText(text = track.title ?: "", color = Color.White, fontSize = 16.sp, modifier = Modifier.fillMaxWidth())
+            MarqueeText(text = track.artist ?: "", color = TextGray, fontSize = 12.sp, modifier = Modifier.fillMaxWidth())
         }
         Text(
             text = track.getFormattedDuration(),
