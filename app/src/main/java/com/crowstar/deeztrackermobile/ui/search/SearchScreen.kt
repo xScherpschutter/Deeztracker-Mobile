@@ -61,6 +61,7 @@ import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.common.MarqueeText
 import com.crowstar.deeztrackermobile.ui.common.TrackPreviewButton
+import com.crowstar.deeztrackermobile.ui.common.TrackOptionsMenu
 import com.crowstar.deeztrackermobile.ui.common.TrackArtwork
 import kotlinx.coroutines.launch
 import com.crowstar.deeztrackermobile.ui.utils.formatDuration
@@ -74,19 +75,22 @@ import javax.inject.Inject
 import androidx.hilt.navigation.compose.hiltViewModel
 
 import com.crowstar.deeztrackermobile.features.player.PlayerController
-
+import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylistRepository
+import com.crowstar.deeztrackermobile.features.localmusic.toPlaylistTrack
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val repository: DeezerRepository,
     val downloadManager: DownloadManager,
     private val previewPlayer: PreviewPlayer,
-    val playerController: PlayerController
+    val playerController: PlayerController,
+    val playlistRepository: LocalPlaylistRepository
 ) : ViewModel() {
     val apiRepository = repository
     
     val playingUrl = previewPlayer.playingUrl
     val previewPosition = previewPlayer.positionMs
     val downloadedKeys = downloadManager.downloadedKeys
+    val playlists = playlistRepository.playlists
 
     fun stopPreview() {
         previewPlayer.stop()
@@ -128,6 +132,10 @@ fun SearchScreen(
 
     val playingUrl by viewModel.playingUrl.collectAsState()
     val previewPosition by viewModel.previewPosition.collectAsState()
+
+    var trackToAddToPlaylist by remember { mutableStateOf<com.crowstar.deeztrackermobile.features.deezer.Track?>(null) }
+    var showCreatePlaylistDialog by remember { mutableStateOf(false) }
+    val localPlaylists by viewModel.playlists.collectAsState()
 
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var artists by remember { mutableStateOf<List<Artist>>(emptyList()) }
@@ -362,7 +370,8 @@ fun SearchScreen(
                                         onDownloadClick = { downloadManager.startTrackDownload(track.id, track.title) },
                                         onStreamClick = {
                                             viewModel.playerController.playDeezerTrackWithRadio(track)
-                                        }
+                                        },
+                                        onAddToPlaylist = { trackToAddToPlaylist = track }
                                     )
                                 }
                             }
@@ -390,6 +399,40 @@ fun SearchScreen(
             }
         }
     }
+
+    if (trackToAddToPlaylist != null) {
+        com.crowstar.deeztrackermobile.ui.playlist.AddToPlaylistBottomSheet(
+            playlists = localPlaylists,
+            onDismiss = { trackToAddToPlaylist = null },
+            onPlaylistClick = { playlist ->
+                val trackToSave = trackToAddToPlaylist
+                scope.launch {
+                    viewModel.playlistRepository.addTrackToPlaylist(
+                        playlist.id, 
+                        trackToSave?.toPlaylistTrack() ?: return@launch
+                    )
+                }
+                trackToAddToPlaylist = null
+            },
+            onCreateNewPlaylist = { showCreatePlaylistDialog = true }
+        )
+    }
+
+    if (showCreatePlaylistDialog) {
+        com.crowstar.deeztrackermobile.ui.playlist.CreatePlaylistDialog(
+            onDismiss = { showCreatePlaylistDialog = false },
+            onCreate = { newPlaylistName ->
+                scope.launch {
+                    viewModel.playlistRepository.createPlaylist(newPlaylistName)
+                    snackbarHostState.showSnackbar(
+                        message = context.getString(R.string.toast_playlist_created, newPlaylistName),
+                        duration = SnackbarDuration.Short
+                    )
+                }
+                showCreatePlaylistDialog = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -401,7 +444,8 @@ fun TrackItem(
     previewPosition: Long = 0,
     onTogglePreview: (String) -> Unit = {},
     onDownloadClick: () -> Unit = {},
-    onStreamClick: () -> Unit = {}
+    onStreamClick: () -> Unit = {},
+    onAddToPlaylist: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -464,6 +508,8 @@ fun TrackItem(
                 Icon(Icons.Default.Download, contentDescription = "Download", tint = Primary, modifier = Modifier.size(20.dp))
             }
         }
+
+        TrackOptionsMenu(onAddToPlaylist = onAddToPlaylist)
     }
 }
 

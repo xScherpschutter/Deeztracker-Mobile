@@ -1,5 +1,6 @@
 package com.crowstar.deeztrackermobile.ui.downloads
 
+import com.crowstar.deeztrackermobile.features.localmusic.toPlaylistTrack
 import android.app.Application
 import android.content.IntentSender
 import androidx.lifecycle.AndroidViewModel
@@ -74,7 +75,7 @@ class DownloadsViewModel @Inject constructor(
 
     fun addTrackToPlaylist(playlist: com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylist, track: LocalTrack) {
         viewModelScope.launch {
-            playlistRepository.addTrackToPlaylist(playlist.id, track.id)
+            playlistRepository.addTrackToPlaylist(playlist.id, track.toPlaylistTrack())
         }
     }
 

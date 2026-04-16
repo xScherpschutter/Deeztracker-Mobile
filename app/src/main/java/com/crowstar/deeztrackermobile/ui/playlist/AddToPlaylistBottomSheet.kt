@@ -178,7 +178,7 @@ fun PlaylistItem(
                 color = Color.White
             )
             Text(
-                text = stringResource(R.string.artist_songs_count_format, playlist.trackIds.size),
+                text = stringResource(R.string.artist_songs_count_format, playlist.tracks.size),
                 fontSize = 12.sp,
                 color = TextGray
             )

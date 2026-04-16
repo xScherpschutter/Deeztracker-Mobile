@@ -63,3 +63,62 @@ data class LocalArtist(
     val numberOfAlbums: Int,
     val artistArtUri: String? = null
 )
+
+/**
+ * Represents a track in a playlist, containing basic metadata to avoid
+ * needing to query MediaStore every time.
+ */
+data class PlaylistTrack(
+    val id: Long,
+    val title: String,
+    val artist: String,
+    val album: String,
+    val albumId: Long,
+    val duration: Long,
+    val albumArtUri: String? = null,
+    val isStreaming: Boolean = false
+)
+
+fun PlaylistTrack.toLocalTrack(): LocalTrack {
+    return LocalTrack(
+        id = id,
+        title = title,
+        artist = artist,
+        album = album,
+        albumId = albumId,
+        duration = duration,
+        albumArtUri = albumArtUri,
+        isStreaming = isStreaming,
+        filePath = "", // Not needed for playlist display
+        size = 0,
+        mimeType = "",
+        dateAdded = 0,
+        dateModified = 0
+    )
+}
+
+fun LocalTrack.toPlaylistTrack(): PlaylistTrack {
+    return PlaylistTrack(
+        id = id,
+        title = title,
+        artist = artist,
+        album = album,
+        albumId = albumId,
+        duration = duration,
+        albumArtUri = albumArtUri,
+        isStreaming = isStreaming
+    )
+}
+
+fun com.crowstar.deeztrackermobile.features.deezer.Track.toPlaylistTrack(albumArtUri: String? = null): PlaylistTrack {
+    return PlaylistTrack(
+        id = this.id,
+        title = this.title ?: "Unknown Title",
+        artist = this.artist?.name ?: "Unknown Artist",
+        album = this.album?.title ?: "Unknown Album",
+        albumId = this.album?.id ?: 0L,
+        duration = (this.duration?.toLong() ?: 0L) * 1000,
+        albumArtUri = albumArtUri ?: this.album?.coverBig ?: this.album?.coverMedium,
+        isStreaming = true
+    )
+}

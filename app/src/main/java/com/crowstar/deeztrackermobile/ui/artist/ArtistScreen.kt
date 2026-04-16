@@ -33,6 +33,7 @@ import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import com.crowstar.deeztrackermobile.ui.common.TrackOptionsMenu
 import com.crowstar.deeztrackermobile.ui.common.MarqueeText
 import com.crowstar.deeztrackermobile.ui.common.TrackPreviewButton
 import com.crowstar.deeztrackermobile.ui.utils.formatDuration
@@ -43,6 +44,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
+
+import com.crowstar.deeztrackermobile.features.localmusic.toPlaylistTrack
+import com.crowstar.deeztrackermobile.ui.utils.LocalSnackbarController
+import com.crowstar.deeztrackermobile.ui.utils.SnackbarController
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material.icons.filled.MoreVert
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,9 +69,14 @@ fun ArtistScreen(
     val downloadState by viewModel.downloadState.collectAsState()
     val downloadRefreshTrigger by viewModel.downloadRefreshTrigger.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val snackbarController = remember { SnackbarController(snackbarHostState, scope) }
 
     val playingUrl by viewModel.playingUrl.collectAsState()
     val previewPosition by viewModel.previewPosition.collectAsState()
+    var trackToAddToPlaylist by remember { mutableStateOf<com.crowstar.deeztrackermobile.features.deezer.Track?>(null) }
+    var showCreatePlaylistDialog by remember { mutableStateOf(false) }
+    val localPlaylists by viewModel.playlists.collectAsState()
 
     LaunchedEffect(artistId) {
         viewModel.loadArtist(artistId)
@@ -105,128 +118,164 @@ fun ArtistScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Scaffold(
-        containerColor = BackgroundDark,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            if (isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = Primary)
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                ) {
-                    // Artist Header
-                    item {
-                        artist?.let { artistData ->
-                            ArtistHeader(artistData)
-                        }
+    CompositionLocalProvider(LocalSnackbarController provides snackbarController) {
+        Scaffold(
+            containerColor = BackgroundDark,
+            snackbarHost = { SnackbarHost(snackbarHostState) }
+        ) { padding ->
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = Primary)
                     }
-
-                    // Albums Section
-                    if (albums.isNotEmpty()) {
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                    ) {
+                        // Artist Header
                         item {
-                            Spacer(modifier = Modifier.height(32.dp))
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            artist?.let { artistData ->
+                                ArtistHeader(artistData)
+                            }
+                        }
+
+                        // Albums Section
+                        if (albums.isNotEmpty()) {
+                            item {
+                                Spacer(modifier = Modifier.height(32.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Albums",
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+
+                            item {
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    items(albums) { album ->
+                                        AlbumCard(album, onAlbumClick)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Top Tracks Section
+                        if (topTracks.isNotEmpty()) {
+                            item {
+                                Spacer(modifier = Modifier.height(32.dp))
                                 Text(
-                                    text = "Albums",
+                                    text = "Top Tracks",
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+
+                            items(topTracks.size) { index ->
+                                val track = topTracks[index]
+                                var isDownloaded by remember { mutableStateOf(false) }
+                                
+                                // Check if track is downloaded, re-check when refresh trigger changes
+                                LaunchedEffect(track.id, downloadRefreshTrigger) {
+                                    viewModel.isTrackDownloaded(
+                                        track.title,
+                                        track.artist?.name ?: ""
+                                    ) { result ->
+                                        isDownloaded = result
+                                    }
+                                }
+                                
+                                ArtistTrackItem(
+                                    track = track,
+                                    index = index,
+                                    isDownloaded = isDownloaded,
+                                    isDownloading = downloadState is DownloadState.Downloading && 
+                                        (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString(),
+                                    isPlaying = playingUrl == track.preview,
+                                    previewPosition = previewPosition,
+                                    onTogglePreview = { viewModel.togglePreview(it) },
+                                    onDownloadClick = {
+                                        viewModel.startTrackDownload(track.id, track.title)
+                                    },
+                                    onClick = { viewModel.playArtistTopTracks() },
+                                    onAddToPlaylist = { trackToAddToPlaylist = track }
                                 )
                             }
-                            Spacer(modifier = Modifier.height(16.dp))
                         }
 
                         item {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                items(albums) { album ->
-                                    AlbumCard(album, onAlbumClick)
-                                }
-                            }
+                            Spacer(modifier = Modifier.height(100.dp))
                         }
-                    }
-
-                    // Top Tracks Section
-                    if (topTracks.isNotEmpty()) {
-                        item {
-                            Spacer(modifier = Modifier.height(32.dp))
-                            Text(
-                                text = "Top Tracks",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-
-                        items(topTracks.size) { index ->
-                            val track = topTracks[index]
-                            var isDownloaded by remember { mutableStateOf(false) }
-                            
-                            // Check if track is downloaded, re-check when refresh trigger changes
-                            LaunchedEffect(track.id, downloadRefreshTrigger) {
-                                viewModel.isTrackDownloaded(
-                                    track.title,
-                                    track.artist?.name ?: ""
-                                ) { result ->
-                                    isDownloaded = result
-                                }
-                            }
-                            
-                            ArtistTrackItem(
-                                track = track,
-                                index = index,
-                                isDownloaded = isDownloaded,
-                                isDownloading = downloadState is DownloadState.Downloading && 
-                                    (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString(),
-                                isPlaying = playingUrl == track.preview,
-                                previewPosition = previewPosition,
-                                onTogglePreview = { viewModel.togglePreview(it) },
-                                onDownloadClick = {
-                                    viewModel.startTrackDownload(track.id, track.title)
-                                },
-                                onClick = { viewModel.playArtistTopTracks() }
-                            )
-                        }
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(100.dp))
                     }
                 }
+                
+                // Floating Back Button
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .size(40.dp)
+                        .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                        .align(Alignment.TopStart)
+                ) {
+                    Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+                }
             }
-            
-            // Floating Back Button
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier
-                    .padding(16.dp)
-                    .size(40.dp)
-                    .background(Color.White.copy(alpha = 0.15f), CircleShape)
-                    .align(Alignment.TopStart)
-            ) {
-                Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
-            }
+        }
+
+        if (trackToAddToPlaylist != null) {
+            com.crowstar.deeztrackermobile.ui.playlist.AddToPlaylistBottomSheet(
+                playlists = localPlaylists,
+                onDismiss = { trackToAddToPlaylist = null },
+                onPlaylistClick = { playlist ->
+                    val trackToSave = trackToAddToPlaylist
+                    scope.launch {
+                        viewModel.playlistRepository.addTrackToPlaylist(
+                            playlist.id, 
+                            trackToSave?.toPlaylistTrack() ?: return@launch
+                        )
+                    }
+                    trackToAddToPlaylist = null
+                },
+                onCreateNewPlaylist = { showCreatePlaylistDialog = true }
+            )
+        }
+
+        if (showCreatePlaylistDialog) {
+            com.crowstar.deeztrackermobile.ui.playlist.CreatePlaylistDialog(
+                onDismiss = { showCreatePlaylistDialog = false },
+                onCreate = { newPlaylistName ->
+                    scope.launch {
+                        viewModel.playlistRepository.createPlaylist(newPlaylistName)
+                        snackbarController.showSnackbar(
+                            context.getString(R.string.toast_playlist_created, newPlaylistName)
+                        )
+                    }
+                    showCreatePlaylistDialog = false
+                }
+            )
         }
     }
 }
@@ -331,7 +380,8 @@ private fun ArtistTrackItem(
     previewPosition: Long = 0,
     onTogglePreview: (String) -> Unit = {},
     onDownloadClick: () -> Unit = {},
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onAddToPlaylist: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -425,5 +475,7 @@ private fun ArtistTrackItem(
                 }
             }
         }
+
+        TrackOptionsMenu(onAddToPlaylist = onAddToPlaylist)
     }
 }
