@@ -766,7 +766,7 @@ internal interface UniffiLib : Library {
     fun uniffi_rusteer_fn_method_rusteerservice_download_track(`ptr`: Pointer,`arl`: RustBuffer.ByValue,`trackId`: RustBuffer.ByValue,`outputDir`: RustBuffer.ByValue,`quality`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_rusteer_fn_method_rusteerservice_preload_track(`ptr`: Pointer,`arl`: RustBuffer.ByValue,`trackId`: RustBuffer.ByValue,`quality`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
+    ): Long
     fun uniffi_rusteer_fn_method_rusteerservice_read_audio_chunk(`ptr`: Pointer,`trackId`: RustBuffer.ByValue,`offset`: Long,`size`: Int,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_rusteer_fn_method_rusteerservice_search_tracks(`ptr`: Pointer,`arl`: RustBuffer.ByValue,`query`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -932,7 +932,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_rusteer_checksum_method_rusteerservice_download_track() != 17392.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_rusteer_checksum_method_rusteerservice_preload_track() != 34047.toShort()) {
+    if (lib.uniffi_rusteer_checksum_method_rusteerservice_preload_track() != 6478.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_rusteer_checksum_method_rusteerservice_read_audio_chunk() != 1164.toShort()) {
@@ -1314,7 +1314,7 @@ public interface RusteerServiceInterface {
     
     fun `downloadTrack`(`arl`: kotlin.String, `trackId`: kotlin.String, `outputDir`: kotlin.String, `quality`: DownloadQuality): DownloadResult
     
-    fun `preloadTrack`(`arl`: kotlin.String, `trackId`: kotlin.String, `quality`: DownloadQuality)
+    fun `preloadTrack`(`arl`: kotlin.String, `trackId`: kotlin.String, `quality`: DownloadQuality): kotlin.ULong
     
     fun `readAudioChunk`(`trackId`: kotlin.String, `offset`: kotlin.ULong, `size`: kotlin.UInt): kotlin.ByteArray
     
@@ -1474,15 +1474,16 @@ open class RusteerService: Disposable, AutoCloseable, RusteerServiceInterface {
     
 
     
-    @Throws(RusteerException::class)override fun `preloadTrack`(`arl`: kotlin.String, `trackId`: kotlin.String, `quality`: DownloadQuality)
-        = 
+    @Throws(RusteerException::class)override fun `preloadTrack`(`arl`: kotlin.String, `trackId`: kotlin.String, `quality`: DownloadQuality): kotlin.ULong {
+            return FfiConverterULong.lift(
     callWithPointer {
     uniffiRustCallWithError(RusteerException) { _status ->
     UniffiLib.INSTANCE.uniffi_rusteer_fn_method_rusteerservice_preload_track(
         it, FfiConverterString.lower(`arl`),FfiConverterString.lower(`trackId`),FfiConverterTypeDownloadQuality.lower(`quality`),_status)
 }
     }
-    
+    )
+    }
     
 
     
