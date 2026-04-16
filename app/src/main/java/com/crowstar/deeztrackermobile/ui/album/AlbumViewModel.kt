@@ -60,7 +60,7 @@ class AlbumViewModel @Inject constructor(
 
     fun playAlbum(startIndex: Int = 0) {
         val albumData = _album.value ?: return
-        playerController.playDeezerAlbum(albumData.id, albumData.title, startIndex)
+        playerController.playDeezerAlbum(albumData.id, albumData.title, albumData.coverXl ?: albumData.coverBig, startIndex)
     }
 
     fun startAlbumDownload(albumId: Long, title: String) {

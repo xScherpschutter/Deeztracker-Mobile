@@ -368,19 +368,16 @@ fun SearchScreen(
                             }
                             1 -> items(artists, key = { it.id }) { artist -> 
                                 ArtistItem(artist, onClick = { 
-                                    viewModel.playerController.playDeezerArtist(artist.id, artist.name)
                                     onArtistClick(artist.id) 
                                 }) 
                             }
                             2 -> items(albums, key = { it.id }) { album -> 
                                 AlbumItem(album, onClick = { 
-                                    viewModel.playerController.playDeezerAlbum(album.id, album.title)
                                     onAlbumClick(album.id) 
                                 }) 
                             }
                             3 -> items(playlists, key = { it.id }) { playlist -> 
                                 PlaylistItem(playlist, onClick = { 
-                                    viewModel.playerController.playDeezerPlaylist(playlist.id, playlist.title)
                                     onPlaylistClick(playlist.id) 
                                 }) 
                             }

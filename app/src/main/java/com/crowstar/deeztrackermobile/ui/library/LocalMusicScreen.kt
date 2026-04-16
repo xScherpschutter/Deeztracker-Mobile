@@ -615,7 +615,7 @@ fun AlbumGridItem(album: LocalAlbum, onClick: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(8.dp))
         MarqueeText(
-            text = album.title,
+            text = album.title ?: "",
             color = Color.White,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
@@ -623,7 +623,7 @@ fun AlbumGridItem(album: LocalAlbum, onClick: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
         MarqueeText(
-            text = album.artist,
+            text = album.artist ?: "",
             color = TextGray,
             fontSize = 12.sp,
             textAlign = TextAlign.Center,
@@ -675,7 +675,7 @@ fun ArtistGridItem(artist: LocalArtist, onClick: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(8.dp))
         MarqueeText(
-            text = artist.name,
+            text = artist.name ?: "",
             color = Color.White,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
@@ -735,7 +735,7 @@ fun LocalTrackItem(
         // Info
         Column(modifier = Modifier.weight(1f)) {
             MarqueeText(
-                text = track.title,
+                text = track.title ?: "",
                 color = Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
@@ -744,7 +744,7 @@ fun LocalTrackItem(
             Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 MarqueeText(
-                    text = track.artist,
+                    text = track.artist ?: "",
                     color = TextGray,
                     fontSize = 12.sp,
                     modifier = Modifier.weight(1f, fill = false)

@@ -127,10 +127,10 @@ class RustDeezerService @Inject constructor(
     suspend fun preloadTrack(
         trackId: String,
         quality: DownloadQuality
-    ) = withContext(Dispatchers.IO) {
+    ): Long = withContext(Dispatchers.IO) {
         val arl = getSavedArl() ?: throw IllegalStateException("Not logged in - ARL not set")
         try {
-            service.preloadTrack(arl, trackId, quality)
+            service.preloadTrack(arl, trackId, quality).toLong()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to preload track $trackId", e)
             throw e

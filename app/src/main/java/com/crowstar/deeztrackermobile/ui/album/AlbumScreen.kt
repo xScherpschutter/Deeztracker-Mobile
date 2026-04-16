@@ -244,7 +244,7 @@ private fun AlbumHeader(album: Album) {
 
         // Album Title
         MarqueeText(
-            text = album.title,
+            text = album.title ?: "",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
@@ -307,7 +307,7 @@ private fun TrackListItem(
         // Track Info
         Column(modifier = Modifier.weight(1f)) {
             MarqueeText(
-                text = track.title,
+                text = track.title ?: "",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color.White,

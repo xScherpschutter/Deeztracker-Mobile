@@ -89,7 +89,7 @@ fun LocalAlbumDetailScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     MarqueeText(
-                        text = album.title,
+                        text = album.title ?: "",
                         color = Color.White,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
@@ -97,7 +97,7 @@ fun LocalAlbumDetailScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     MarqueeText(
-                        text = album.artist,
+                        text = album.artist ?: "",
                         color = TextGray,
                         fontSize = 16.sp,
                         textAlign = TextAlign.Center,
@@ -144,8 +144,8 @@ fun LocalTrackItemSimple(track: LocalTrack, onClick: () -> Unit) {
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            MarqueeText(text = track.title, color = Color.White, fontSize = 16.sp, modifier = Modifier.fillMaxWidth())
-            MarqueeText(text = track.artist, color = TextGray, fontSize = 12.sp, modifier = Modifier.fillMaxWidth())
+            MarqueeText(text = track.title ?: "", color = Color.White, fontSize = 16.sp, modifier = Modifier.fillMaxWidth())
+            MarqueeText(text = track.artist ?: "", color = TextGray, fontSize = 12.sp, modifier = Modifier.fillMaxWidth())
         }
         Text(
             text = track.getFormattedDuration(),
