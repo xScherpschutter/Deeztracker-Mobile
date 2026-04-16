@@ -67,6 +67,15 @@ class MusicService : MediaLibraryService() {
         const val KEY_VOLUME = "volume"
     }
 
+    private fun getUserQuality(): DownloadQuality {
+        val prefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        return when (prefs.getString("audio_quality", "MP3_128")) {
+            "MP3_320" -> DownloadQuality.MP3_320
+            "FLAC"    -> DownloadQuality.FLAC
+            else      -> DownloadQuality.MP3_128
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         initializePlayer()
@@ -76,6 +85,16 @@ class MusicService : MediaLibraryService() {
 
     private fun initializePlayer() {
         player = ExoPlayer.Builder(this)
+            .setLoadControl(
+                androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                    .setBufferDurationsMs(
+                        androidx.media3.exoplayer.DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+                        androidx.media3.exoplayer.DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+                        500,
+                        androidx.media3.exoplayer.DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
+                    )
+                    .build()
+            )
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
@@ -88,7 +107,7 @@ class MusicService : MediaLibraryService() {
                 DefaultMediaSourceFactory(this)
                     .setDataSourceFactory(
                         DataSource.Factory {
-                            RusteerDataSource(this, rustDeezerService)
+                            RusteerDataSource(this, rustDeezerService, ::getUserQuality)
                         }
                     )
             )
@@ -119,7 +138,7 @@ class MusicService : MediaLibraryService() {
                         val trackId = uri.host ?: ""
                         serviceScope.launch {
                             try {
-                                rustDeezerService.preloadTrack(trackId, DownloadQuality.MP3_320)
+                                rustDeezerService.preloadTrack(trackId, getUserQuality())
                             } catch (e: Exception) {
                                 e.printStackTrace()
                             }
@@ -138,9 +157,7 @@ class MusicService : MediaLibraryService() {
                                 Log.d("MusicService", "Triggering predictive preload for track $nextTrackId (position: $nextIndex)")
                                 serviceScope.launch {
                                     try {
-                                        // Give some time between preloads to avoid congestion
-                                        kotlinx.coroutines.delay(i * 800L)
-                                        rustDeezerService.preloadTrack(nextTrackId, DownloadQuality.MP3_320)
+                                        rustDeezerService.preloadTrack(nextTrackId, getUserQuality())
                                     } catch (e: Exception) {
                                         // Ignore errors for future tracks
                                     }
@@ -201,7 +218,7 @@ class MusicService : MediaLibraryService() {
                         // We can't easily suspend here, but we can launch a job
                         serviceScope.launch {
                             try {
-                                rustDeezerService.preloadTrack(trackId, DownloadQuality.MP3_320)
+                                rustDeezerService.preloadTrack(trackId, getUserQuality())
                             } catch (e: Exception) {
                                 e.printStackTrace()
                             }
@@ -349,7 +366,8 @@ class MusicService : MediaLibraryService() {
 @UnstableApi
 class RusteerDataSource(
     private val context: Context,
-    private val rustDeezerService: RustDeezerService
+    private val rustDeezerService: RustDeezerService,
+    private val qualityProvider: () -> DownloadQuality = { DownloadQuality.MP3_128 }
 ) : DataSource {
 
     private val defaultDataSource: DataSource by lazy {
@@ -377,7 +395,7 @@ class RusteerDataSource(
             // Wait for Rust to initialize buffer and fetch headers
             return runBlocking(Dispatchers.IO) {
                 try {
-                    val totalSize = rustDeezerService.preloadTrack(trackId!!, DownloadQuality.MP3_320)
+                    val totalSize = rustDeezerService.preloadTrack(trackId!!, qualityProvider())
                     if (totalSize > 0) {
                         totalSize - currentPosition
                     } else {
