@@ -94,6 +94,16 @@ fun QueueBottomSheet(
                 }
             } else {
                 val listState = rememberLazyListState()
+                
+                // Scroll to current track when the sheet is opened
+                LaunchedEffect(Unit) {
+                    val index = queue.indexOfFirst { it.id == currentTrack?.id }
+                    if (index >= 0) {
+                        // Scroll to the index, ideally centered (though scrollToItem puts it at the top)
+                        listState.scrollToItem(index)
+                    }
+                }
+
                 var draggedItemId by remember { mutableStateOf<Long?>(null) }
                 
                 val fingerY = remember { mutableFloatStateOf(0f) }
