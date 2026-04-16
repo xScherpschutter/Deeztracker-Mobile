@@ -14,8 +14,6 @@ use crate::rusteer::DownloadQuality;
 
 const BLOCK_SIZE: u64 = 2048; 
 const MAX_CONCURRENT_DOWNLOADS: usize = 4;
-// Número de bloques a descargar por petición spot (para seeks a zonas con huecos).
-// 64 bloques * 2048 bytes = 128 KB por petición → suficiente para ~1s de MP3 128kbps
 const SPOT_DOWNLOAD_BATCH: u64 = 64;
 
 #[derive(Debug, Clone)]
@@ -106,28 +104,20 @@ async fn get_gateway(arl: &str) -> Result<GatewayApi> {
 }
 
 pub async fn preload_track(arl: &str, track_id: &str, preferred_quality: DownloadQuality) -> Result<u64> {
-    // 1. Check LRU Cache
     let cached = {
         let mut cache = STREAM_CACHE.lock().unwrap();
-        // === DIAG: estado del caché en lookup ===
-        debug!("[Cache:{}] LRU lookup — cache tiene {} entradas: [{}]",
+        debug!("[Cache:{}] LRU lookup — cache has {} entries: [{}]",
             track_id,
             cache.len(),
             cache.iter().map(|c| c.track_id.as_str()).collect::<Vec<_>>().join(", ")
         );
-        // BUG FIX: el lookup anterior usaba `track_id == X && quality == Y`.
-        // Si el mismo track se pedía con una variante de calidad diferente (aunque mínima),
-        // causaba MISS, duplicando la entrada en el cache y re-descargando desde 0.
-        // Ahora buscamos solo por track_id. Si la calidad difiere pero el buffer
-        // tiene datos, lo reutilizamos. Si difiere y está vacío, lo descartamos.
         if let Some(pos) = cache.iter().position(|c| c.track_id == track_id) {
             let item = cache.remove(pos);
             let buffer = item.buffer.clone();
             let media_url = item.media_url.clone();
             let block_count = buffer.blocks.lock().unwrap().len();
 
-            // === DIAG: estado del buffer encontrado ===
-            debug!("[Cache:{}] HIT (quality_stored={:?}, quality_req={:?}) — bloques={}, download_pos={}, total_size={}, complete={}, cancelled={}, downloading={}",
+            debug!("[Cache:{}] HIT (quality_stored={:?}, quality_req={:?}) — blocks={}, download_pos={}, total_size={}, complete={}, cancelled={}, downloading={}",
                 track_id,
                 item.quality,
                 preferred_quality,
@@ -139,28 +129,25 @@ pub async fn preload_track(arl: &str, track_id: &str, preferred_quality: Downloa
                 buffer.is_downloading.load(Ordering::SeqCst),
             );
 
-            // Si la calidad difiere y el buffer está completamente vacío → descartar y re-descargar
             if item.quality != preferred_quality && block_count == 0 && !buffer.is_downloading.load(Ordering::SeqCst) {
-                debug!("[Cache:{}] Calidad diferente y buffer vacío → descartando entrada para re-descargar con calidad {:?}", track_id, preferred_quality);
+                debug!("[Cache:{}] Quality mismatch and empty buffer → discarding entry to re-download with quality {:?}", track_id, preferred_quality);
                 buffer.is_cancelled.store(true, Ordering::SeqCst);
                 buffer.notify.notify_waiters();
-                // No hacer push → cae al bloque de resolución de URL abajo
                 None
             } else {
-                // Reutilizar buffer existente (misma calidad, o calidad diferente pero con datos)
                 if buffer.is_cancelled.load(Ordering::SeqCst) {
-                    debug!("[Cache:{}] Buffer cancelado — reiniciando descarga", track_id);
+                    debug!("[Cache:{}] Buffer cancelled — restarting download", track_id);
                     buffer.is_cancelled.store(false, Ordering::SeqCst);
                     start_background_download(buffer.clone(), track_id.to_string(), media_url);
                 } else if !buffer.is_downloading.load(Ordering::SeqCst) && !buffer.is_complete.load(Ordering::SeqCst) {
-                    debug!("[Cache:{}] Buffer parado (no descargando, no completo) — reiniciando descarga", track_id);
+                    debug!("[Cache:{}] Buffer stopped (not downloading, not complete) — restarting download", track_id);
                     start_background_download(buffer.clone(), track_id.to_string(), media_url);
                 }
                 cache.push(item);
                 Some(buffer)
             }
         } else {
-            debug!("[Cache:{}] MISS — track no encontrado en LRU", track_id);
+            debug!("[Cache:{}] MISS — track not found in LRU", track_id);
             None
         }
     };
@@ -170,7 +157,6 @@ pub async fn preload_track(arl: &str, track_id: &str, preferred_quality: Downloa
         return Ok(buffer.total_size.load(Ordering::SeqCst));
     }
 
-    // 2. Resolve URL
     let (url, quality, size) = {
         let meta = METADATA_CACHE.lock().unwrap();
         meta.get(track_id).cloned().unwrap_or_default()
@@ -209,25 +195,19 @@ pub async fn preload_track(arl: &str, track_id: &str, preferred_quality: Downloa
         (url, quality, size)
     };
 
-    // 3. Create Buffer — con double-checked locking para evitar race condition
-    // Entre el primer check (paso 1) y llegar aquí, otro thread pudo haber
-    // resuelto la URL e insertado el mismo track_id. Lo verificamos antes de insertar.
     let buffer = SharedBuffer::new();
     let buffer_clone = buffer.clone();
 
     let buffer_to_use = {
         let mut cache = STREAM_CACHE.lock().unwrap();
 
-        // DOUBLE-CHECK: ¿ya lo insertó un thread concurrente mientras hacíamos el await de red?
         if let Some(pos) = cache.iter().position(|c| c.track_id == track_id) {
             let item = cache.remove(pos);
             let existing_buffer = item.buffer.clone();
             let block_count = existing_buffer.blocks.lock().unwrap().len();
-            debug!("[Cache:{}] Double-check HIT (race ganada por otro thread) — bloques={}, reusando buffer existente",
+            debug!("[Cache:{}] Double-check HIT (race won by another thread) — blocks={}, reusing existing buffer",
                 track_id, block_count);
-            // LRU: mover al final
             cache.push(item);
-            // Asegurarse de que la descarga esté activa
             if existing_buffer.is_cancelled.load(Ordering::SeqCst) {
                 existing_buffer.is_cancelled.store(false, Ordering::SeqCst);
                 start_background_download(existing_buffer.clone(), track_id.to_string(), final_url.clone());
@@ -236,11 +216,10 @@ pub async fn preload_track(arl: &str, track_id: &str, preferred_quality: Downloa
             }
             existing_buffer
         } else {
-            // No hay race: insertar el nuevo buffer normalmente
             if cache.len() >= 10 {
                 let old = cache.remove(0);
                 let old_blocks = old.buffer.blocks.lock().unwrap().len();
-                debug!("[Cache] EVICT '{}' (bloques en memoria: {}) para hacer sitio a '{}'",
+                debug!("[Cache] EVICT '{}' (memory blocks: {}) to make room for '{}'",
                     old.track_id, old_blocks, track_id);
                 old.buffer.is_cancelled.store(true, Ordering::SeqCst);
                 old.buffer.notify.notify_waiters();
@@ -251,13 +230,12 @@ pub async fn preload_track(arl: &str, track_id: &str, preferred_quality: Downloa
                 buffer: buffer.clone(),
                 media_url: final_url.clone(),
             });
-            debug!("[Cache:{}] Nuevo buffer creado — caché ahora tiene {} entradas",
+            debug!("[Cache:{}] New buffer created — cache now has {} entries",
                 track_id, cache.len());
             buffer_clone.clone()
         }
     };
 
-    // Solo lanzar descarga si usamos nuestro propio buffer (no el del thread ganador)
     if Arc::ptr_eq(&buffer_to_use.blocks, &buffer.blocks) {
         start_background_download(buffer, track_id.to_string(), final_url);
     }
@@ -267,11 +245,10 @@ pub async fn preload_track(arl: &str, track_id: &str, preferred_quality: Downloa
 
 async fn wait_for_initial_data(buffer: &SharedBuffer) {
     let mut attempts = 0;
-    while attempts < 60 { // Aumentado a 3 segundos
+    while attempts < 60 { 
         {
             let blocks = buffer.blocks.lock().unwrap();
             let total = buffer.total_size.load(Ordering::SeqCst);
-            // Si ya tenemos el tamaño total y al menos 2 bloques, es suficiente para ExoPlayer
             if (total > 0 && blocks.len() >= 2) || buffer.is_complete.load(Ordering::SeqCst) { break; }
         }
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -306,9 +283,6 @@ fn start_background_download(buffer: SharedBuffer, track_id: String, media_url: 
             }
 
             let aligned_start = (start_pos / BLOCK_SIZE) * BLOCK_SIZE;
-            // FIX #1: Encontrar el primer bloque realmente faltante desde aligned_start.
-            // Esto evita hacer peticiones HTTP para datos que ya están en caché,
-            // lo cual era la causa de la re-descarga innecesaria en seek hacia atrás.
             let mut block_index = aligned_start / BLOCK_SIZE;
             {
                 let blocks = buffer.blocks.lock().unwrap();
@@ -318,8 +292,6 @@ fn start_background_download(buffer: SharedBuffer, track_id: String, media_url: 
             }
             let actual_http_start = block_index * BLOCK_SIZE;
 
-            // Si todos los bloques desde aligned_start hasta total_size ya están en caché,
-            // la descarga está completa.
             if total_size > 0 && actual_http_start >= total_size {
                 buffer.is_complete.store(true, Ordering::SeqCst);
                 buffer.notify.notify_waiters();
@@ -348,10 +320,6 @@ fn start_background_download(buffer: SharedBuffer, track_id: String, media_url: 
                     }
 
                     if let Some(len) = response.content_length() {
-                        // Usar actual_http_start (inicio real de la petición HTTP) para calcular
-                        // el tamaño total. Antes usaba aligned_start, que puede ser menor que
-                        // actual_http_start si se saltaron bloques ya cacheados, resultando en
-                        // un total_size incorrecto (demasiado pequeño → detección prematura de EOF).
                         let full_size = if status.as_u16() == 206 { actual_http_start + len } else { len };
                         buffer.total_size.store(full_size, Ordering::SeqCst);
                     }
@@ -362,7 +330,6 @@ fn start_background_download(buffer: SharedBuffer, track_id: String, media_url: 
 
                     loop {
                         tokio::select! {
-                            // Si hay un seek, interrumpimos la descarga actual para saltar
                             _ = buffer.seek_trigger.notified() => {
                                 debug!("[Stream:{}] Seek detected, restarting stream", track_id);
                                 continue 'download_loop;
@@ -388,7 +355,6 @@ fn start_background_download(buffer: SharedBuffer, track_id: String, media_url: 
                                         }
                                     }
                                     Some(Err(_)) | None => {
-                                        // Fin del stream o error
                                         if !chunk_buffer.is_empty() {
                                             let mut blocks = buffer.blocks.lock().unwrap();
                                             if !blocks.contains_key(&block_index) {
@@ -434,8 +400,7 @@ pub async fn read_audio_chunk(track_id: &str, offset: u64, size: u32) -> Result<
             cache.push(item);
             Some((b, url))
         } else {
-            // === DIAG: track no encontrado al leer — listar contenido actual del LRU ===
-            debug!("[Cache:{}] read_audio_chunk — track NO está en caché. Entradas actuales: [{}]",
+            debug!("[Cache:{}] read_audio_chunk — track NOT in cache. Current entries: [{}]",
                 track_id,
                 cache.iter().map(|c| format!("{}(b={})",
                     c.track_id,
@@ -446,7 +411,6 @@ pub async fn read_audio_chunk(track_id: &str, offset: u64, size: u32) -> Result<
         }
     }.ok_or_else(|| DeezerError::ApiError(format!("Track {} not in cache", track_id)))?;
 
-    // Pre-calcular la clave Blowfish una sola vez (necesaria para spot downloads)
     let key = crypto::calc_blowfish_key(track_id);
     let mut current_offset = offset;
     let end_offset = offset + size as u64;
@@ -461,34 +425,19 @@ pub async fn read_audio_chunk(track_id: &str, offset: u64, size: u32) -> Result<
         let block_offset = (current_offset % BLOCK_SIZE) as usize;
 
         if let Some(block) = buffer.get_block(block_index) {
-            // Camino óptimo: el bloque ya está en caché, servir inmediatamente
             let available = block.len() - block_offset;
             let to_copy = std::cmp::min(available, (end_offset - current_offset) as usize);
             result.extend_from_slice(&block[block_offset..block_offset + to_copy]);
             current_offset += to_copy as u64;
         } else {
             let d_pos = buffer.download_pos.load(Ordering::Relaxed);
-            // Salto hacia adelante de más de 128 KB respecto al downloader
             let is_far_ahead = current_offset > d_pos + (128 * 1024);
-            // Hueco hacia atrás: el downloader ya pasó este bloque sin descargarlo
             let is_behind = current_offset < d_pos.saturating_sub(BLOCK_SIZE);
 
             if is_behind {
-                // *** SOLUCIÓN CORE ***
-                // El bloque está DETRÁS del downloader y no existe en caché → es un "hueco"
-                // causado por un seek anterior que hizo que el downloader saltara este rango.
-                //
-                // INCORRECTO (antes): redirigir el downloader atrás, lo que rompe la descarga
-                // secuencial hacia adelante y crea nuevos huecos en la otra dirección.
-                //
-                // CORRECTO (ahora): hacer una petición HTTP puntual ("spot download") sólo
-                // para este lote de bloques, sin tocar el downloader principal. El downloader
-                // sigue su descarga secuencial sin interrupción.
                 debug!("[Stream:{}] Spot download needed at block {} (d_pos={})", track_id, block_index, d_pos);
                 spot_download_blocks(&buffer, &media_url, track_id, block_index, &key).await?;
-                // El bloque ahora está en caché; el loop vuelve a leerlo en la próxima iteración
             } else if is_far_ahead {
-                // Seek hacia adelante grande: redirigir el downloader (correcto)
                 buffer.is_complete.store(false, Ordering::SeqCst);
                 buffer.download_pos.store(current_offset, Ordering::SeqCst);
                 buffer.seek_trigger.notify_waiters();
@@ -496,7 +445,7 @@ pub async fn read_audio_chunk(track_id: &str, offset: u64, size: u32) -> Result<
 
                 if buffer.is_complete.load(Ordering::SeqCst) {
                     if buffer.has_block(block_index) { continue; }
-                    break; // EOF real
+                    break; 
                 }
                 if tokio::time::timeout(std::time::Duration::from_secs(5), buffer.notify.notified()).await.is_err() {
                     return Err(DeezerError::ApiError(
@@ -504,10 +453,9 @@ pub async fn read_audio_chunk(track_id: &str, offset: u64, size: u32) -> Result<
                     ));
                 }
             } else {
-                // Descarga secuencial normal: el downloader no ha llegado aquí aún
                 if buffer.is_complete.load(Ordering::SeqCst) {
                     if buffer.has_block(block_index) { continue; }
-                    break; // EOF real
+                    break; 
                 }
                 if tokio::time::timeout(std::time::Duration::from_secs(5), buffer.notify.notified()).await.is_err() {
                     return Err(DeezerError::ApiError(
@@ -520,10 +468,6 @@ pub async fn read_audio_chunk(track_id: &str, offset: u64, size: u32) -> Result<
     Ok(result)
 }
 
-/// Descarga un lote de bloques directamente con una única petición HTTP Range.
-/// Se usa para rellenar "huecos" en la caché causados por seeks previos que
-/// hicieron saltar al downloader sin descargar el rango intermedio.
-/// NO usa el DOWNLOAD_SEMAPHORE para no bloquear al downloader principal.
 async fn spot_download_blocks(
     buffer: &SharedBuffer,
     media_url: &str,
@@ -540,7 +484,7 @@ async fn spot_download_blocks(
     let end_block = (start_block + SPOT_DOWNLOAD_BATCH).min(max_block);
 
     let http_start = start_block * BLOCK_SIZE;
-    let http_end   = end_block * BLOCK_SIZE - 1; // Range: bytes=X-Y (inclusivo)
+    let http_end   = end_block * BLOCK_SIZE - 1; 
 
     debug!("[Stream:{}] Spot download blocks {}-{} (bytes {}-{})",
         track_id, start_block, end_block, http_start, http_end);
@@ -554,7 +498,6 @@ async fn spot_download_blocks(
 
     let status = response.status();
     if status.as_u16() == 416 {
-        // Más allá del EOF → no hay datos, no es un error fatal
         return Ok(());
     }
     if !status.is_success() {
@@ -566,7 +509,6 @@ async fn spot_download_blocks(
         .await
         .map_err(|e| DeezerError::ApiError(format!("[Spot] Read error: {}", e)))?;
 
-    // Repartir los bytes descargados en bloques, desencriptar y guardar en caché
     let data_slice = data.as_ref();
     let mut block_index = start_block;
     let mut consumed = 0usize;
@@ -585,7 +527,6 @@ async fn spot_download_blocks(
         consumed += BLOCK_SIZE as usize;
     }
 
-    // Bloque parcial final (si existe)
     if consumed < data_slice.len() && !buffer.has_block(block_index) {
         let raw = &data_slice[consumed..];
         let processed = if block_index % 3 == 0 {
@@ -596,7 +537,6 @@ async fn spot_download_blocks(
         buffer.blocks.lock().unwrap().insert(block_index, processed);
     }
 
-    // Notificar a cualquier lector que esté esperando datos
     buffer.notify.notify_waiters();
     Ok(())
 }
