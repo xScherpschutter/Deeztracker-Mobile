@@ -126,6 +126,25 @@ class MusicService : MediaLibraryService() {
                         }
                     }
                 }
+
+                // Preload NEXT track in queue
+                val nextIndex = player.nextMediaItemIndex
+                if (nextIndex != C.INDEX_UNSET) {
+                    val nextItem = player.getMediaItemAt(nextIndex)
+                    nextItem.localConfiguration?.uri?.let { uri ->
+                        if (uri.scheme == "rusteer") {
+                            val nextTrackId = uri.host ?: ""
+                            serviceScope.launch {
+                                try {
+                                    // Just trigger preload, don't wait. LRU will handle it.
+                                    rustDeezerService.preloadTrack(nextTrackId, DownloadQuality.MP3_320)
+                                } catch (e: Exception) {
+                                    // Ignore next track preload errors
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             override fun onAudioSessionIdChanged(audioSessionId: Int) {

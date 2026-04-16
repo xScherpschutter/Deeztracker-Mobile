@@ -7,6 +7,7 @@ import com.crowstar.deeztrackermobile.features.deezer.Album
 import com.crowstar.deeztrackermobile.features.deezer.Track
 import com.crowstar.deeztrackermobile.features.download.DownloadManager
 import com.crowstar.deeztrackermobile.features.preview.PreviewPlayer
+import com.crowstar.deeztrackermobile.features.player.PlayerController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +19,8 @@ import javax.inject.Inject
 class AlbumViewModel @Inject constructor(
     private val repository: DeezerRepository,
     val downloadManager: DownloadManager,
-    private val previewPlayer: PreviewPlayer
+    private val previewPlayer: PreviewPlayer,
+    val playerController: PlayerController
 ) : ViewModel() {
     
     private val _album = MutableStateFlow<Album?>(null)
@@ -54,6 +56,11 @@ class AlbumViewModel @Inject constructor(
                 _isLoading.value = false
             }
         }
+    }
+
+    fun playAlbum(startIndex: Int = 0) {
+        val albumData = _album.value ?: return
+        playerController.playDeezerAlbum(albumData.id, albumData.title, startIndex)
     }
 
     fun startAlbumDownload(albumId: Long, title: String) {
