@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.util.Log
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -33,12 +34,27 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DataSpec
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import com.crowstar.deeztrackermobile.features.rusteer.RustDeezerService
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import uniffi.rusteer.DownloadQuality
+import java.net.URI
+import javax.inject.Inject
+
+@AndroidEntryPoint
 class MusicService : MediaLibraryService() {
 
     private lateinit var player: ExoPlayer
     private lateinit var mediaLibrarySession: MediaLibrarySession
     private var loudnessEnhancer: LoudnessEnhancer? = null
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
+
+    @Inject
+    lateinit var rustDeezerService: RustDeezerService
 
     companion object {
         private const val NOTIFICATION_CHANNEL_ID = "deeztracker_music"
@@ -68,6 +84,14 @@ class MusicService : MediaLibraryService() {
                 true
             )
             .setHandleAudioBecomingNoisy(true)
+            .setMediaSourceFactory(
+                DefaultMediaSourceFactory(this)
+                    .setDataSourceFactory(
+                        DataSource.Factory {
+                            RusteerDataSource(this, rustDeezerService)
+                        }
+                    )
+            )
             .build()
         
         player.addListener(object : Player.Listener {
@@ -88,6 +112,20 @@ class MusicService : MediaLibraryService() {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 updatePlayerState()
                 savePlaybackState()
+                
+                // If it's a streaming item, trigger preload
+                mediaItem?.localConfiguration?.uri?.let { uri ->
+                    if (uri.scheme == "rusteer") {
+                        val trackId = uri.host ?: ""
+                        serviceScope.launch {
+                            try {
+                                rustDeezerService.preloadTrack(trackId, DownloadQuality.MP3_320)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }
+                }
             }
 
             override fun onAudioSessionIdChanged(audioSessionId: Int) {
@@ -127,6 +165,29 @@ class MusicService : MediaLibraryService() {
             ): ListenableFuture<androidx.media3.session.LibraryResult<MediaItem>> {
                 return Futures.immediateFuture(androidx.media3.session.LibraryResult.ofError(androidx.media3.session.LibraryResult.RESULT_ERROR_NOT_SUPPORTED))
             }
+            
+            override fun onAddMediaItems(
+                mediaSession: MediaSession,
+                controller: MediaSession.ControllerInfo,
+                mediaItems: MutableList<MediaItem>
+            ): ListenableFuture<MutableList<MediaItem>> {
+                // Ensure we preload if the first item is streaming
+                mediaItems.firstOrNull()?.localConfiguration?.uri?.let { uri ->
+                    if (uri.scheme == "rusteer") {
+                        val trackId = uri.host ?: ""
+                        // We can't easily suspend here, but we can launch a job
+                        serviceScope.launch {
+                            try {
+                                rustDeezerService.preloadTrack(trackId, DownloadQuality.MP3_320)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }
+                }
+                return super.onAddMediaItems(mediaSession, controller, mediaItems)
+            }
+
             // Add other overrides as necessary
             override fun onConnect(
                 session: MediaSession,
@@ -197,9 +258,15 @@ class MusicService : MediaLibraryService() {
         player.shuffleModeEnabled = shuffleMode
 
         if (lastTrackPath != null) {
-            val file = File(lastTrackPath)
-            if (file.exists()) {
-                val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
+            val uri = if (lastTrackPath.startsWith("rusteer://")) {
+                Uri.parse(lastTrackPath)
+            } else {
+                val file = File(lastTrackPath)
+                if (file.exists()) Uri.fromFile(file) else null
+            }
+            
+            if (uri != null) {
+                val mediaItem = MediaItem.fromUri(uri)
                 player.setMediaItem(mediaItem)
                 player.seekTo(lastPosition)
                 player.prepare()
@@ -211,8 +278,8 @@ class MusicService : MediaLibraryService() {
 
     private fun savePlaybackState() {
         val currentMediaItem = player.currentMediaItem ?: return
-        // We use the URI path as the ID for local files
-        val path = currentMediaItem.localConfiguration?.uri?.path
+        // Use full URI as ID to distinguish between local and streaming
+        val path = currentMediaItem.localConfiguration?.uri?.toString()
         
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().apply {
             putString(KEY_LAST_TRACK_ID, path)
@@ -250,5 +317,101 @@ class MusicService : MediaLibraryService() {
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
+    }
+}
+
+/**
+ * Custom DataSource for ExoPlayer to pull data directly from the Rust buffer
+ * or delegate to DefaultDataSource for other schemes (file://, http://, etc)
+ */
+@UnstableApi
+class RusteerDataSource(
+    private val context: Context,
+    private val rustDeezerService: RustDeezerService
+) : DataSource {
+
+    private val defaultDataSource: DataSource by lazy {
+        androidx.media3.datasource.DefaultDataSource.Factory(context).createDataSource()
+    }
+    
+    private var activeDataSource: DataSource? = null
+    private var trackId: String? = null
+    private var currentPosition: Long = 0
+    private var isOpen = false
+
+    override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) {
+        defaultDataSource.addTransferListener(transferListener)
+    }
+
+    override fun open(dataSpec: DataSpec): Long {
+        val uriString = dataSpec.uri.toString()
+        if (uriString.startsWith("rusteer://")) {
+            val uri = URI.create(uriString)
+            trackId = uri.host ?: uriString.substringAfter("rusteer://")
+            currentPosition = dataSpec.position
+            isOpen = true
+            activeDataSource = null // We handle it ourselves
+            
+            // Critical: Wait for Rust to initialize buffer and fetch headers
+            runBlocking(Dispatchers.IO) {
+                try {
+                    rustDeezerService.preloadTrack(trackId!!, DownloadQuality.MP3_320)
+                } catch (e: Exception) {
+                    Log.e("RusteerDataSource", "Preload failed for $trackId", e)
+                }
+            }
+            
+            return C.LENGTH_UNSET.toLong()
+        } else {
+            activeDataSource = defaultDataSource
+            return defaultDataSource.open(dataSpec)
+        }
+    }
+
+    override fun read(buffer: ByteArray, offset: Int, readLength: Int): Int {
+        if (activeDataSource == defaultDataSource) {
+            return defaultDataSource.read(buffer, offset, readLength)
+        }
+
+        if (!isOpen || trackId == null) {
+            return C.RESULT_END_OF_INPUT
+        }
+
+        if (readLength == 0) return 0
+
+        // Perform blocking read to Rust over UniFFI
+        return runBlocking(Dispatchers.IO) {
+            try {
+                val chunk = rustDeezerService.readAudioChunk(trackId!!, currentPosition.toULong(), readLength.toUInt())
+                if (chunk.isEmpty()) {
+                    return@runBlocking C.RESULT_END_OF_INPUT
+                }
+                
+                val bytesToCopy = Math.min(chunk.size, readLength)
+                System.arraycopy(chunk, 0, buffer, offset, bytesToCopy)
+                currentPosition += bytesToCopy.toLong()
+                
+                bytesToCopy
+            } catch (e: Exception) {
+                Log.e("RusteerDataSource", "Error reading chunk for $trackId", e)
+                C.RESULT_END_OF_INPUT
+            }
+        }
+    }
+
+    override fun getUri(): android.net.Uri? {
+        if (activeDataSource == defaultDataSource) {
+            return defaultDataSource.uri
+        }
+        return trackId?.let { android.net.Uri.parse("rusteer://$it") }
+    }
+
+    override fun close() {
+        if (activeDataSource == defaultDataSource) {
+            defaultDataSource.close()
+        }
+        activeDataSource = null
+        isOpen = false
+        trackId = null
     }
 }
