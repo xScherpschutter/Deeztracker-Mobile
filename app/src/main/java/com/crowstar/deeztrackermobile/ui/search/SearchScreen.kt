@@ -361,14 +361,29 @@ fun SearchScreen(
                                         onTogglePreview = { viewModel.togglePreview(it) },
                                         onDownloadClick = { downloadManager.startTrackDownload(track.id, track.title) },
                                         onStreamClick = {
-                                            viewModel.playerController.playDeezerTrack(track)
+                                            viewModel.playerController.playDeezerTrackWithRadio(track)
                                         }
                                     )
                                 }
                             }
-                            1 -> items(artists, key = { it.id }) { artist -> ArtistItem(artist, onClick = { onArtistClick(artist.id) }) }
-                            2 -> items(albums, key = { it.id }) { album -> AlbumItem(album, onClick = { onAlbumClick(album.id) }) }
-                            3 -> items(playlists, key = { it.id }) { playlist -> PlaylistItem(playlist, onClick = { onPlaylistClick(playlist.id) }) }
+                            1 -> items(artists, key = { it.id }) { artist -> 
+                                ArtistItem(artist, onClick = { 
+                                    viewModel.playerController.playDeezerArtist(artist.id, artist.name)
+                                    onArtistClick(artist.id) 
+                                }) 
+                            }
+                            2 -> items(albums, key = { it.id }) { album -> 
+                                AlbumItem(album, onClick = { 
+                                    viewModel.playerController.playDeezerAlbum(album.id, album.title)
+                                    onAlbumClick(album.id) 
+                                }) 
+                            }
+                            3 -> items(playlists, key = { it.id }) { playlist -> 
+                                PlaylistItem(playlist, onClick = { 
+                                    viewModel.playerController.playDeezerPlaylist(playlist.id, playlist.title)
+                                    onPlaylistClick(playlist.id) 
+                                }) 
+                            }
                         }
                         if (isAppending) {
                             item { Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Primary, modifier = Modifier.size(24.dp)) } }
