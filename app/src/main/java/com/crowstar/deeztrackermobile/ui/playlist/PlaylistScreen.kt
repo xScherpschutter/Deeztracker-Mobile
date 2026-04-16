@@ -244,7 +244,7 @@ private fun PlaylistHeader(playlist: Playlist) {
 
         // Playlist Title
         MarqueeText(
-            text = playlist.title,
+            text = playlist.title ?: "",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,

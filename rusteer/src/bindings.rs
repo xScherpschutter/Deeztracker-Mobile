@@ -119,6 +119,16 @@ pub struct RusteerService {}
 impl RusteerService {
     #[uniffi::constructor]
     pub fn new() -> Self {
+        #[cfg(target_os = "android")]
+        {
+            use android_logger::Config;
+            use log::LevelFilter;
+            let _ = android_logger::init_once(
+                Config::default()
+                    .with_max_level(LevelFilter::Debug)
+                    .with_tag("RusteerRust"),
+            );
+        }
         Self {}
     }
 
@@ -228,10 +238,10 @@ impl RusteerService {
         arl: String,
         track_id: String,
         quality: DownloadQuality,
-    ) -> Result<(), RusteerError> {
+    ) -> Result<u64, RusteerError> {
         crate::streaming::RUNTIME.block_on(async {
-            crate::streaming::preload_track(&arl, &track_id, quality.into()).await?;
-            Ok(())
+            let size = crate::streaming::preload_track(&arl, &track_id, quality.into()).await?;
+            Ok(size)
         })
     }
 

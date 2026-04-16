@@ -57,7 +57,7 @@ const CLIENT_SECRET: &str = "fb0bec7ccc063dab0417eb7b0d847f34";
 ///     Ok(())
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GatewayApi {
     client: Client,
     arl: String,

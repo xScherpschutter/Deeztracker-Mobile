@@ -252,10 +252,12 @@ class PlayerController @Inject constructor(
         }
     }
 
-    fun playDeezerAlbum(albumId: Long, albumTitle: String, startIndex: Int = 0) {
+    fun playDeezerAlbum(albumId: Long, albumTitle: String, albumArt: String? = null, startIndex: Int = 0) {
         controllerScope.launch {
             try {
-                val tracks = deezerRepository.getAlbumTracks(albumId).data.map { it.toLocalTrack() }
+                val tracks = deezerRepository.getAlbumTracks(albumId).data.map { 
+                    it.toLocalTrack(backupAlbumTitle = albumTitle, backupAlbumId = albumId, backupAlbumArt = albumArt) 
+                }
                 if (tracks.isNotEmpty()) {
                     val startTrack = if (startIndex in tracks.indices) tracks[startIndex] else tracks[0]
                     playTrack(startTrack, tracks, albumTitle)
@@ -266,12 +268,12 @@ class PlayerController @Inject constructor(
         }
     }
 
-    fun playDeezerPlaylist(playlistId: Long, playlistTitle: String, startIndex: Int = 0) {
+    fun playDeezerPlaylist(playlistId: Long, playlistTitle: String, playlistArt: String? = null, startIndex: Int = 0) {
         controllerScope.launch {
             try {
                 val tracks = deezerRepository.getPlaylistTracks(playlistId).data
                     .filter { it.id > 0 } // Filter corrupt/invalid IDs
-                    .map { it.toLocalTrack() }
+                    .map { it.toLocalTrack(backupAlbumArt = it.album?.coverBig ?: it.album?.coverMedium ?: playlistArt) }
                 if (tracks.isNotEmpty()) {
                     val startTrack = if (startIndex in tracks.indices) tracks[startIndex] else tracks[0]
                     playTrack(startTrack, tracks, playlistTitle)
@@ -295,20 +297,24 @@ class PlayerController @Inject constructor(
         }
     }
 
-    private fun com.crowstar.deeztrackermobile.features.deezer.Track.toLocalTrack(): LocalTrack {
+    private fun com.crowstar.deeztrackermobile.features.deezer.Track.toLocalTrack(
+        backupAlbumTitle: String? = null,
+        backupAlbumId: Long? = null,
+        backupAlbumArt: String? = null
+    ): LocalTrack {
         return LocalTrack(
             id = this.id,
             title = this.title,
             artist = this.artist?.name ?: "Unknown Artist",
-            album = this.album?.title ?: "Unknown Album",
-            albumId = this.album?.id ?: 0L,
+            album = this.album?.title ?: backupAlbumTitle ?: "Unknown Album",
+            albumId = this.album?.id ?: backupAlbumId ?: 0L,
             duration = (this.duration ?: 0).toLong() * 1000,
             filePath = "",
             size = 0,
             mimeType = "audio/mpeg",
             dateAdded = System.currentTimeMillis(),
             dateModified = System.currentTimeMillis(),
-            albumArtUri = this.album?.coverBig ?: this.album?.coverMedium,
+            albumArtUri = this.album?.coverBig ?: this.album?.coverMedium ?: backupAlbumArt,
             isStreaming = true
         )
     }

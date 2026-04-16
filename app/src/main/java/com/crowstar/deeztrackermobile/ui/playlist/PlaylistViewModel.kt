@@ -60,7 +60,7 @@ class PlaylistViewModel @Inject constructor(
 
     fun playPlaylist(startIndex: Int = 0) {
         val playlistData = _playlist.value ?: return
-        playerController.playDeezerPlaylist(playlistData.id, playlistData.title, startIndex)
+        playerController.playDeezerPlaylist(playlistData.id, playlistData.title, playlistData.pictureXl ?: playlistData.pictureBig, startIndex)
     }
 
     fun startPlaylistDownload(playlistId: Long, title: String) {

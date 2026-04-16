@@ -127,19 +127,23 @@ class MusicService : MediaLibraryService() {
                     }
                 }
 
-                // Preload NEXT track in queue
-                val nextIndex = player.nextMediaItemIndex
-                if (nextIndex != C.INDEX_UNSET) {
-                    val nextItem = player.getMediaItemAt(nextIndex)
-                    nextItem.localConfiguration?.uri?.let { uri ->
-                        if (uri.scheme == "rusteer") {
-                            val nextTrackId = uri.host ?: ""
-                            serviceScope.launch {
-                                try {
-                                    // Just trigger preload, don't wait. LRU will handle it.
-                                    rustDeezerService.preloadTrack(nextTrackId, DownloadQuality.MP3_320)
-                                } catch (e: Exception) {
-                                    // Ignore next track preload errors
+                // Preload NEXT tracks in queue (Next 3 tracks)
+                for (i in 1..3) {
+                    val nextIndex = (player.currentMediaItemIndex + i)
+                    if (nextIndex < player.mediaItemCount) {
+                        val nextItem = player.getMediaItemAt(nextIndex)
+                        nextItem.localConfiguration?.uri?.let { uri ->
+                            if (uri.scheme == "rusteer") {
+                                val nextTrackId = uri.host ?: ""
+                                Log.d("MusicService", "Triggering predictive preload for track $nextTrackId (position: $nextIndex)")
+                                serviceScope.launch {
+                                    try {
+                                        // Give some time between preloads to avoid congestion
+                                        kotlinx.coroutines.delay(i * 800L)
+                                        rustDeezerService.preloadTrack(nextTrackId, DownloadQuality.MP3_320)
+                                    } catch (e: Exception) {
+                                        // Ignore errors for future tracks
+                                    }
                                 }
                             }
                         }
@@ -288,8 +292,7 @@ class MusicService : MediaLibraryService() {
                 val mediaItem = MediaItem.fromUri(uri)
                 player.setMediaItem(mediaItem)
                 player.seekTo(lastPosition)
-                player.prepare()
-                // Don't auto-play on restore
+                // Remove player.prepare() to prevent immediate data loading/probing on startup
                 player.pause() 
             }
         }
@@ -369,18 +372,22 @@ class RusteerDataSource(
             trackId = uri.host ?: uriString.substringAfter("rusteer://")
             currentPosition = dataSpec.position
             isOpen = true
-            activeDataSource = null // We handle it ourselves
+            activeDataSource = null 
             
-            // Critical: Wait for Rust to initialize buffer and fetch headers
-            runBlocking(Dispatchers.IO) {
+            // Wait for Rust to initialize buffer and fetch headers
+            return runBlocking(Dispatchers.IO) {
                 try {
-                    rustDeezerService.preloadTrack(trackId!!, DownloadQuality.MP3_320)
+                    val totalSize = rustDeezerService.preloadTrack(trackId!!, DownloadQuality.MP3_320)
+                    if (totalSize > 0) {
+                        totalSize - currentPosition
+                    } else {
+                        C.LENGTH_UNSET.toLong()
+                    }
                 } catch (e: Exception) {
                     Log.e("RusteerDataSource", "Preload failed for $trackId", e)
+                    C.LENGTH_UNSET.toLong()
                 }
             }
-            
-            return C.LENGTH_UNSET.toLong()
         } else {
             activeDataSource = defaultDataSource
             return defaultDataSource.open(dataSpec)
