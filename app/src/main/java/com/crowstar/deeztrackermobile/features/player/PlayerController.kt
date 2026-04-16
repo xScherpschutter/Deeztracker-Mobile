@@ -74,8 +74,14 @@ class PlayerController @Inject constructor(
                 Uri.parse("android.resource://${context.packageName}/${com.crowstar.deeztrackermobile.R.drawable.ic_app_icon}")
             }
             
+            val uri = if (localTrack.isStreaming) {
+                Uri.parse("rusteer://${localTrack.id}")
+            } else {
+                Uri.fromFile(File(localTrack.filePath))
+            }
+            
             MediaItem.Builder()
-                .setUri(Uri.fromFile(File(localTrack.filePath)))
+                .setUri(uri)
                 .setMediaId(localTrack.id.toString())
                 .setMediaMetadata(
                     MediaMetadata.Builder()
@@ -182,6 +188,44 @@ class PlayerController @Inject constructor(
              val isFav = withContext(Dispatchers.IO) { playlistRepository.isFavorite(track.id) }
              _playerState.update { it.copy(isCurrentTrackFavorite = isFav) }
          }
+    }
+
+    fun playStream(track: uniffi.rusteer.Track, source: String? = null) {
+        val localTrack = LocalTrack(
+            id = track.id.toLongOrNull() ?: 0L,
+            title = track.title,
+            artist = track.artist,
+            album = track.album,
+            albumId = 0,
+            duration = 0,
+            filePath = "",
+            size = 0,
+            mimeType = "audio/mpeg",
+            dateAdded = System.currentTimeMillis(),
+            dateModified = System.currentTimeMillis(),
+            albumArtUri = track.coverUrl,
+            isStreaming = true
+        )
+        playTrack(localTrack, listOf(localTrack), source ?: "Deezer Streaming")
+    }
+
+    fun playDeezerTrack(track: com.crowstar.deeztrackermobile.features.deezer.Track, source: String? = null) {
+        val localTrack = LocalTrack(
+            id = track.id,
+            title = track.title,
+            artist = track.artist?.name ?: "Unknown Artist",
+            album = track.album?.title ?: "Unknown Album",
+            albumId = track.album?.id ?: 0L,
+            duration = (track.duration ?: 0).toLong() * 1000,
+            filePath = "",
+            size = 0,
+            mimeType = "audio/mpeg",
+            dateAdded = System.currentTimeMillis(),
+            dateModified = System.currentTimeMillis(),
+            albumArtUri = track.album?.coverBig ?: track.album?.coverMedium,
+            isStreaming = true
+        )
+        playTrack(localTrack, listOf(localTrack), source ?: "Deezer Streaming")
     }
 
     fun playTrack(track: LocalTrack, playlist: List<LocalTrack>, source: String? = null) {

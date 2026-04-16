@@ -30,8 +30,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
-import android.content.Intent
-import com.crowstar.deeztrackermobile.features.rusteer.AudioStreamService 
+import android.content.Intent 
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -74,11 +73,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import androidx.hilt.navigation.compose.hiltViewModel
 
+import com.crowstar.deeztrackermobile.features.player.PlayerController
+
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val repository: DeezerRepository,
     val downloadManager: DownloadManager,
-    private val previewPlayer: PreviewPlayer
+    private val previewPlayer: PreviewPlayer,
+    val playerController: PlayerController
 ) : ViewModel() {
     val apiRepository = repository
     
@@ -359,10 +361,7 @@ fun SearchScreen(
                                         onTogglePreview = { viewModel.togglePreview(it) },
                                         onDownloadClick = { downloadManager.startTrackDownload(track.id, track.title) },
                                         onStreamClick = {
-                                            val intent = Intent(context, AudioStreamService::class.java).apply {
-                                                putExtra("track_id", track.id.toString())
-                                            }
-                                            context.startForegroundService(intent)
+                                            viewModel.playerController.playDeezerTrack(track)
                                         }
                                     )
                                 }
