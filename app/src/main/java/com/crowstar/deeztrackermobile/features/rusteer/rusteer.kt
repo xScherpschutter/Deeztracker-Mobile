@@ -938,7 +938,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_rusteer_checksum_method_rusteerservice_download_track() != 17392.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_rusteer_checksum_method_rusteerservice_get_cached_track_size() != 28403.toShort()) {
+    if (lib.uniffi_rusteer_checksum_method_rusteerservice_get_cached_track_size() != 4947.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_rusteer_checksum_method_rusteerservice_preload_track() != 6478.toShort()) {
@@ -1323,11 +1323,6 @@ public interface RusteerServiceInterface {
     
     fun `downloadTrack`(`arl`: kotlin.String, `trackId`: kotlin.String, `outputDir`: kotlin.String, `quality`: DownloadQuality): DownloadResult
     
-    /**
-     * Returns the cached total size of a track without any blocking I/O.
-     * Used by Kotlin's RusteerDataSource.open() as a fast path to skip preload_track
-     * when the track is already in the LRU cache.
-     */
     fun `getCachedTrackSize`(`trackId`: kotlin.String): kotlin.ULong?
     
     fun `preloadTrack`(`arl`: kotlin.String, `trackId`: kotlin.String, `quality`: DownloadQuality): kotlin.ULong
@@ -1489,12 +1484,7 @@ open class RusteerService: Disposable, AutoCloseable, RusteerServiceInterface {
     }
     
 
-    
-    /**
-     * Returns the cached total size of a track without any blocking I/O.
-     * Used by Kotlin's RusteerDataSource.open() as a fast path to skip preload_track
-     * when the track is already in the LRU cache.
-     */override fun `getCachedTrackSize`(`trackId`: kotlin.String): kotlin.ULong? {
+    override fun `getCachedTrackSize`(`trackId`: kotlin.String): kotlin.ULong? {
             return FfiConverterOptionalULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
