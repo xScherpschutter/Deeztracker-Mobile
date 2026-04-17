@@ -732,6 +732,8 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -764,6 +766,8 @@ internal interface UniffiLib : Library {
     fun uniffi_rusteer_fn_method_rusteerservice_download_playlist(`ptr`: Pointer,`arl`: RustBuffer.ByValue,`playlistId`: RustBuffer.ByValue,`outputDir`: RustBuffer.ByValue,`quality`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_rusteer_fn_method_rusteerservice_download_track(`ptr`: Pointer,`arl`: RustBuffer.ByValue,`trackId`: RustBuffer.ByValue,`outputDir`: RustBuffer.ByValue,`quality`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_rusteer_fn_method_rusteerservice_get_cached_track_size(`ptr`: Pointer,`trackId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_rusteer_fn_method_rusteerservice_preload_track(`ptr`: Pointer,`arl`: RustBuffer.ByValue,`trackId`: RustBuffer.ByValue,`quality`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
@@ -893,6 +897,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_rusteer_checksum_method_rusteerservice_download_track(
     ): Short
+    fun uniffi_rusteer_checksum_method_rusteerservice_get_cached_track_size(
+    ): Short
     fun uniffi_rusteer_checksum_method_rusteerservice_preload_track(
     ): Short
     fun uniffi_rusteer_checksum_method_rusteerservice_read_audio_chunk(
@@ -930,6 +936,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_rusteer_checksum_method_rusteerservice_download_track() != 17392.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_rusteer_checksum_method_rusteerservice_get_cached_track_size() != 28403.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_rusteer_checksum_method_rusteerservice_preload_track() != 6478.toShort()) {
@@ -1314,6 +1323,13 @@ public interface RusteerServiceInterface {
     
     fun `downloadTrack`(`arl`: kotlin.String, `trackId`: kotlin.String, `outputDir`: kotlin.String, `quality`: DownloadQuality): DownloadResult
     
+    /**
+     * Returns the cached total size of a track without any blocking I/O.
+     * Used by Kotlin's RusteerDataSource.open() as a fast path to skip preload_track
+     * when the track is already in the LRU cache.
+     */
+    fun `getCachedTrackSize`(`trackId`: kotlin.String): kotlin.ULong?
+    
     fun `preloadTrack`(`arl`: kotlin.String, `trackId`: kotlin.String, `quality`: DownloadQuality): kotlin.ULong
     
     fun `readAudioChunk`(`trackId`: kotlin.String, `offset`: kotlin.ULong, `size`: kotlin.UInt): kotlin.ByteArray
@@ -1467,6 +1483,23 @@ open class RusteerService: Disposable, AutoCloseable, RusteerServiceInterface {
     uniffiRustCallWithError(RusteerException) { _status ->
     UniffiLib.INSTANCE.uniffi_rusteer_fn_method_rusteerservice_download_track(
         it, FfiConverterString.lower(`arl`),FfiConverterString.lower(`trackId`),FfiConverterString.lower(`outputDir`),FfiConverterTypeDownloadQuality.lower(`quality`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Returns the cached total size of a track without any blocking I/O.
+     * Used by Kotlin's RusteerDataSource.open() as a fast path to skip preload_track
+     * when the track is already in the LRU cache.
+     */override fun `getCachedTrackSize`(`trackId`: kotlin.String): kotlin.ULong? {
+            return FfiConverterOptionalULong.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_rusteer_fn_method_rusteerservice_get_cached_track_size(
+        it, FfiConverterString.lower(`trackId`),_status)
 }
     }
     )
@@ -1812,6 +1845,38 @@ public object FfiConverterTypeRusteerError : FfiConverterRustBuffer<RusteerExcep
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalULong: FfiConverterRustBuffer<kotlin.ULong?> {
+    override fun read(buf: ByteBuffer): kotlin.ULong? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterULong.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.ULong?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterULong.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.ULong?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterULong.write(value, buf)
+        }
+    }
 }
 
 
