@@ -157,4 +157,18 @@ class RustDeezerService @Inject constructor(
             Log.e(TAG, "Failed to cancel preload for track $trackId", e)
         }
     }
+
+    /**
+     * Synchronous LRU cache size lookup — no I/O, no Tokio blocking.
+     * Returns null if the track isn't cached or total_size hasn't been written yet.
+     * Safe to call directly on the ExoPlayer loader thread from RusteerDataSource.open().
+     */
+    fun getCachedTrackSize(trackId: String): Long? {
+        return try {
+            service.getCachedTrackSize(trackId)?.toLong()
+        } catch (e: Exception) {
+            Log.e(TAG, "getCachedTrackSize failed for $trackId", e)
+            null
+        }
+    }
 }

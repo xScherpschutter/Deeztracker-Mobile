@@ -133,11 +133,7 @@ impl RusteerService {
     }
 
     /// Search for tracks
-    pub fn search_tracks(
-        &self,
-        arl: String,
-        query: String,
-    ) -> Result<Vec<Track>, RusteerError> {
+    pub fn search_tracks(&self, arl: String, query: String) -> Result<Vec<Track>, RusteerError> {
         let runtime = tokio::runtime::Runtime::new()
             .map_err(|e| RusteerError::DeezerError(format!("Failed to create runtime: {}", e)))?;
 
@@ -259,5 +255,9 @@ impl RusteerService {
 
     pub fn cancel_preload(&self, track_id: String) {
         crate::streaming::cancel_preload(&track_id);
+    }
+
+    pub fn get_cached_track_size(&self, track_id: String) -> Option<u64> {
+        crate::streaming::get_cached_track_size(&track_id)
     }
 }
