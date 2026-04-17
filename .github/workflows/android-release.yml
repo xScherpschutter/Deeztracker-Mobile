@@ -25,6 +25,14 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Android NDK
+        run: |
+          # Install a specific NDK version via sdkmanager
+          # Using version 26.x as it's a stable modern version
+          sdkmanager --install "ndk;26.1.10909125"
+          # Set the environment variable for subsequent steps
+          echo "ANDROID_NDK_HOME=${ANDROID_SDK_ROOT}/ndk/26.1.10909125" >> $GITHUB_ENV
+
       - name: Cache Cargo Dependencies
         uses: actions/cache@v3
         with:
@@ -47,24 +55,36 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # Rust toolchain setup for Rusteer bindings
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: x86_64-linux-android
-          override: true
-          components: rustfmt, clippy
-
-      - name: Install cross-compilation targets
+      # Build Rusteer Engine and Bindings
+      - name: Build Rust Native Libraries and Bindings
         run: |
+          # 1. Install Rust targets
           rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
-
-      - name: Install cargo-ndk
-        run: |
-          if ! command -v cargo-ndk &> /dev/null; then
-            cargo install cargo-ndk
-          fi
+          
+          # 2. Install cargo-ndk
+          cargo install cargo-ndk
+          
+          # 3. Build Rust project for all platforms
+          cd rusteer
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86 -t x86_64 build --release
+          
+          # 4. Build host library for UniFFI bindgen
+          cargo build --release
+          
+          # 5. Generate Kotlin bindings using UniFFI
+          cargo run --features uniffi/cli --bin uniffi-bindgen generate --library target/release/librusteer.so --language kotlin --out-dir out --no-format
+          
+          # 6. Deploy artifacts to Android project directories
+          cd ..
+          mkdir -p app/src/main/jniLibs/arm64-v8a app/src/main/jniLibs/armeabi-v7a app/src/main/jniLibs/x86 app/src/main/jniLibs/x86_64
+          cp rusteer/target/aarch64-linux-android/release/librusteer.so app/src/main/jniLibs/arm64-v8a/
+          cp rusteer/target/armv7-linux-androideabi/release/librusteer.so app/src/main/jniLibs/armeabi-v7a/
+          cp rusteer/target/i686-linux-android/release/librusteer.so app/src/main/jniLibs/x86/
+          cp rusteer/target/x86_64-linux-android/release/librusteer.so app/src/main/jniLibs/x86_64/
+          
+          # Deploy generated Kotlin code
+          mkdir -p app/src/main/java/com/crowstar/deeztrackermobile/features/rusteer
+          cp rusteer/out/uniffi/rusteer/rusteer.kt app/src/main/java/com/crowstar/deeztrackermobile/features/rusteer/rusteer.kt
 
       - name: Decode Keystore
         env:
