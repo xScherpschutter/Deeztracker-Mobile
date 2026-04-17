@@ -97,7 +97,7 @@ fun LocalPlaylistDetailScreen(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 MarqueeText(
-                    text = playlist.name,
+                    text = if (playlist.id == "favorites" || playlist.name == "Favorites") stringResource(R.string.playlist_favorites) else playlist.name,
                     color = Color.White,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,

@@ -126,7 +126,7 @@ fun LocalPlaylistsScreen(
                 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = playlist.name,
+                        text = if (playlist.id == "favorites" || playlist.name == "Favorites") stringResource(R.string.playlist_favorites) else playlist.name,
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold

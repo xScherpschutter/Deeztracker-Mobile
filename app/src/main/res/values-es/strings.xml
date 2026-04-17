@@ -163,6 +163,7 @@
     <string name="playlist_empty">No hay pistas en esta playlist</string>
     <string name="stats_playlists_format">%d Playlists</string>
     <string name="stats_playlist_tracks_format">%d pistas</string>
+    <string name="playlist_favorites">Favoritos</string>
 
     <!-- Intents & Accessibility -->
     <string name="intent_share_track">Compartir Pista</string>
