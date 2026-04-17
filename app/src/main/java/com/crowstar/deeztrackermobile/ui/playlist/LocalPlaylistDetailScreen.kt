@@ -40,71 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 
 import com.crowstar.deeztrackermobile.ui.library.PlaylistTrackUiState
 
-@Composable
-fun PlaylistMosaic(covers: List<String?>) {
-    val nonNullCovers = covers.filterNotNull()
-    
-    Box(
-        modifier = Modifier
-            .size(240.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceDark),
-        contentAlignment = Alignment.Center
-    ) {
-        when {
-            nonNullCovers.isEmpty() -> {
-                Icon(
-                    imageVector = Icons.Default.MusicNote,
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = TextGray
-                )
-            }
-            nonNullCovers.size == 1 -> {
-                com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
-                    model = nonNullCovers[0],
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-            nonNullCovers.size in 2..3 -> {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
-                        model = nonNullCovers[0],
-                        modifier = Modifier.weight(1f).fillMaxHeight()
-                    )
-                    com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
-                        model = nonNullCovers[1],
-                        modifier = Modifier.weight(1f).fillMaxHeight()
-                    )
-                }
-            }
-            else -> {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Row(modifier = Modifier.weight(1f)) {
-                        com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
-                            model = nonNullCovers[0],
-                            modifier = Modifier.weight(1f).fillMaxHeight()
-                        )
-                        com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
-                            model = nonNullCovers[1],
-                            modifier = Modifier.weight(1f).fillMaxHeight()
-                        )
-                    }
-                    Row(modifier = Modifier.weight(1f)) {
-                        com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
-                            model = nonNullCovers[2],
-                            modifier = Modifier.weight(1f).fillMaxHeight()
-                        )
-                        com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
-                            model = nonNullCovers[3],
-                            modifier = Modifier.weight(1f).fillMaxHeight()
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
+import com.crowstar.deeztrackermobile.ui.common.PlaylistMosaic
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,7 +89,10 @@ fun LocalPlaylistDetailScreen(
             ) {
                 val covers = playlistTracks.map { it.track.albumArtUri }.distinct().take(4)
                 
-                PlaylistMosaic(covers)
+                PlaylistMosaic(
+                    covers = covers,
+                    modifier = Modifier.size(240.dp)
+                )
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 

@@ -31,6 +31,7 @@ import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.R
 import com.crowstar.deeztrackermobile.ui.playlist.EditPlaylistDialog
+import com.crowstar.deeztrackermobile.ui.common.PlaylistMosaic
 
 @Composable
 fun LocalPlaylistsScreen(
@@ -116,6 +117,13 @@ fun LocalPlaylistsScreen(
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                PlaylistMosaic(
+                    covers = playlist.tracks.take(4).map { it.albumArtUri },
+                    modifier = Modifier.size(64.dp)
+                )
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = playlist.name,
