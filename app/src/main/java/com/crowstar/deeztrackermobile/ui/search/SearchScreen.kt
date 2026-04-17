@@ -125,7 +125,6 @@ fun SearchScreen(
     
     val downloadManager = viewModel.downloadManager
     val downloadState by downloadManager.downloadState.collectAsState()
-    val downloadedKeys by viewModel.downloadedKeys.collectAsState()
 
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -357,8 +356,10 @@ fun SearchScreen(
                             0 -> {
                                 items(tracks, key = { it.id }) { track ->
                                     // FAST CHECK: O(1) in-memory check
-                                    val trackKey = "${track.title.lowercase().replace(Regex("[^a-z0-9]"), "")}|${track.artist?.name?.lowercase()?.replace(Regex("[^a-z0-9]"), "")}"
-                                    val isDownloaded = downloadedKeys.contains(trackKey)
+                                    val isDownloaded = downloadManager.isTrackDownloadedFast(
+                                        track.title,
+                                        track.artist?.name ?: ""
+                                    )
                                     
                                     TrackItem(
                                         track = track,

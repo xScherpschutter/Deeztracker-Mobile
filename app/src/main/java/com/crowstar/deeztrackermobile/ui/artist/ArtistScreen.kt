@@ -195,17 +195,11 @@ fun ArtistScreen(
 
                             items(topTracks.size) { index ->
                                 val track = topTracks[index]
-                                var isDownloaded by remember { mutableStateOf(false) }
-                                
-                                // Check if track is downloaded, re-check when refresh trigger changes
-                                LaunchedEffect(track.id, downloadRefreshTrigger) {
-                                    viewModel.isTrackDownloaded(
-                                        track.title,
-                                        track.artist?.name ?: ""
-                                    ) { result ->
-                                        isDownloaded = result
-                                    }
-                                }
+                            // FAST CHECK: O(1) in-memory check
+                            val isDownloaded = viewModel.downloadManager.isTrackDownloadedFast(
+                                track.title ?: "",
+                                track.artist?.name ?: ""
+                            )
                                 
                                 ArtistTrackItem(
                                     track = track,

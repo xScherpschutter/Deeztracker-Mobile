@@ -71,10 +71,23 @@ class DownloadManager @Inject constructor(
         }
     }
 
+    /**
+     * Normalizes titles by stripping feature information and non-alphanumeric characters.
+     */
+    private fun normalizeTitle(input: String): String {
+        val withoutFeat = input.replace(Regex("(?i)[\\(\\[]?(?:feat\\.|ft\\.|featuring|with).*"), "")
+        return withoutFeat.lowercase().replace(Regex("[^a-z0-9]"), "")
+    }
+
+    /**
+     * Normalizes artist names by lowercasing and removing non-alphanumeric characters.
+     */
+    private fun normalizeArtist(input: String): String {
+        return input.lowercase().replace(Regex("[^a-z0-9]"), "")
+    }
+
     private fun generateTrackKey(title: String, artist: String): String {
-        val t = title.lowercase().replace(Regex("[^a-z0-9]"), "")
-        val a = artist.lowercase().replace(Regex("[^a-z0-9]"), "")
-        return "$t|$a"
+        return "${normalizeTitle(title)}|${normalizeArtist(artist)}"
     }
 
     fun isTrackDownloadedFast(title: String, artist: String): Boolean {
@@ -130,9 +143,32 @@ class DownloadManager @Inject constructor(
         downloadChannel.trySend(DownloadRequest.Playlist(playlistId, title))
         return true
     }
-    
+
     suspend fun isTrackDownloaded(trackTitle: String, artistName: String): Boolean {
-        return isTrackDownloadedFast(trackTitle, artistName)
+        return try {
+            val normalizedTitle = normalizeTitle(trackTitle)
+            val normalizedArtist = normalizeArtist(artistName)
+            
+            // First try O(1) cache
+            if (_downloadedKeys.value.contains("$normalizedTitle|$normalizedArtist")) {
+                return true
+            }
+
+            // Fallback to O(N) scan for flexible matching (e.g. partial artist matches)
+            val localTracks = musicRepository.getAllTracks()
+            localTracks.any { track ->
+                val localTitle = normalizeTitle(track.title)
+                val localArtist = normalizeArtist(track.artist)
+                
+                val titleMatch = localTitle == normalizedTitle
+                val artistMatch = localArtist.contains(normalizedArtist) || normalizedArtist.contains(localArtist)
+                
+                titleMatch && artistMatch
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking if track is downloaded", e)
+            false
+        }
     }
 
     private suspend fun processRequest(request: DownloadRequest) {
