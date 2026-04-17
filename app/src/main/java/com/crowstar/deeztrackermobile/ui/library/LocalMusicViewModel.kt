@@ -21,7 +21,8 @@ import javax.inject.Inject
 
 data class PlaylistTrackUiState(
     val track: LocalTrack,
-    val isDownloaded: Boolean
+    val isDownloaded: Boolean,
+    val originalId: Long // The ID stored in the playlist JSON, essential for removal
 )
 
 @HiltViewModel
@@ -170,9 +171,9 @@ class LocalMusicViewModel @Inject constructor(
         }
     }
 
-    fun removeTrackFromPlaylist(playlist: LocalPlaylist, track: LocalTrack) {
+    fun removeTrackFromPlaylist(playlist: LocalPlaylist, uiState: PlaylistTrackUiState) {
         viewModelScope.launch {
-            playlistRepository.removeTrackFromPlaylist(playlist.id, track.id)
+            playlistRepository.removeTrackFromPlaylist(playlist.id, uiState.originalId)
         }
     }
 
@@ -201,12 +202,17 @@ class LocalMusicViewModel @Inject constructor(
     }
 
     fun getPlaylistTracksUiState(playlist: LocalPlaylist, allTracks: List<LocalTrack>): List<PlaylistTrackUiState> {
-        return playlist.tracks.map { it.toLocalTrack() }.map { track -> 
-            allTracks.find { it.title.lowercase() == track.title.lowercase() && it.artist.lowercase() == track.artist.lowercase() } ?: track 
-        }.map { finalTrack ->
+        return playlist.tracks.map { pt -> 
+            val track = pt.toLocalTrack()
+            val finalTrack = allTracks.find { 
+                it.title.lowercase() == track.title.lowercase() && 
+                it.artist.lowercase() == track.artist.lowercase() 
+            } ?: track
+            
             PlaylistTrackUiState(
                 track = finalTrack,
-                isDownloaded = downloadManager.isTrackDownloadedFast(finalTrack.title, finalTrack.artist ?: "")
+                isDownloaded = downloadManager.isTrackDownloadedFast(finalTrack.title, finalTrack.artist ?: ""),
+                originalId = pt.id
             )
         }
     }

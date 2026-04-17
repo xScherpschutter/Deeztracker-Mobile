@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import uniffi.rusteer.DownloadQuality
 import android.media.MediaScannerConnection 
@@ -196,6 +197,10 @@ class DownloadManager @Inject constructor(
                     
                     val uri = scanFileSuspend(result.path)
                     if (uri != null) {
+                        // FIX: Manually inject the key immediately so the UI doesn't have to wait for MediaStore refresh
+                        val newKey = generateTrackKey(request.title, result.artist ?: "") 
+                        _downloadedKeys.update { it + newKey }
+                        
                         refreshDownloadedKeys()
                         _downloadRefreshTrigger.value += 1
                     }

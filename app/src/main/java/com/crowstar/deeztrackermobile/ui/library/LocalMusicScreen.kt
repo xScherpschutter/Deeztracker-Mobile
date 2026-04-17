@@ -265,7 +265,7 @@ fun LocalMusicScreen(
                             onTrackClick(shuffled.first(), shuffled, selectedPlaylist.name)
                         }
                     },
-                    onRemoveTrack = { track -> viewModel.removeTrackFromPlaylist(selectedPlaylist, track) },
+                    onRemoveTrack = { uiState -> viewModel.removeTrackFromPlaylist(selectedPlaylist, uiState) },
                     onShareTrack = { track -> shareTrack(track) },
                     onEditTrack = { track -> trackToEdit = track },
                     contentPadding = contentPadding

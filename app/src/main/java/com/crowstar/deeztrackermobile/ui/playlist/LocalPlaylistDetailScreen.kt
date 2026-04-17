@@ -51,7 +51,7 @@ fun LocalPlaylistDetailScreen(
     onTrackClick: (LocalTrack) -> Unit,
     onPlayPlaylist: () -> Unit,
     onShufflePlaylist: () -> Unit,
-    onRemoveTrack: (LocalTrack) -> Unit,
+    onRemoveTrack: (PlaylistTrackUiState) -> Unit,
     onShareTrack: (LocalTrack) -> Unit,
     onEditTrack: (LocalTrack) -> Unit,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp
@@ -162,7 +162,7 @@ fun LocalPlaylistDetailScreen(
                     track = uiState.track,
                     onClick = { onTrackClick(uiState.track) },
                     onShare = if (uiState.isDownloaded) { { onShareTrack(uiState.track) } } else null,
-                    onDelete = { onRemoveTrack(uiState.track) },
+                    onDelete = { onRemoveTrack(uiState) },
                     onEdit = if (uiState.isDownloaded) { { onEditTrack(uiState.track) } } else null,
                     onAddToPlaylist = null,
                     deleteLabel = stringResource(R.string.action_remove),
