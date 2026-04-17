@@ -60,7 +60,7 @@ interface DeezerApiService {
     @GET("artist/{id}/radio")
     suspend fun getArtistRadio(
         @Path("id") id: Long,
-        @Query("limit") limit: Int? = 25
+        @Query("limit") limit: Int? = 40
     ): TrackListResponse
 
     // --- Album ---
