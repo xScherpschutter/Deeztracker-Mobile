@@ -119,7 +119,10 @@ class MusicService : MediaLibraryService() {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 updatePlayerState()
                 if (playbackState == Player.STATE_ENDED) {
-                    // Handle end of playlist if needed
+                    if (player.hasNextMediaItem()) {
+                        player.seekToNextMediaItem()
+                        player.play()
+                    }
                 }
             }
 

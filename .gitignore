@@ -87,3 +87,8 @@ Thumbs.db
 target/
 keystore.properties
 keystore_base64.txt
+
+# Rusteer generated artifacts
+app/src/main/jniLibs/**/librusteer.so
+app/src/main/java/com/crowstar/deeztrackermobile/features/rusteer/rusteer.kt
+rusteer/out/

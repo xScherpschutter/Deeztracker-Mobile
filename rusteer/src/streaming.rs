@@ -369,16 +369,18 @@ fn start_background_download(buffer: SharedBuffer, track_id: String, media_url: 
                                         }
                                     }
                                     Some(Err(_)) | None => {
+                                        // Write the final partial block BEFORE marking complete
+                                        // so readers woken up by notify_waiters() will find it.
                                         if !chunk_buffer.is_empty() {
                                             let mut blocks = buffer.blocks.lock().unwrap();
                                             if !blocks.contains_key(&block_index) {
                                                 blocks.insert(block_index, chunk_buffer.clone());
                                             }
+                                            drop(blocks);
                                             let final_pos = block_index * BLOCK_SIZE + chunk_buffer.len() as u64;
                                             buffer.download_pos.store(final_pos, Ordering::SeqCst);
-                                            buffer.notify.notify_waiters();
                                         }
-                                        break; 
+                                        break;
                                     }
                                 }
                             }
@@ -439,43 +441,49 @@ pub async fn read_audio_chunk(track_id: &str, offset: u64, size: u32) -> Result<
         let block_offset = (current_offset % BLOCK_SIZE) as usize;
 
         if let Some(block) = buffer.get_block(block_index) {
-            let available = block.len() - block_offset;
+            let available = block.len().saturating_sub(block_offset);
+            if available == 0 {
+                // We've read all bytes from this block, but haven't crossed to the next block index.
+                // This means the block was smaller than BLOCK_SIZE, so we've reached the true EOF.
+                break;
+            }
             let to_copy = std::cmp::min(available, (end_offset - current_offset) as usize);
             result.extend_from_slice(&block[block_offset..block_offset + to_copy]);
             current_offset += to_copy as u64;
         } else {
-            let d_pos = buffer.download_pos.load(Ordering::Relaxed);
-            let is_far_ahead = current_offset > d_pos + (128 * 1024);
-            let is_behind = current_offset < d_pos.saturating_sub(BLOCK_SIZE);
+            let total_size = buffer.total_size.load(Ordering::Acquire);
 
-            if is_behind {
-                debug!("[Stream:{}] Spot download needed at block {} (d_pos={})", track_id, block_index, d_pos);
+            // True end of stream: we've read everything.
+            if total_size > 0 && current_offset >= total_size {
+                break;
+            }
+
+            let d_pos = buffer.download_pos.load(Ordering::Relaxed);
+            let is_far_behind = current_offset < d_pos.saturating_sub(BLOCK_SIZE);
+            let is_far_ahead = current_offset > d_pos + (128 * 1024);
+
+            if buffer.is_complete.load(Ordering::SeqCst) {
+                // Downloader finished but the block isn't there: either the
+                // last partial block race (re-check) or a real missing block.
+                if buffer.has_block(block_index) { continue; }
+
+                if total_size > 0 && current_offset < total_size {
+                    // We're within the file but the block is missing — recover via spot download.
+                    spot_download_blocks(&buffer, &media_url, track_id, block_index, &key).await?;
+                    if buffer.has_block(block_index) { continue; }
+                }
+                // Nothing more to do.
+                break;
+            }
+
+            if is_far_behind {
                 spot_download_blocks(&buffer, &media_url, track_id, block_index, &key).await?;
             } else if is_far_ahead {
-                buffer.is_complete.store(false, Ordering::SeqCst);
                 buffer.download_pos.store(current_offset, Ordering::SeqCst);
                 buffer.seek_trigger.notify_waiters();
-                debug!("[Stream:{}] Forward seek → {} (redirecting downloader)", track_id, current_offset);
-
-                if buffer.is_complete.load(Ordering::SeqCst) {
-                    if buffer.has_block(block_index) { continue; }
-                    break; 
-                }
-                if tokio::time::timeout(std::time::Duration::from_secs(5), buffer.notify.notified()).await.is_err() {
-                    return Err(DeezerError::ApiError(
-                        format!("[Stream:{}] Forward seek timeout at offset {}", track_id, current_offset)
-                    ));
-                }
+                let _ = tokio::time::timeout(std::time::Duration::from_secs(5), buffer.notify.notified()).await;
             } else {
-                if buffer.is_complete.load(Ordering::SeqCst) {
-                    if buffer.has_block(block_index) { continue; }
-                    break; 
-                }
-                if tokio::time::timeout(std::time::Duration::from_secs(5), buffer.notify.notified()).await.is_err() {
-                    return Err(DeezerError::ApiError(
-                        format!("[Stream:{}] Read timeout at offset {}: downloader stalled", track_id, current_offset)
-                    ));
-                }
+                let _ = tokio::time::timeout(std::time::Duration::from_secs(5), buffer.notify.notified()).await;
             }
         }
     }
