@@ -59,7 +59,7 @@ fun AlbumScreen(
     
     val context = LocalContext.current
     val downloadState by viewModel.downloadState.collectAsState()
-    val downloadRefreshTrigger by viewModel.downloadRefreshTrigger.collectAsState()
+    val downloadedKeys by viewModel.downloadManager.downloadedKeys.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val snackbarController = remember { SnackbarController(snackbarHostState, scope) }
@@ -197,9 +197,11 @@ fun AlbumScreen(
                         val track = tracks[index]
                         
                         // FAST CHECK: O(1) in-memory check
-                        val isDownloaded = viewModel.downloadManager.isTrackDownloadedFast(
-                            track.title ?: "",
-                            track.artist?.name ?: ""
+                        val isDownloaded = downloadedKeys.contains(
+                            viewModel.downloadManager.generateTrackKey(
+                                track.title,
+                                track.artist?.name ?: ""
+                            )
                         )
                         
                         TrackListItem(

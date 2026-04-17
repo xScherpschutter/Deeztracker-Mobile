@@ -75,18 +75,21 @@ class DownloadManager @Inject constructor(
      * Normalizes titles by stripping feature information and non-alphanumeric characters.
      */
     private fun normalizeTitle(input: String): String {
-        val withoutFeat = input.replace(Regex("(?i)[\\(\\[]?(?:feat\\.|ft\\.|featuring|with).*"), "")
+        val withoutFeat = input.replace(Regex("(?i)\\s*[\\(\\[](?:feat\\.?|ft\\.?|featuring|with)[^\\)\\]]*[\\)\\]]"), "")
+            .replace(Regex("(?i)\\s*(?:feat\\.?|ft\\.?|featuring|with).*"), "")
         return withoutFeat.lowercase().replace(Regex("[^a-z0-9]"), "")
     }
 
     /**
-     * Normalizes artist names by lowercasing and removing non-alphanumeric characters.
+     * Normalizes artist names by extracting the primary artist before standard separators,
+     * then lowercasing and removing non-alphanumeric characters.
      */
     private fun normalizeArtist(input: String): String {
-        return input.lowercase().replace(Regex("[^a-z0-9]"), "")
+        val primaryArtist = input.split(Regex("[,/;&]|\\b(?i)(feat\\.?|ft\\.?|featuring|with)\\b")).first()
+        return primaryArtist.lowercase().replace(Regex("[^a-z0-9]"), "")
     }
 
-    private fun generateTrackKey(title: String, artist: String): String {
+    fun generateTrackKey(title: String, artist: String): String {
         return "${normalizeTitle(title)}|${normalizeArtist(artist)}"
     }
 

@@ -1,6 +1,7 @@
 package com.crowstar.deeztrackermobile.ui.library
 
 import com.crowstar.deeztrackermobile.features.localmusic.toPlaylistTrack
+import com.crowstar.deeztrackermobile.features.localmusic.toLocalTrack
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.crowstar.deeztrackermobile.features.localmusic.LocalAlbum
@@ -18,10 +19,16 @@ import kotlinx.coroutines.async
 import android.content.IntentSender
 import javax.inject.Inject
 
+data class PlaylistTrackUiState(
+    val track: LocalTrack,
+    val isDownloaded: Boolean
+)
+
 @HiltViewModel
 class LocalMusicViewModel @Inject constructor(
     private val repository: LocalMusicRepository,
-    private val playlistRepository: LocalPlaylistRepository
+    private val playlistRepository: LocalPlaylistRepository,
+    val downloadManager: com.crowstar.deeztrackermobile.features.download.DownloadManager
 ) : ViewModel() {
     
     private val _tracks = MutableStateFlow<List<LocalTrack>>(emptyList())
@@ -190,6 +197,17 @@ class LocalMusicViewModel @Inject constructor(
         viewModelScope.launch {
             trackPendingDeletion = null
             loadMusic()
+        }
+    }
+
+    fun getPlaylistTracksUiState(playlist: LocalPlaylist, allTracks: List<LocalTrack>): List<PlaylistTrackUiState> {
+        return playlist.tracks.map { it.toLocalTrack() }.map { track -> 
+            allTracks.find { it.title.lowercase() == track.title.lowercase() && it.artist.lowercase() == track.artist.lowercase() } ?: track 
+        }.map { finalTrack ->
+            PlaylistTrackUiState(
+                track = finalTrack,
+                isDownloaded = downloadManager.isTrackDownloadedFast(finalTrack.title, finalTrack.artist ?: "")
+            )
         }
     }
 }

@@ -154,6 +154,45 @@ fun LocalMusicScreen(
 
     // Edit Metadata State
     var trackToEdit by remember { mutableStateOf<LocalTrack?>(null) }
+    var metadataToEdit by remember { mutableStateOf<TrackMetadata?>(null) }
+    val metadataEditor = remember { com.crowstar.deeztrackermobile.features.localmusic.MetadataEditor(context) }
+    val scope = rememberCoroutineScope()
+
+    if (trackToEdit != null && metadataToEdit == null) {
+        LaunchedEffect(trackToEdit) {
+            withContext(Dispatchers.IO) {
+                metadataToEdit = metadataEditor.readMetadata(trackToEdit!!.filePath)
+            }
+        }
+    }
+
+    if (trackToEdit != null && metadataToEdit != null) {
+        EditTrackDialog(
+            initialMetadata = metadataToEdit!!,
+            onDismiss = { 
+                trackToEdit = null
+                metadataToEdit = null
+            },
+            onSave = { newMetadata ->
+                val trackPath = trackToEdit!!.filePath
+                trackToEdit = null
+                metadataToEdit = null
+                
+                scope.launch(Dispatchers.IO) {
+                    val success = metadataEditor.writeMetadata(
+                        trackPath, 
+                        newMetadata,
+                        onScanComplete = { viewModel.loadMusic() }
+                    )
+                    if (success) {
+                        snackbarController.showSnackbar(context.getString(R.string.edit_success))
+                    } else {
+                        snackbarController.showSnackbar(context.getString(R.string.edit_error_saving))
+                    }
+                }
+            }
+        )
+    }
 
     // Permissions
     var hasPermission by remember {
@@ -194,6 +233,12 @@ fun LocalMusicScreen(
         BackHandler(enabled = selectedPlaylistId != null) {
             selectedPlaylistId = null
         }
+        
+        val downloadTrigger by viewModel.downloadManager.downloadRefreshTrigger.collectAsState()
+        val playlistTracksWithState = remember(selectedPlaylist, unfilteredTracks, downloadTrigger) {
+            viewModel.getPlaylistTracksUiState(selectedPlaylist, unfilteredTracks)
+        }
+        
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = BackgroundDark
@@ -201,23 +246,22 @@ fun LocalMusicScreen(
             Box(modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
                 LocalPlaylistDetailScreen(
                     playlist = selectedPlaylist,
-                    allTracks = unfilteredTracks,
+                    playlistTracks = playlistTracksWithState,
                     onBackClick = { selectedPlaylistId = null },
                     onTrackClick = { track ->
-                         // Filter tracks to match playlist content context
-                         val playlistTracks = selectedPlaylist.tracks.map { it.toLocalTrack() }.map { track -> unfilteredTracks.find { it.title.lowercase() == track.title.lowercase() && it.artist.lowercase() == track.artist.lowercase() } ?: track }
-                         onTrackClick(track, playlistTracks, selectedPlaylist.name)
+                         val rawTracks = playlistTracksWithState.map { it.track }
+                         onTrackClick(track, rawTracks, selectedPlaylist.name)
                     },
                     onPlayPlaylist = {
-                         val playlistTracks = selectedPlaylist.tracks.map { it.toLocalTrack() }.map { track -> unfilteredTracks.find { it.title.lowercase() == track.title.lowercase() && it.artist.lowercase() == track.artist.lowercase() } ?: track }
-                         if (playlistTracks.isNotEmpty()) {
-                             onTrackClick(playlistTracks.first(), playlistTracks, selectedPlaylist.name)
+                         val rawTracks = playlistTracksWithState.map { it.track }
+                         if (rawTracks.isNotEmpty()) {
+                             onTrackClick(rawTracks.first(), rawTracks, selectedPlaylist.name)
                          }
                     },
                     onShufflePlaylist = {
-                        val playlistTracks = selectedPlaylist.tracks.map { it.toLocalTrack() }.map { track -> unfilteredTracks.find { it.title.lowercase() == track.title.lowercase() && it.artist.lowercase() == track.artist.lowercase() } ?: track }
-                        if (playlistTracks.isNotEmpty()) {
-                            val shuffled = playlistTracks.shuffled()
+                        val rawTracks = playlistTracksWithState.map { it.track }
+                        if (rawTracks.isNotEmpty()) {
+                            val shuffled = rawTracks.shuffled()
                             onTrackClick(shuffled.first(), shuffled, selectedPlaylist.name)
                         }
                     },
@@ -695,12 +739,13 @@ fun ArtistGridItem(artist: LocalArtist, onClick: () -> Unit) {
 @Composable
 fun LocalTrackItem(
     track: LocalTrack,
-    onShare: () -> Unit,
+    onShare: (() -> Unit)? = null,
     onDelete: () -> Unit,
-    onEdit: () -> Unit,
+    onEdit: (() -> Unit)? = null,
     onAddToPlaylist: (() -> Unit)? = null,
     onClick: () -> Unit,
-    deleteLabel: String = stringResource(R.string.action_delete)
+    deleteLabel: String = stringResource(R.string.action_delete),
+    showAllOptions: Boolean = true
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showDetails by remember { mutableStateOf(false) }
@@ -754,13 +799,15 @@ fun LocalTrackItem(
                 // Format Badge
                 FormatBadge(track.mimeType)
                 
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                Text(
-                    text = track.getFormattedSize().replace(" ", ""), // Compact size
-                    color = TextGray,
-                    fontSize = 12.sp
-                )
+                if (track.size > 0L) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    Text(
+                        text = track.getFormattedSize().replace(" ", ""), // Compact size
+                        color = TextGray,
+                        fontSize = 12.sp
+                    )
+                }
             }
         }
 
@@ -784,36 +831,42 @@ fun LocalTrackItem(
                 onDismissRequest = { showMenu = false },
                 modifier = Modifier.background(SurfaceDark)
             ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_share), color = Color.White) },
-                    onClick = { 
-                        showMenu = false
-                        onShare()
+                if (showAllOptions) {
+                    if (onShare != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_share), color = Color.White) },
+                            onClick = { 
+                                showMenu = false
+                                onShare()
+                            }
+                        )
                     }
-                )
-                if (onAddToPlaylist != null) {
+                    if (onAddToPlaylist != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_add_to_playlist), color = Color.White) },
+                            onClick = {
+                                showMenu = false
+                                onAddToPlaylist()
+                            }
+                        )
+                    }
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_add_to_playlist), color = Color.White) },
-                        onClick = {
-                            showMenu = false
-                            onAddToPlaylist()
+                        text = { Text(stringResource(R.string.action_details), color = Color.White) },
+                        onClick = { 
+                            showMenu = false 
+                            showDetails = true
                         }
                     )
+                    if (onEdit != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_edit), color = Color.White) },
+                            onClick = { 
+                                showMenu = false
+                                onEdit()
+                            }
+                        )
+                    }
                 }
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_details), color = Color.White) },
-                    onClick = { 
-                        showMenu = false 
-                        showDetails = true
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_edit), color = Color.White) },
-                    onClick = { 
-                        showMenu = false
-                        onEdit()
-                    }
-                )
                 DropdownMenuItem(
                     text = { Text(deleteLabel, color = Color.Red) },
                     onClick = { 

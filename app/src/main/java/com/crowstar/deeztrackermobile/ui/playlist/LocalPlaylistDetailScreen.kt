@@ -30,12 +30,87 @@ import com.crowstar.deeztrackermobile.ui.library.LocalTrackItem
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.ui.text.style.TextAlign
+
+import com.crowstar.deeztrackermobile.ui.library.PlaylistTrackUiState
+
+@Composable
+fun PlaylistMosaic(covers: List<String?>) {
+    val nonNullCovers = covers.filterNotNull()
+    
+    Box(
+        modifier = Modifier
+            .size(240.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(SurfaceDark),
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            nonNullCovers.isEmpty() -> {
+                Icon(
+                    imageVector = Icons.Default.MusicNote,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = TextGray
+                )
+            }
+            nonNullCovers.size == 1 -> {
+                com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
+                    model = nonNullCovers[0],
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            nonNullCovers.size in 2..3 -> {
+                Row(modifier = Modifier.fillMaxSize()) {
+                    com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
+                        model = nonNullCovers[0],
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
+                    com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
+                        model = nonNullCovers[1],
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
+                }
+            }
+            else -> {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Row(modifier = Modifier.weight(1f)) {
+                        com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
+                            model = nonNullCovers[0],
+                            modifier = Modifier.weight(1f).fillMaxHeight()
+                        )
+                        com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
+                            model = nonNullCovers[1],
+                            modifier = Modifier.weight(1f).fillMaxHeight()
+                        )
+                    }
+                    Row(modifier = Modifier.weight(1f)) {
+                        com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
+                            model = nonNullCovers[2],
+                            modifier = Modifier.weight(1f).fillMaxHeight()
+                        )
+                        com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
+                            model = nonNullCovers[3],
+                            modifier = Modifier.weight(1f).fillMaxHeight()
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocalPlaylistDetailScreen(
     playlist: LocalPlaylist,
-    allTracks: List<LocalTrack>,
+    playlistTracks: List<PlaylistTrackUiState>,
     onBackClick: () -> Unit,
     onTrackClick: (LocalTrack) -> Unit,
     onPlayPlaylist: () -> Unit,
@@ -45,9 +120,6 @@ fun LocalPlaylistDetailScreen(
     onEditTrack: (LocalTrack) -> Unit,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
-    // Filter tracks belonging to this playlist
-    val playlistTracks = playlist.tracks.map { it.toLocalTrack() }.map { track -> allTracks.find { it.title.lowercase() == track.title.lowercase() && it.artist.lowercase() == track.artist.lowercase() } ?: track }
-    
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     
     LazyColumn(
@@ -61,7 +133,7 @@ fun LocalPlaylistDetailScreen(
         ),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Header
+        // Top App Bar like Header
         item {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
@@ -70,21 +142,38 @@ fun LocalPlaylistDetailScreen(
                 IconButton(onClick = onBackClick) {
                     Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = Color.White)
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    MarqueeText(
-                        text = playlist.name,
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Text(
-                        text = stringResource(R.string.stats_playlist_tracks_format, playlistTracks.size),
-                        color = TextGray,
-                        fontSize = 14.sp
-                    )
-                }
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+        
+        item {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                val covers = playlistTracks.map { it.track.albumArtUri }.distinct().take(4)
+                
+                PlaylistMosaic(covers)
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                MarqueeText(
+                    text = playlist.name,
+                    color = Color.White,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = stringResource(R.string.stats_playlist_tracks_format, playlistTracks.size),
+                    color = TextGray,
+                    fontSize = 16.sp,
+                    textAlign = TextAlign.Center
+                )
             }
         }
         
@@ -129,15 +218,16 @@ fun LocalPlaylistDetailScreen(
                 }
             }
         } else {
-            items(playlistTracks, key = { it.id }) { track ->
+            items(playlistTracks, key = { it.track.id }) { uiState ->
                 LocalTrackItem(
-                    track = track,
-                    onClick = { onTrackClick(track) },
-                    onShare = { onShareTrack(track) },
-                    onDelete = { onRemoveTrack(track) },
-                    onEdit = { onEditTrack(track) },
+                    track = uiState.track,
+                    onClick = { onTrackClick(uiState.track) },
+                    onShare = if (uiState.isDownloaded) { { onShareTrack(uiState.track) } } else null,
+                    onDelete = { onRemoveTrack(uiState.track) },
+                    onEdit = if (uiState.isDownloaded) { { onEditTrack(uiState.track) } } else null,
                     onAddToPlaylist = null,
-                    deleteLabel = stringResource(R.string.action_remove)
+                    deleteLabel = stringResource(R.string.action_remove),
+                    showAllOptions = uiState.isDownloaded
                 )
             }
         }
