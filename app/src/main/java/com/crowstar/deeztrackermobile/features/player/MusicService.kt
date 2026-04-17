@@ -88,10 +88,12 @@ class MusicService : MediaLibraryService() {
             .setLoadControl(
                 androidx.media3.exoplayer.DefaultLoadControl.Builder()
                     .setBufferDurationsMs(
-                        androidx.media3.exoplayer.DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
-                        androidx.media3.exoplayer.DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
-                        500,
-                        androidx.media3.exoplayer.DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
+                        /* minBufferMs */ 30_000,
+                        /* maxBufferMs */ 30_000,
+                        /* bufferForPlaybackMs */ 500,
+                        // ⚠️ Default is 5000ms — if ExoPlayer classifies a manual skip as
+                        // rebuffering, it waits 5s of audio before starting. Reduce to 1s.
+                        /* bufferForPlaybackAfterRebufferMs */ 1_000
                     )
                     .build()
             )
@@ -131,37 +133,31 @@ class MusicService : MediaLibraryService() {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 updatePlayerState()
                 savePlaybackState()
-                
-                // If it's a streaming item, trigger preload
-                mediaItem?.localConfiguration?.uri?.let { uri ->
-                    if (uri.scheme == "rusteer") {
-                        val trackId = uri.host ?: ""
-                        serviceScope.launch {
-                            try {
-                                rustDeezerService.preloadTrack(trackId, getUserQuality())
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
-                        }
-                    }
-                }
 
-                // Preload NEXT tracks in queue (Next 3 tracks)
-                for (i in 1..3) {
-                    val nextIndex = (player.currentMediaItemIndex + i)
-                    if (nextIndex < player.mediaItemCount) {
-                        val nextItem = player.getMediaItemAt(nextIndex)
-                        nextItem.localConfiguration?.uri?.let { uri ->
-                            if (uri.scheme == "rusteer") {
-                                val nextTrackId = uri.host ?: ""
-                                Log.d("MusicService", "Triggering predictive preload for track $nextTrackId (position: $nextIndex)")
-                                serviceScope.launch {
-                                    try {
-                                        rustDeezerService.preloadTrack(nextTrackId, getUserQuality())
-                                    } catch (e: Exception) {
-                                        // Ignore errors for future tracks
-                                    }
-                                }
+                // Preload NEXT tracks + 1 PREV track in queue
+                // ⚠️ Do NOT preload the current item here — open() will call preloadTrack
+                // if getCachedTrackSize returns null (slow path). Calling it here races with open().
+                val currentIndex = player.currentMediaItemIndex
+                val indicesToPreload = buildList {
+                    // Next 3
+                    for (i in 1..3) {
+                        val idx = currentIndex + i
+                        if (idx < player.mediaItemCount) add(idx)
+                    }
+                    // Previous 1 (back navigation)
+                    val prev = currentIndex - 1
+                    if (prev >= 0) add(prev)
+                }
+                for (idx in indicesToPreload) {
+                    val item = player.getMediaItemAt(idx)
+                    item.localConfiguration?.uri?.let { uri ->
+                        if (uri.scheme == "rusteer") {
+                            val nextTrackId = uri.host ?: ""
+                            Log.d("MusicService", "Predictive preload track=$nextTrackId pos=$idx")
+                            serviceScope.launch {
+                                try {
+                                    rustDeezerService.preloadTrack(nextTrackId, getUserQuality())
+                                } catch (e: Exception) { /* non-fatal */ }
                             }
                         }
                     }
@@ -379,6 +375,11 @@ class RusteerDataSource(
     private var currentPosition: Long = 0
     private var isOpen = false
 
+    // Read-ahead buffer to handle Mp3Extractor's byte-by-byte reads efficiently.
+    private var readAheadBuffer: ByteArray = ByteArray(0)
+    private var readAheadOffset: Int = 0
+    private val READ_AHEAD_SIZE = 65536
+
     override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) {
         defaultDataSource.addTransferListener(transferListener)
     }
@@ -390,17 +391,22 @@ class RusteerDataSource(
             trackId = uri.host ?: uriString.substringAfter("rusteer://")
             currentPosition = dataSpec.position
             isOpen = true
-            activeDataSource = null 
-            
-            // Wait for Rust to initialize buffer and fetch headers
+            activeDataSource = null
+            readAheadBuffer = ByteArray(0)
+            readAheadOffset = 0
+
+            // Sync LRU lookup to avoid runBlocking if size is already known.
+            val cachedSize = rustDeezerService.getCachedTrackSize(trackId!!)
+            if (cachedSize != null && cachedSize > 0L) {
+                return cachedSize - currentPosition
+            }
+
+            // Slow path: track not yet in cache, block until Rust fetches headers and
+            // writes the first two blocks. This only happens on genuine cache MISSes.
             return runBlocking(Dispatchers.IO) {
                 try {
                     val totalSize = rustDeezerService.preloadTrack(trackId!!, qualityProvider())
-                    if (totalSize > 0) {
-                        totalSize - currentPosition
-                    } else {
-                        C.LENGTH_UNSET.toLong()
-                    }
+                    if (totalSize > 0) totalSize - currentPosition else C.LENGTH_UNSET.toLong()
                 } catch (e: Exception) {
                     Log.e("RusteerDataSource", "Preload failed for $trackId", e)
                     C.LENGTH_UNSET.toLong()
@@ -416,26 +422,37 @@ class RusteerDataSource(
         if (activeDataSource == defaultDataSource) {
             return defaultDataSource.read(buffer, offset, readLength)
         }
-
-        if (!isOpen || trackId == null) {
-            return C.RESULT_END_OF_INPUT
-        }
-
+        if (!isOpen || trackId == null) return C.RESULT_END_OF_INPUT
         if (readLength == 0) return 0
 
-        // Perform blocking read to Rust over UniFFI
+        // Serve from read-ahead cache if possible.
+        if (readAheadOffset < readAheadBuffer.size) {
+            val available = readAheadBuffer.size - readAheadOffset
+            val bytesToCopy = minOf(available, readLength)
+            System.arraycopy(readAheadBuffer, readAheadOffset, buffer, offset, bytesToCopy)
+            readAheadOffset += bytesToCopy
+            currentPosition += bytesToCopy.toLong()
+            return bytesToCopy
+        }
+
+        val fetchSize = maxOf(readLength, READ_AHEAD_SIZE)
         return runBlocking(Dispatchers.IO) {
             try {
-                val chunk = rustDeezerService.readAudioChunk(trackId!!, currentPosition.toULong(), readLength.toUInt())
-                if (chunk.isEmpty()) {
-                    return@runBlocking C.RESULT_END_OF_INPUT
+                val chunk = rustDeezerService.readAudioChunk(trackId!!, currentPosition.toULong(), fetchSize.toUInt())
+                if (chunk.isEmpty()) return@runBlocking C.RESULT_END_OF_INPUT
+
+                val bytesToServe = minOf(chunk.size, readLength)
+                System.arraycopy(chunk, 0, buffer, offset, bytesToServe)
+                currentPosition += bytesToServe.toLong()
+
+                if (chunk.size > bytesToServe) {
+                    readAheadBuffer = chunk
+                    readAheadOffset = bytesToServe
+                } else {
+                    readAheadBuffer = ByteArray(0)
+                    readAheadOffset = 0
                 }
-                
-                val bytesToCopy = Math.min(chunk.size, readLength)
-                System.arraycopy(chunk, 0, buffer, offset, bytesToCopy)
-                currentPosition += bytesToCopy.toLong()
-                
-                bytesToCopy
+                bytesToServe
             } catch (e: Exception) {
                 Log.e("RusteerDataSource", "Error reading chunk for $trackId", e)
                 C.RESULT_END_OF_INPUT
@@ -457,5 +474,8 @@ class RusteerDataSource(
         activeDataSource = null
         isOpen = false
         trackId = null
+        // Always reset read-ahead buffer on close — position context is invalid after this
+        readAheadBuffer = ByteArray(0)
+        readAheadOffset = 0
     }
 }

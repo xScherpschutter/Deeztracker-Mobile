@@ -244,16 +244,30 @@ pub async fn preload_track(arl: &str, track_id: &str, preferred_quality: Downloa
 }
 
 async fn wait_for_initial_data(buffer: &SharedBuffer) {
-    let mut attempts = 0;
-    while attempts < 60 { 
-        {
-            let blocks = buffer.blocks.lock().unwrap();
-            let total = buffer.total_size.load(Ordering::SeqCst);
-            if (total > 0 && blocks.len() >= 2) || buffer.is_complete.load(Ordering::SeqCst) { break; }
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        attempts += 1;
+    if buffer.is_complete.load(Ordering::Acquire) {
+        return;
     }
+    {
+        let total = buffer.total_size.load(Ordering::Acquire);
+        if total > 0 {
+            let block_count = buffer.blocks.lock().unwrap().len();
+            if block_count >= 2 { return; }
+        }
+    }
+    let _ = tokio::time::timeout(
+        std::time::Duration::from_secs(3),
+        async {
+            loop {
+                buffer.notify.notified().await;
+                let total = buffer.total_size.load(Ordering::SeqCst);
+                let block_count = buffer.blocks.lock().unwrap().len();
+                if (total > 0 && block_count >= 2) || buffer.is_complete.load(Ordering::SeqCst) {
+                    break;
+                }
+            }
+        },
+    )
+    .await;
 }
 
 fn start_background_download(buffer: SharedBuffer, track_id: String, media_url: String) {
@@ -548,4 +562,13 @@ pub fn cancel_preload(track_id: &str) {
         item.buffer.is_cancelled.store(true, Ordering::SeqCst);
         item.buffer.notify.notify_waiters();
     }
+}
+
+/// Returns the known total size of a cached track.
+pub fn get_cached_track_size(track_id: &str) -> Option<u64> {
+    let cache = STREAM_CACHE.lock().unwrap();
+    cache.iter().find(|c| c.track_id == track_id).and_then(|entry| {
+        let size = entry.buffer.total_size.load(Ordering::Acquire);
+        if size > 0 { Some(size) } else { None }
+    })
 }
