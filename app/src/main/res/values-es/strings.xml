@@ -77,6 +77,7 @@
     <string name="action_cancel">Cancelar</string>
     <string name="action_create">Crear</string>
     <string name="action_add_to_playlist">Añadir a playlist</string>
+    <string name="action_add_to_queue">Añadir a la cola</string>
     <string name="toast_added_to_playlist">Pista añadida a %s</string>
     <string name="notification_download_completed">Descargado: %s</string>
     <string name="notification_download_failed">Error al descargar: %s</string>

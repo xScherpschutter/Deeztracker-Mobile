@@ -215,8 +215,15 @@ fun ArtistScreen(
                                     onDownloadClick = {
                                         viewModel.startTrackDownload(track.id, track.title)
                                     },
-                                    onClick = { viewModel.playArtistTopTracks() },
-                                    onAddToPlaylist = { trackToAddToPlaylist = track }
+                                    onStreamClick = { viewModel.playArtistTopTracks() },
+                                    onAddToPlaylist = { trackToAddToPlaylist = track },
+                                    onAddToQueue = { 
+                                        viewModel.playerController.addToQueue(
+                                            track = track,
+                                            source = artist?.name,
+                                            backupAlbumArt = track.album?.coverBig ?: track.album?.coverMedium
+                                        ) 
+                                    }
                                 )
                             }
                         }
@@ -376,14 +383,15 @@ private fun ArtistTrackItem(
     previewPosition: Long = 0,
     onTogglePreview: (String) -> Unit = {},
     onDownloadClick: () -> Unit = {},
-    onClick: () -> Unit = {},
-    onAddToPlaylist: () -> Unit = {}
+    onStreamClick: () -> Unit = {},
+    onAddToPlaylist: () -> Unit = {},
+    onAddToQueue: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .clickable { onStreamClick() }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Track Number
@@ -472,6 +480,6 @@ private fun ArtistTrackItem(
             }
         }
 
-        TrackOptionsMenu(onAddToPlaylist = onAddToPlaylist)
+        TrackOptionsMenu(onAddToPlaylist = onAddToPlaylist, onAddToQueue = onAddToQueue)
     }
 }

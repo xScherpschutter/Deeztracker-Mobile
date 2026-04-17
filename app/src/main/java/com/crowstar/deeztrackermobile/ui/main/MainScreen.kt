@@ -204,6 +204,7 @@ fun MainNavigation(
                 onAlbumClick = { album -> navController.navigate("local_album/${album.id}") },
                 onArtistClick = { artist -> navController.navigate("local_artist/${artist.name}") },
                 onImportPlaylist = importAction,
+                onAddToQueue = { track -> playerController.addToQueue(track) },
                 contentPadding = contentPadding
             )
         }
@@ -218,6 +219,7 @@ fun MainNavigation(
         composable("downloads") { 
             DownloadsScreen(
                 onTrackClick = { track, list -> playerController.playTrack(track, list, "Downloads") },
+                onAddToQueue = { track -> playerController.addToQueue(track) },
                 contentPadding = contentPadding
             )
         }
@@ -239,7 +241,8 @@ fun MainNavigation(
                 albumId = albumId,
                 onBackClick = safePopBackStack,
                 onTrackClick = { track, list -> playerController.playTrack(track, list, "Album") },
-                onPlayAlbum = { list -> playerController.playTrack(list.first(), list, "Album") }
+                onPlayAlbum = { list -> playerController.playTrack(list.first(), list, "Album") },
+                onAddToQueue = { track -> playerController.addToQueue(track) }
             )
         }
         composable(
@@ -251,7 +254,8 @@ fun MainNavigation(
                 artistName = artistName,
                 onBackClick = safePopBackStack,
                 onTrackClick = { track, list -> playerController.playTrack(track, list, "Artist") },
-                onPlayArtist = { list -> playerController.playTrack(list.first(), list, "Artist") }
+                onPlayArtist = { list -> playerController.playTrack(list.first(), list, "Artist") },
+                onAddToQueue = { track -> playerController.addToQueue(track) }
             )
         }
     }

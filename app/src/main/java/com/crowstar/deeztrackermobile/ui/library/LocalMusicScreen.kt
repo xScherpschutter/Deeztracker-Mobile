@@ -83,6 +83,7 @@ fun LocalMusicScreen(
     onAlbumClick: (LocalAlbum) -> Unit,
     onArtistClick: (LocalArtist) -> Unit,
     onImportPlaylist: () -> Unit,
+    onAddToQueue: ((LocalTrack) -> Unit)? = null,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: LocalMusicViewModel = hiltViewModel()
 ) {
@@ -267,6 +268,7 @@ fun LocalMusicScreen(
                     },
                     onRemoveTrack = { uiState -> viewModel.removeTrackFromPlaylist(selectedPlaylist, uiState) },
                     onShareTrack = { track -> shareTrack(track) },
+                    onAddToQueue = { track -> onAddToQueue?.invoke(track) },
                     onEditTrack = { track -> trackToEdit = track },
                     contentPadding = contentPadding
                 )
@@ -421,6 +423,7 @@ fun LocalMusicScreen(
                             onDelete = { track -> viewModel.requestDeleteTrack(track) },
                             onEdit = { track -> trackToEdit = track },
                             onAddToPlaylist = { track -> trackForPlaylist = track },
+                            onAddToQueue = { track -> onAddToQueue?.invoke(track) },
                             totalStorage = totalStorage,
                             contentPadding = contentPadding
                         )
@@ -488,6 +491,7 @@ fun LocalTracksList(
     onDelete: (LocalTrack) -> Unit,
     onEdit: (LocalTrack) -> Unit,
     onAddToPlaylist: (LocalTrack) -> Unit,
+    onAddToQueue: ((LocalTrack) -> Unit)? = null,
     totalStorage: Long,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
@@ -568,6 +572,7 @@ fun LocalTracksList(
                         onDelete = { onDelete(track) },
                         onEdit = { onEdit(track) },
                         onAddToPlaylist = { onAddToPlaylist(track) },
+                        onAddToQueue = { onAddToQueue?.invoke(track) },
                         onClick = { onTrackClick(track, tracks) }
                     )
                 }
@@ -743,6 +748,7 @@ fun LocalTrackItem(
     onDelete: () -> Unit,
     onEdit: (() -> Unit)? = null,
     onAddToPlaylist: (() -> Unit)? = null,
+    onAddToQueue: (() -> Unit)? = null,
     onClick: () -> Unit,
     deleteLabel: String = stringResource(R.string.action_delete),
     showAllOptions: Boolean = true
@@ -847,6 +853,15 @@ fun LocalTrackItem(
                             onClick = {
                                 showMenu = false
                                 onAddToPlaylist()
+                            }
+                        )
+                    }
+                    if (onAddToQueue != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_add_to_queue), color = Color.White) },
+                            onClick = {
+                                showMenu = false
+                                onAddToQueue()
                             }
                         )
                     }

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,6 +42,7 @@ fun LocalArtistDetailScreen(
     onBackClick: () -> Unit,
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
     onPlayArtist: (List<LocalTrack>) -> Unit,
+    onAddToQueue: ((LocalTrack) -> Unit)? = null,
     viewModel: LocalMusicViewModel = hiltViewModel()
 ) {
     val tracks by viewModel.loadedArtistTracks.collectAsState()
@@ -103,14 +105,24 @@ fun LocalArtistDetailScreen(
 
             // Tracks
             items(tracks, key = { it.id }) { track ->
-                ArtistTrackItem(track = track, onClick = { onTrackClick(track, tracks) })
+                ArtistTrackItem(
+                    track = track, 
+                    onClick = { onTrackClick(track, tracks) },
+                    onAddToQueue = { onAddToQueue?.invoke(track) }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ArtistTrackItem(track: LocalTrack, onClick: () -> Unit) {
+private fun ArtistTrackItem(
+    track: LocalTrack, 
+    onClick: () -> Unit,
+    onAddToQueue: (() -> Unit)? = null
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -136,5 +148,25 @@ private fun ArtistTrackItem(track: LocalTrack, onClick: () -> Unit) {
             color = TextGray,
             fontSize = 12.sp
         )
+        if (onAddToQueue != null) {
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.player_options), tint = TextGray)
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                    modifier = Modifier.background(SurfaceDark)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_add_to_queue), color = Color.White) },
+                        onClick = {
+                            showMenu = false
+                            onAddToQueue()
+                        }
+                    )
+                }
+            }
+        }
     }
 }

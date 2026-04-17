@@ -375,7 +375,8 @@ fun SearchScreen(
                                         onStreamClick = {
                                             viewModel.playerController.playDeezerTrackWithRadio(track)
                                         },
-                                        onAddToPlaylist = { trackToAddToPlaylist = track }
+                                        onAddToPlaylist = { trackToAddToPlaylist = track },
+                                        onAddToQueue = { viewModel.playerController.addToQueue(track) }
                                     )
                                 }
                             }
@@ -449,7 +450,8 @@ fun TrackItem(
     onTogglePreview: (String) -> Unit = {},
     onDownloadClick: () -> Unit = {},
     onStreamClick: () -> Unit = {},
-    onAddToPlaylist: () -> Unit = {}
+    onAddToPlaylist: () -> Unit = {},
+    onAddToQueue: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -513,7 +515,7 @@ fun TrackItem(
             }
         }
 
-        TrackOptionsMenu(onAddToPlaylist = onAddToPlaylist)
+        TrackOptionsMenu(onAddToPlaylist = onAddToPlaylist, onAddToQueue = onAddToQueue)
     }
 }
 

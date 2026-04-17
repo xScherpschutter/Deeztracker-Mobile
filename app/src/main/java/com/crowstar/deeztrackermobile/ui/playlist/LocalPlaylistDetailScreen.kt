@@ -54,6 +54,7 @@ fun LocalPlaylistDetailScreen(
     onRemoveTrack: (PlaylistTrackUiState) -> Unit,
     onShareTrack: (LocalTrack) -> Unit,
     onEditTrack: (LocalTrack) -> Unit,
+    onAddToQueue: ((LocalTrack) -> Unit)? = null,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
@@ -165,6 +166,7 @@ fun LocalPlaylistDetailScreen(
                     onDelete = { onRemoveTrack(uiState) },
                     onEdit = if (uiState.isDownloaded) { { onEditTrack(uiState.track) } } else null,
                     onAddToPlaylist = null,
+                    onAddToQueue = { onAddToQueue?.invoke(uiState.track) },
                     deleteLabel = stringResource(R.string.action_remove),
                     showAllOptions = uiState.isDownloaded
                 )

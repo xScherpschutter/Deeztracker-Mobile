@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
 import com.crowstar.deeztrackermobile.ui.library.LocalMusicViewModel
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
+import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.R
@@ -38,6 +40,7 @@ fun LocalAlbumDetailScreen(
     onBackClick: () -> Unit,
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
     onPlayAlbum: (List<LocalTrack>) -> Unit,
+    onAddToQueue: ((LocalTrack) -> Unit)? = null,
     viewModel: LocalMusicViewModel = hiltViewModel()
 ) {
     val albums by viewModel.albums.collectAsState()
@@ -119,14 +122,24 @@ fun LocalAlbumDetailScreen(
 
             // Tracks
             items(tracks, key = { it.id }) { track ->
-                LocalTrackItemSimple(track = track, onClick = { onTrackClick(track, tracks) })
+                LocalTrackItemSimple(
+                    track = track, 
+                    onClick = { onTrackClick(track, tracks) },
+                    onAddToQueue = { onAddToQueue?.invoke(track) }
+                )
             }
         }
     }
 }
 
 @Composable
-fun LocalTrackItemSimple(track: LocalTrack, onClick: () -> Unit) {
+fun LocalTrackItemSimple(
+    track: LocalTrack, 
+    onClick: () -> Unit,
+    onAddToQueue: (() -> Unit)? = null
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -152,5 +165,25 @@ fun LocalTrackItemSimple(track: LocalTrack, onClick: () -> Unit) {
             color = TextGray,
             fontSize = 12.sp
         )
+        if (onAddToQueue != null) {
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.player_options), tint = TextGray)
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                    modifier = Modifier.background(SurfaceDark)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_add_to_queue), color = Color.White) },
+                        onClick = {
+                            showMenu = false
+                            onAddToQueue()
+                        }
+                    )
+                }
+            }
+        }
     }
 }

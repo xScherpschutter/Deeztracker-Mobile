@@ -220,8 +220,18 @@ fun AlbumScreen(
                             onDownloadClick = {
                                 viewModel.startTrackDownload(track.id, track.title)
                             },
-                            onClick = { viewModel.playAlbum(index) },
-                            onAddToPlaylist = { trackToAddToPlaylist = track }
+                            onStreamClick = {
+                                viewModel.playAlbum(index)
+                            },
+                            onAddToPlaylist = { trackToAddToPlaylist = track },
+                            onAddToQueue = { 
+                                val currentAlbum = album
+                                viewModel.playerController.addToQueue(
+                                    track = track,
+                                    source = currentAlbum?.title,
+                                    backupAlbumArt = currentAlbum?.coverBig ?: currentAlbum?.coverMedium
+                                ) 
+                            }
                         )
                     }
 
@@ -330,8 +340,9 @@ private fun TrackListItem(
     previewPosition: Long = 0,
     onTogglePreview: (String) -> Unit = {},
     onDownloadClick: () -> Unit = {},
-    onClick: () -> Unit = {},
-    onAddToPlaylist: () -> Unit = {}
+    onStreamClick: () -> Unit = {},
+    onAddToPlaylist: () -> Unit = {},
+    onAddToQueue: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -339,7 +350,7 @@ private fun TrackListItem(
             .background(
                 if (index % 2 == 0) SurfaceDark.copy(alpha = 0.3f) else Color.Transparent
             )
-            .clickable(onClick = onClick)
+            .clickable { onStreamClick() }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -418,6 +429,6 @@ private fun TrackListItem(
             }
         }
 
-        TrackOptionsMenu(onAddToPlaylist = onAddToPlaylist)
+        TrackOptionsMenu(onAddToPlaylist = onAddToPlaylist, onAddToQueue = onAddToQueue)
     }
 }

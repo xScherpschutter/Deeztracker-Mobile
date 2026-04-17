@@ -16,6 +16,7 @@ import com.crowstar.deeztrackermobile.ui.theme.TextGray
 @Composable
 fun TrackOptionsMenu(
     onAddToPlaylist: () -> Unit,
+    onAddToQueue: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -47,8 +48,20 @@ fun TrackOptionsMenu(
                 }
             )
             
-            // Aquí podemos añadir más opciones en el futuro:
-            // DropdownMenuItem(text = { Text("Ir al Artista") }, onClick = { ... })
+            if (onAddToQueue != null) {
+                DropdownMenuItem(
+                    text = { 
+                        Text(
+                            text = stringResource(R.string.action_add_to_queue),
+                            color = Color.White 
+                        ) 
+                    },
+                    onClick = {
+                        showMenu = false
+                        onAddToQueue()
+                    }
+                )
+            }
         }
     }
 }

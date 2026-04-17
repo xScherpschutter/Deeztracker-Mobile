@@ -357,6 +357,77 @@ class PlayerController @Inject constructor(
         }
     }
 
+    fun addToQueue(track: LocalTrack, source: String? = null) {
+        val player = mediaController ?: run {
+            Log.w(TAG, "Cannot add to queue: MediaController not initialized")
+            initializeController()
+            return
+        }
+        
+        // Prevent duplicates to avoid crashes in UI lists with unique keys
+        if (_currentQueue.value.any { it.id == track.id }) {
+            Log.d(TAG, "Track already in queue: ${track.title}")
+            return
+        }
+
+        controllerScope.launch {
+            val mediaItems = createMediaItems(listOf(track))
+            val mediaItem = mediaItems.firstOrNull() ?: return@launch
+            
+            // Check if our local queue is empty, regardless of what's in the ExoPlayer
+            // (MusicService might have restored a last-played track, but we want to override it 
+            // if the user manually adds something to the queue for the first time).
+            val wasEmpty = _currentQueue.value.isEmpty()
+            
+            // Update internal state flows
+            val updatedQueue = _currentQueue.value.toMutableList()
+            updatedQueue.add(track)
+            _currentQueue.value = updatedQueue
+            
+            // Update original queue for shuffle logic 
+            originalQueue?.let { original ->
+                val newOriginal = original.toMutableList()
+                newOriginal.add(track)
+                originalQueue = newOriginal
+            }
+
+            if (wasEmpty) {
+                val resolvedSource = source ?: context.getString(com.crowstar.deeztrackermobile.R.string.local_music_title)
+                
+                // If it was the first manual add, we use setMediaItem to CLEAR any restored track
+                // and start fresh with the user's choice.
+                player.setMediaItem(mediaItem)
+                player.prepare()
+                player.playWhenReady = true
+                player.play()
+                
+                _playerState.update { 
+                    it.copy(
+                        currentTrack = track, 
+                        isPlaying = true,
+                        playingSource = resolvedSource
+                    ) 
+                }
+                checkFavoriteStatus()
+                fetchLyrics(track)
+            } else {
+                // Already has a manual queue, just append
+                player.addMediaItem(mediaItem)
+            }
+        }
+    }
+
+    fun addToQueue(
+        track: com.crowstar.deeztrackermobile.features.deezer.Track,
+        source: String? = null,
+        backupAlbumArt: String? = null
+    ) {
+        addToQueue(
+            track.toLocalTrack(backupAlbumTitle = source, backupAlbumArt = backupAlbumArt),
+            source
+        )
+    }
+
     fun togglePlayPause() {
         val player = mediaController ?: return
         if (player.isPlaying) {

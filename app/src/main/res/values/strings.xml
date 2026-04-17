@@ -77,6 +77,7 @@
     <string name="action_cancel">Cancel</string>
     <string name="action_create">Create</string>
     <string name="action_add_to_playlist">Add to playlist</string>
+    <string name="action_add_to_queue">Add to queue</string>
     <string name="toast_added_to_playlist">Track added to %s</string>
     <string name="notification_download_completed">Downloaded: %s</string>
     <string name="notification_download_failed">Download failed: %s</string>

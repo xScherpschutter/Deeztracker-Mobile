@@ -219,9 +219,12 @@ fun PlaylistScreen(
                                 onDownloadClick = {
                                     viewModel.startTrackDownload(track.id, track.title)
                                 },
-                                onClick = { viewModel.playPlaylist(index) },
-                                onAddToPlaylist = { trackToAddToPlaylist = track }
-                                )
+                                onStreamClick = {
+                                    viewModel.playPlaylist(index)
+                                },
+                                onAddToPlaylist = { trackToAddToPlaylist = track },
+                                onAddToQueue = { viewModel.playerController.addToQueue(track) }
+                            )
 
                         }
 
@@ -335,8 +338,9 @@ private fun PlaylistTrackItem(
     previewPosition: Long = 0,
     onTogglePreview: (String) -> Unit = {},
     onDownloadClick: () -> Unit = {},
-    onClick: () -> Unit = {},
-    onAddToPlaylist: () -> Unit = {}
+    onStreamClick: () -> Unit = {},
+    onAddToPlaylist: () -> Unit = {},
+    onAddToQueue: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -344,7 +348,7 @@ private fun PlaylistTrackItem(
             .background(
                 if (index % 2 == 0) SurfaceDark.copy(alpha = 0.3f) else Color.Transparent
             )
-            .clickable(onClick = onClick)
+            .clickable(onClick = onStreamClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -425,6 +429,6 @@ private fun PlaylistTrackItem(
             }
         }
 
-        TrackOptionsMenu(onAddToPlaylist = onAddToPlaylist)
+        TrackOptionsMenu(onAddToPlaylist = onAddToPlaylist, onAddToQueue = onAddToQueue)
     }
 }

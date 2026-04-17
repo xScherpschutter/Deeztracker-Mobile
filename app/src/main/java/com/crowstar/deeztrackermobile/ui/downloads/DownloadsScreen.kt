@@ -63,6 +63,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun DownloadsScreen(
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
+    onAddToQueue: ((LocalTrack) -> Unit)? = null,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: DownloadsViewModel = hiltViewModel()
 ) {
@@ -304,7 +305,8 @@ fun DownloadsScreen(
                                 onShare = { shareTrack(track) },
                                 onEdit = { trackToEdit = track },
                                 onDetails = { trackDetails = track },
-                                onAddToPlaylist = { trackForPlaylist = track }
+                                onAddToPlaylist = { trackForPlaylist = track },
+                                onAddToQueue = { onAddToQueue?.invoke(track) }
                             )
                         }
                     }
@@ -359,7 +361,8 @@ fun DownloadedTrackItem(
     onShare: () -> Unit,
     onEdit: () -> Unit,
     onDetails: () -> Unit,
-    onAddToPlaylist: () -> Unit
+    onAddToPlaylist: () -> Unit,
+    onAddToQueue: (() -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -416,6 +419,15 @@ fun DownloadedTrackItem(
                         onAddToPlaylist()
                     }
                 )
+                if (onAddToQueue != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_add_to_queue), color = Color.White) },
+                        onClick = {
+                            showMenu = false
+                            onAddToQueue()
+                        }
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_details), color = Color.White) },
                     onClick = { 
