@@ -33,7 +33,7 @@ class DeezerRepository @Inject constructor(
         return api.getArtistTopTracks(id, limit)
     }
 
-    suspend fun getArtistRadio(id: Long, limit: Int = 25): TrackListResponse {
+    suspend fun getArtistRadio(id: Long, limit: Int = 39): TrackListResponse {
         return api.getArtistRadio(id, limit)
     }
 
