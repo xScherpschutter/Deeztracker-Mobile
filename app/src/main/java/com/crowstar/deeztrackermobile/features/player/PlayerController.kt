@@ -113,9 +113,9 @@ class PlayerController @Inject constructor(
         }
     }
 
-    private fun generateTrackKey(title: String, artist: String): String {
-        val t = title.lowercase().replace(Regex("[^a-z0-9]"), "")
-        val a = artist.lowercase().replace(Regex("[^a-z0-9]"), "")
+    private fun generateTrackKey(title: String?, artist: String?): String {
+        val t = (title ?: "").lowercase().replace(Regex("[^a-z0-9]"), "")
+        val a = (artist ?: "").lowercase().replace(Regex("[^a-z0-9]"), "")
         return "$t|$a"
     }
 

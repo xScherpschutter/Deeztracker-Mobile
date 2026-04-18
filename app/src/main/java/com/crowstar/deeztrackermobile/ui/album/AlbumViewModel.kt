@@ -71,7 +71,7 @@ class AlbumViewModel @Inject constructor(
 
     fun isTrackDownloaded(title: String, artist: String, callback: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val result = downloadManager.isTrackDownloaded(title, artist)
+            val result = downloadManager.checkIfTrackDownloaded(title, artist)
             callback(result)
         }
     }

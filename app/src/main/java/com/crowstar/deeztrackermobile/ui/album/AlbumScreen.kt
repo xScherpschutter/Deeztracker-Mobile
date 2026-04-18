@@ -59,6 +59,7 @@ fun AlbumScreen(
     val context = LocalContext.current
     val downloadState by viewModel.downloadState.collectAsState()
     val downloadedKeys by viewModel.downloadManager.downloadedKeys.collectAsState()
+    val activeDownloads by viewModel.downloadManager.activeDownloads.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val snackbarController = remember { SnackbarController(snackbarHostState, scope) }
@@ -181,7 +182,7 @@ fun AlbumScreen(
                         // FAST CHECK: O(1) in-memory check
                         val isDownloaded = downloadedKeys.contains(
                             viewModel.downloadManager.generateTrackKey(
-                                track.title,
+                                track.title ?: "",
                                 track.artist?.name ?: ""
                             )
                         )
@@ -190,14 +191,9 @@ fun AlbumScreen(
                             track = track,
                             index = index + 1,
                             isDownloaded = isDownloaded,
-                            isDownloading = (downloadState is DownloadState.Downloading) && (
-                                // Individual track download
-                                (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString() ||
-                                // Part of bulk album download - check if this is the current track being downloaded
-                                (downloadState as? DownloadState.Downloading)?.currentTrackId == track.id.toString()
-                            ),
+                            isDownloading = activeDownloads.contains(track.id.toString()),
                             onDownloadClick = {
-                                viewModel.startTrackDownload(track.id, track.title)
+                                viewModel.startTrackDownload(track.id, track.title ?: "Unknown Track")
                             },
                             onStreamClick = {
                                 viewModel.playAlbum(index)

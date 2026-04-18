@@ -7,18 +7,16 @@ import com.crowstar.deeztrackermobile.features.rusteer.RustDeezerService
 import com.crowstar.deeztrackermobile.features.deezer.DeezerRepository
 import com.crowstar.deeztrackermobile.features.localmusic.LocalMusicRepository
 import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylistRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import uniffi.rusteer.DownloadQuality
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import android.media.MediaScannerConnection 
 import dagger.hilt.android.qualifiers.ApplicationContext
+import uniffi.rusteer.DownloadQuality
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -34,10 +32,19 @@ class DownloadManager @Inject constructor(
 ) {
     private val TAG = "DownloadManager"
     private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val downloadChannel = kotlinx.coroutines.channels.Channel<DownloadRequest>(20)
+    
+    // Búfer aumentado a 100 para evitar pérdida de peticiones
+    private val downloadChannel = kotlinx.coroutines.channels.Channel<DownloadRequest>(100)
+    
+    // Control de concurrencia: máximo 3 descargas de tracks en paralelo
+    private val downloadSemaphore = Semaphore(3)
     
     private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
+    
+    // IDs de tracks que se están descargando actualmente (para mostrar múltiples spinners)
+    private val _activeDownloads = MutableStateFlow<Set<String>>(emptySet())
+    val activeDownloads: StateFlow<Set<String>> = _activeDownloads.asStateFlow()
     
     // FAST CACHE: Memory set for O(1) download checks during scroll
     private val _downloadedKeys = MutableStateFlow<Set<String>>(emptySet())
@@ -54,7 +61,11 @@ class DownloadManager @Inject constructor(
         
         managerScope.launch {
             for (request in downloadChannel) {
-                processRequest(request)
+                // Loteamos el procesamiento para que múltiples peticiones individuales
+                // puedan mostrar su spinner simultáneamente mientras esperan el semáforo.
+                launch {
+                    processRequest(request)
+                }
             }
         }
     }
@@ -72,30 +83,52 @@ class DownloadManager @Inject constructor(
         }
     }
 
-    /**
-     * Normalizes titles by stripping feature information and non-alphanumeric characters.
-     */
-    private fun normalizeTitle(input: String): String {
-        val withoutFeat = input.replace(Regex("(?i)\\s*[\\(\\[](?:feat\\.?|ft\\.?|featuring|with)[^\\)\\]]*[\\)\\]]"), "")
+    private fun normalizeTitle(input: String?): String {
+        val str = input ?: ""
+        val withoutFeat = str.replace(Regex("(?i)\\s*[\\(\\[](?:feat\\.?|ft\\.?|featuring|with)[^\\)\\]]*[\\)\\]]"), "")
             .replace(Regex("(?i)\\s*(?:feat\\.?|ft\\.?|featuring|with).*"), "")
         return withoutFeat.lowercase().replace(Regex("[^a-z0-9]"), "")
     }
 
-    /**
-     * Normalizes artist names by extracting the primary artist before standard separators,
-     * then lowercasing and removing non-alphanumeric characters.
-     */
-    private fun normalizeArtist(input: String): String {
-        val primaryArtist = input.split(Regex("[,/;&]|\\b(?i)(feat\\.?|ft\\.?|featuring|with)\\b")).first()
+    private fun normalizeArtist(input: String?): String {
+        val str = input ?: ""
+        val primaryArtist = str.split(Regex("[,/;&]|\\b(?i)(feat\\.?|ft\\.?|featuring|with)\\b")).first()
         return primaryArtist.lowercase().replace(Regex("[^a-z0-9]"), "")
     }
 
-    fun generateTrackKey(title: String, artist: String): String {
+    fun generateTrackKey(title: String?, artist: String?): String {
         return "${normalizeTitle(title)}|${normalizeArtist(artist)}"
     }
 
-    fun isTrackDownloadedFast(title: String, artist: String): Boolean {
+    fun isTrackDownloadedFast(title: String?, artist: String?): Boolean {
         return _downloadedKeys.value.contains(generateTrackKey(title, artist))
+    }
+
+    suspend fun checkIfTrackDownloaded(trackTitle: String, artistName: String): Boolean {
+        return try {
+            val normalizedTitle = normalizeTitle(trackTitle)
+            val normalizedArtist = normalizeArtist(artistName)
+            
+            // First try O(1) cache
+            if (_downloadedKeys.value.contains("$normalizedTitle|$normalizedArtist")) {
+                return true
+            }
+
+            // Fallback to O(N) scan for flexible matching (e.g. partial artist matches)
+            val localTracks = musicRepository.getAllTracks()
+            localTracks.any { track ->
+                val localTitle = normalizeTitle(track.title)
+                val localArtist = normalizeArtist(track.artist)
+                
+                val titleMatch = localTitle == normalizedTitle
+                val artistMatch = localArtist.contains(normalizedArtist) || normalizedArtist.contains(localArtist)
+                
+                titleMatch && artistMatch
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking if track is downloaded", e)
+            false
+        }
     }
 
     val currentQuality: DownloadQuality
@@ -128,54 +161,34 @@ class DownloadManager @Inject constructor(
     
     @OptIn(ExperimentalCoroutinesApi::class)
     fun resetState() {
-        if (downloadChannel.isEmpty) {
+        if (downloadChannel.isEmpty && _activeDownloads.value.isEmpty()) {
             _downloadState.value = DownloadState.Idle
         }
     }
     
     fun startTrackDownload(trackId: Long, title: String, targetPlaylistId: String? = null): Boolean {
-        downloadChannel.trySend(DownloadRequest.Track(trackId, title, targetPlaylistId))
+        managerScope.launch {
+            downloadChannel.send(DownloadRequest.Track(trackId, title, targetPlaylistId))
+        }
         return true
     }
     
     fun startAlbumDownload(albumId: Long, title: String): Boolean {
-        downloadChannel.trySend(DownloadRequest.Album(albumId, title))
+        managerScope.launch {
+            downloadChannel.send(DownloadRequest.Album(albumId, title))
+        }
         return true
     }
     
     fun startPlaylistDownload(playlistId: Long, title: String): Boolean {
-        downloadChannel.trySend(DownloadRequest.Playlist(playlistId, title))
+        managerScope.launch {
+            downloadChannel.send(DownloadRequest.Playlist(playlistId, title))
+        }
         return true
     }
 
-    suspend fun isTrackDownloaded(trackTitle: String, artistName: String): Boolean {
-        return try {
-            val normalizedTitle = normalizeTitle(trackTitle)
-            val normalizedArtist = normalizeArtist(artistName)
-            
-            // First try O(1) cache
-            if (_downloadedKeys.value.contains("$normalizedTitle|$normalizedArtist")) {
-                return true
-            }
-
-            // Fallback to O(N) scan for flexible matching (e.g. partial artist matches)
-            val localTracks = musicRepository.getAllTracks()
-            localTracks.any { track ->
-                val localTitle = normalizeTitle(track.title)
-                val localArtist = normalizeArtist(track.artist)
-                
-                val titleMatch = localTitle == normalizedTitle
-                val artistMatch = localArtist.contains(normalizedArtist) || normalizedArtist.contains(localArtist)
-                
-                titleMatch && artistMatch
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error checking if track is downloaded", e)
-            false
-        }
-    }
-
     private suspend fun processRequest(request: DownloadRequest) {
+        // Actualizamos estado general (esto sirve para notificaciones de "Descargando X álbum")
         _downloadState.value = DownloadState.Downloading(
             type = when(request) {
                 is DownloadRequest.Track -> DownloadType.TRACK
@@ -189,115 +202,29 @@ class DownloadManager @Inject constructor(
         try {
             when (request) {
                 is DownloadRequest.Track -> {
-                    val result = rustService.downloadTrack(
-                        trackId = request.id.toString(),
-                        outputDir = downloadDirectory,
-                        quality = currentQuality
-                    )
-                    
-                    val uri = scanFileSuspend(result.path)
-                    if (uri != null) {
-                        // FIX: Manually inject the key immediately so the UI doesn't have to wait for MediaStore refresh
-                        val newKey = generateTrackKey(request.title, result.artist ?: "") 
-                        _downloadedKeys.update { it + newKey }
-                        
-                        refreshDownloadedKeys()
-                        _downloadRefreshTrigger.value += 1
-                    }
-                    
+                    val success = downloadSingleTrackWithControl(request.id, request.title)
                     _downloadState.value = DownloadState.Completed(
                         type = DownloadType.TRACK,
                         title = request.title,
-                        successCount = 1
+                        successCount = if (success) 1 else 0,
+                        failedCount = if (success) 0 else 1
                     )
                 }
                 is DownloadRequest.Album -> {
-                    val albumTracks = try {
+                    val tracks = try {
                         deezerRepository.getAlbumTracks(request.id).data
                     } catch (e: Exception) {
                         emptyList()
                     }
-                    
-                    var successCount = 0
-                    var failedCount = 0
-                    var skippedCount = 0
-                    
-                    for (track in albumTracks) {
-                        if (isTrackDownloadedFast(track.title, track.artist?.name ?: "")) {
-                            skippedCount++
-                        } else {
-                            try {
-                                _downloadState.value = DownloadState.Downloading(
-                                    type = DownloadType.ALBUM,
-                                    title = request.title,
-                                    itemId = request.id.toString(),
-                                    currentTrackId = track.id.toString()
-                                )
-                                rustService.downloadTrack(
-                                    trackId = track.id.toString(),
-                                    outputDir = downloadDirectory,
-                                    quality = currentQuality
-                                )
-                                successCount++
-                                refreshDownloadedKeys()
-                                _downloadRefreshTrigger.value += 1
-                            } catch (e: Exception) {
-                                failedCount++
-                            }
-                        }
-                    }
-                    
-                    _downloadState.value = DownloadState.Completed(
-                        type = DownloadType.ALBUM,
-                        title = request.title,
-                        successCount = successCount,
-                        failedCount = failedCount,
-                        skippedCount = skippedCount
-                    )
+                    processBulkDownload(DownloadType.ALBUM, request.title, tracks)
                 }
                 is DownloadRequest.Playlist -> {
-                    val playlistTracks = try {
+                    val tracks = try {
                         deezerRepository.getPlaylistTracks(request.id).data
                     } catch (e: Exception) {
                         emptyList()
                     }
-                    
-                    var successCount = 0
-                    var failedCount = 0
-                    var skippedCount = 0
-                    
-                    for (track in playlistTracks) {
-                        if (isTrackDownloadedFast(track.title, track.artist?.name ?: "")) {
-                            skippedCount++
-                        } else {
-                            try {
-                                _downloadState.value = DownloadState.Downloading(
-                                    type = DownloadType.PLAYLIST,
-                                    title = request.title,
-                                    itemId = request.id.toString(),
-                                    currentTrackId = track.id.toString()
-                                )
-                                rustService.downloadTrack(
-                                    trackId = track.id.toString(),
-                                    outputDir = downloadDirectory,
-                                    quality = currentQuality
-                                )
-                                successCount++
-                                refreshDownloadedKeys()
-                                _downloadRefreshTrigger.value += 1
-                            } catch (e: Exception) {
-                                failedCount++
-                            }
-                        }
-                    }
-                    
-                    _downloadState.value = DownloadState.Completed(
-                        type = DownloadType.PLAYLIST,
-                        title = request.title,
-                        successCount = successCount,
-                        failedCount = failedCount,
-                        skippedCount = skippedCount
-                    )
+                    processBulkDownload(DownloadType.PLAYLIST, request.title, tracks)
                 }
             }
         } catch (e: Exception) {
@@ -306,6 +233,72 @@ class DownloadManager @Inject constructor(
                 message = e.message ?: "Unknown error"
             )
         }
+    }
+
+    private suspend fun downloadSingleTrackWithControl(trackId: Long, title: String): Boolean {
+        val idStr = trackId.toString()
+        // Marcar como activo inmediatamente para el spinner
+        _activeDownloads.update { it + idStr }
+        
+        return try {
+            // Esperar turno en el semáforo (máximo 3 a la vez)
+            downloadSemaphore.withPermit {
+                val result = rustService.downloadTrack(
+                    trackId = idStr,
+                    outputDir = downloadDirectory,
+                    quality = currentQuality
+                )
+                
+                val uri = scanFileSuspend(result.path)
+                if (uri != null) {
+                    val newKey = generateTrackKey(title, result.artist ?: "") 
+                    _downloadedKeys.update { it + newKey }
+                    _downloadRefreshTrigger.value += 1
+                }
+            }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error downloading track $trackId", e)
+            false
+        } finally {
+            // Quitar de activos al terminar (éxito o error)
+            _activeDownloads.update { it - idStr }
+        }
+    }
+
+    private suspend fun processBulkDownload(
+        type: DownloadType, 
+        requestTitle: String, 
+        tracks: List<com.crowstar.deeztrackermobile.features.deezer.Track>
+    ) {
+        var successCount = 0
+        var failedCount = 0
+        var skippedCount = 0
+        
+        // Usamos supervisorScope para que el fallo de un track no cancele los demás
+        supervisorScope {
+            tracks.map { track ->
+                async {
+                    if (isTrackDownloadedFast(track.title, track.artist?.name ?: "")) {
+                        synchronized(this@DownloadManager) { skippedCount++ }
+                    } else {
+                        val success = downloadSingleTrackWithControl(track.id, track.title ?: "Unknown")
+                        synchronized(this@DownloadManager) {
+                            if (success) successCount++ else failedCount++
+                        }
+                    }
+                }
+            }.awaitAll()
+        }
+        
+        _downloadState.value = DownloadState.Completed(
+            type = type,
+            title = requestTitle,
+            successCount = successCount,
+            failedCount = failedCount,
+            skippedCount = skippedCount
+        )
+        refreshDownloadedKeys() // Refresco final por si acaso
     }
 
     private sealed class DownloadRequest(val id: Long, val title: String) {

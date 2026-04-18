@@ -113,6 +113,7 @@ fun SearchScreen(
     val downloadManager = viewModel.downloadManager
     val downloadState by downloadManager.downloadState.collectAsState()
     val downloadedKeys by viewModel.downloadedKeys.collectAsState()
+    val activeDownloads by downloadManager.activeDownloads.collectAsState()
 
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -187,7 +188,7 @@ fun SearchScreen(
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
+        val observer = LifecycleEventObserver { _, _ ->
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -321,8 +322,6 @@ fun SearchScreen(
                 } else if (query.isEmpty() || !hasSearched) {
                     EmptySearchView()
                 } else {
-                    val isDownloading = downloadState is DownloadState.Downloading
-                    
                     LazyColumn(
                         state = listState,
                         contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp + contentPadding, start = 16.dp, end = 16.dp),
@@ -335,7 +334,7 @@ fun SearchScreen(
                                     // FAST CHECK: O(1) in-memory check
                                     val isDownloaded = downloadedKeys.contains(
                                         downloadManager.generateTrackKey(
-                                            track.title,
+                                            track.title ?: "",
                                             track.artist?.name ?: ""
                                         )
                                     )
@@ -343,8 +342,8 @@ fun SearchScreen(
                                     TrackItem(
                                         track = track,
                                         isDownloaded = isDownloaded,
-                                        isDownloading = isDownloading && (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString(),
-                                        onDownloadClick = { downloadManager.startTrackDownload(track.id, track.title) },
+                                        isDownloading = activeDownloads.contains(track.id.toString()),
+                                        onDownloadClick = { downloadManager.startTrackDownload(track.id, track.title ?: "Unknown Track") },
                                         onStreamClick = {
                                             viewModel.playerController.playDeezerTrackWithRadio(track)
                                         },
