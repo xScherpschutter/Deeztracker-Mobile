@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -316,6 +317,14 @@ fun LocalMusicScreen(
                          IconButton(onClick = onImportPlaylist) {
                              Icon(Icons.Default.Input, contentDescription = "Import Playlist", tint = Color.White)
                          }
+                    }
+                    if (selectedView == 0 && tracks.isNotEmpty()) {
+                        IconButton(onClick = {
+                            val shuffled = tracks.shuffled()
+                            onTrackClick(shuffled.first(), shuffled, localMusicTitle)
+                        }) {
+                            Icon(Icons.Default.Shuffle, contentDescription = stringResource(R.string.player_shuffle), tint = Color.White)
+                        }
                     }
                     IconButton(onClick = { viewModel.loadMusic() }) {
                         Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh), tint = Color.White)

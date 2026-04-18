@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -230,6 +231,14 @@ fun DownloadsScreen(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
+                IconButton(onClick = { 
+                    if (tracks.isNotEmpty()) {
+                        val shuffled = tracks.shuffled()
+                        onTrackClick(shuffled.first(), shuffled)
+                    }
+                }) {
+                    Icon(Icons.Default.Shuffle, contentDescription = stringResource(R.string.player_shuffle), tint = Color.White)
+                }
                 IconButton(onClick = { viewModel.loadDownloadedMusic() }) {
                     Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh), tint = Color.White)
                 }
