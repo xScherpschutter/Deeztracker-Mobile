@@ -193,8 +193,8 @@ fun PlaylistScreen(
                     }
 
                     // Tracks List
-                        items(tracks.size) { index ->
-                            val track = tracks[index]
+                    items(tracks.size) { index ->
+                        val track = tracks[index]
                             // FAST CHECK: O(1) in-memory check
                             val isDownloaded = downloadedKeys.contains(
                                 viewModel.downloadManager.generateTrackKey(

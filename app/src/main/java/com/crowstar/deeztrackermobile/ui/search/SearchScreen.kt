@@ -168,22 +168,22 @@ fun SearchScreen(
                 when (selectedTabIndex) {
                     0 -> {
                         val response = repository.searchTracks(query, currentNext)
-                        tracks = if (isNewSearch) response.data else tracks + response.data
+                        tracks = if (isNewSearch) response.data else (tracks + response.data).distinctBy { it.id }
                         nextUrl = response.next
                     }
                     1 -> {
                         val response = repository.searchArtists(query, currentNext)
-                        artists = if (isNewSearch) response.data else artists + response.data
+                        artists = if (isNewSearch) response.data else (artists + response.data).distinctBy { it.id }
                         nextUrl = response.next
                     }
                     2 -> {
                         val response = repository.searchAlbums(query, currentNext)
-                        albums = if (isNewSearch) response.data else albums + response.data
+                        albums = if (isNewSearch) response.data else (albums + response.data).distinctBy { it.id }
                         nextUrl = response.next
                     }
                     3 -> {
                         val response = repository.searchPlaylists(query, currentNext)
-                        playlists = if (isNewSearch) response.data else playlists + response.data
+                        playlists = if (isNewSearch) response.data else (playlists + response.data).distinctBy { it.id }
                         nextUrl = response.next
                     }
                 }
