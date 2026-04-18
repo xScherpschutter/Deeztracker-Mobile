@@ -53,14 +53,12 @@ import com.crowstar.deeztrackermobile.features.deezer.DeezerRepository
 import com.crowstar.deeztrackermobile.features.deezer.Playlist
 import com.crowstar.deeztrackermobile.features.deezer.Track
 import com.crowstar.deeztrackermobile.features.download.DownloadManager
-import com.crowstar.deeztrackermobile.features.preview.PreviewPlayer
 import com.crowstar.deeztrackermobile.features.download.DownloadState
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
 import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.common.MarqueeText
-import com.crowstar.deeztrackermobile.ui.common.TrackPreviewButton
 import com.crowstar.deeztrackermobile.ui.common.TrackOptionsMenu
 import com.crowstar.deeztrackermobile.ui.common.TrackArtwork
 import kotlinx.coroutines.launch
@@ -81,24 +79,13 @@ import com.crowstar.deeztrackermobile.features.localmusic.toPlaylistTrack
 class SearchViewModel @Inject constructor(
     private val repository: DeezerRepository,
     val downloadManager: DownloadManager,
-    private val previewPlayer: PreviewPlayer,
     val playerController: PlayerController,
     val playlistRepository: LocalPlaylistRepository
 ) : ViewModel() {
     val apiRepository = repository
     
-    val playingUrl = previewPlayer.playingUrl
-    val previewPosition = previewPlayer.positionMs
     val downloadedKeys = downloadManager.downloadedKeys
     val playlists = playlistRepository.playlists
-
-    fun stopPreview() {
-        previewPlayer.stop()
-    }
-
-    fun togglePreview(url: String) {
-        previewPlayer.toggle(url)
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -130,9 +117,6 @@ fun SearchScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val playingUrl by viewModel.playingUrl.collectAsState()
-    val previewPosition by viewModel.previewPosition.collectAsState()
-
     var trackToAddToPlaylist by remember { mutableStateOf<com.crowstar.deeztrackermobile.features.deezer.Track?>(null) }
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     val localPlaylists by viewModel.playlists.collectAsState()
@@ -152,7 +136,6 @@ fun SearchScreen(
         if (query.isBlank()) return
         scope.launch {
             if (isNewSearch) {
-                viewModel.stopPreview()
                 isLoading = true
                 tracks = emptyList()
                 artists = emptyList()
@@ -197,7 +180,6 @@ fun SearchScreen(
     }
 
     LaunchedEffect(selectedTabIndex) {
-        viewModel.stopPreview()
         if (query.isNotEmpty() && hasSearched) {
             performSearch(isNewSearch = true)
         }
@@ -206,7 +188,6 @@ fun SearchScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) viewModel.stopPreview()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -228,10 +209,6 @@ fun SearchScreen(
                     performSearch(isNewSearch = false)
                 }
             }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose { viewModel.stopPreview() }
     }
 
     LaunchedEffect(downloadState) {
@@ -294,7 +271,6 @@ fun SearchScreen(
                                 query = it
                                 if (it.isEmpty()) {
                                     hasSearched = false
-                                    viewModel.stopPreview()
                                 }
                             },
                             modifier = Modifier.fillMaxWidth(),
@@ -368,9 +344,6 @@ fun SearchScreen(
                                         track = track,
                                         isDownloaded = isDownloaded,
                                         isDownloading = isDownloading && (downloadState as? DownloadState.Downloading)?.itemId == track.id.toString(),
-                                        isPlaying = playingUrl == track.preview,
-                                        previewPosition = previewPosition,
-                                        onTogglePreview = { viewModel.togglePreview(it) },
                                         onDownloadClick = { downloadManager.startTrackDownload(track.id, track.title) },
                                         onStreamClick = {
                                             viewModel.playerController.playDeezerTrackWithRadio(track)
@@ -445,9 +418,6 @@ fun TrackItem(
     track: Track,
     isDownloaded: Boolean = false,
     isDownloading: Boolean = false,
-    isPlaying: Boolean = false,
-    previewPosition: Long = 0,
-    onTogglePreview: (String) -> Unit = {},
     onDownloadClick: () -> Unit = {},
     onStreamClick: () -> Unit = {},
     onAddToPlaylist: () -> Unit = {},
@@ -496,8 +466,6 @@ fun TrackItem(
                 }
             }
         }
-
-        TrackPreviewButton(previewUrl = track.preview, isPlaying = isPlaying, positionMs = previewPosition, onToggle = onTogglePreview)
 
         Spacer(modifier = Modifier.width(6.dp))
 

@@ -31,7 +31,6 @@ import com.crowstar.deeztrackermobile.ui.utils.formatDuration
 import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.ui.common.TrackOptionsMenu
 import com.crowstar.deeztrackermobile.ui.common.MarqueeText
-import com.crowstar.deeztrackermobile.ui.common.TrackPreviewButton
 import com.crowstar.deeztrackermobile.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -64,8 +63,6 @@ fun AlbumScreen(
     val scope = rememberCoroutineScope()
     val snackbarController = remember { SnackbarController(snackbarHostState, scope) }
 
-    val playingUrl by viewModel.playingUrl.collectAsState()
-    val previewPosition by viewModel.previewPosition.collectAsState()
     var trackToAddToPlaylist by remember { mutableStateOf<com.crowstar.deeztrackermobile.features.deezer.Track?>(null) }
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     val localPlaylists by viewModel.playlists.collectAsState()
@@ -92,21 +89,6 @@ fun AlbumScreen(
             }
             else -> { /* Idle or Downloading - no snackbar */ }
         }
-    }
-
-    // Stop preview when leaving this screen
-    DisposableEffect(Unit) {
-        onDispose { viewModel.stopPreview() }
-    }
-
-    // Stop preview when app goes to background
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) viewModel.stopPreview()
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     CompositionLocalProvider(LocalSnackbarController provides snackbarController) {
@@ -214,9 +196,6 @@ fun AlbumScreen(
                                 // Part of bulk album download - check if this is the current track being downloaded
                                 (downloadState as? DownloadState.Downloading)?.currentTrackId == track.id.toString()
                             ),
-                            isPlaying = playingUrl == track.preview,
-                            previewPosition = previewPosition,
-                            onTogglePreview = { viewModel.togglePreview(it) },
                             onDownloadClick = {
                                 viewModel.startTrackDownload(track.id, track.title)
                             },
@@ -336,9 +315,6 @@ private fun TrackListItem(
     index: Int,
     isDownloaded: Boolean = false,
     isDownloading: Boolean = false,
-    isPlaying: Boolean = false,
-    previewPosition: Long = 0,
-    onTogglePreview: (String) -> Unit = {},
     onDownloadClick: () -> Unit = {},
     onStreamClick: () -> Unit = {},
     onAddToPlaylist: () -> Unit = {},
@@ -387,14 +363,6 @@ private fun TrackListItem(
             fontSize = 12.sp,
             color = TextGray,
             modifier = Modifier.padding(horizontal = 12.dp)
-        )
-
-        // Preview Button
-        TrackPreviewButton(
-            previewUrl = track.preview,
-            isPlaying = isPlaying,
-            positionMs = previewPosition,
-            onToggle = onTogglePreview
         )
 
         // Download Button

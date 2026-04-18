@@ -6,7 +6,6 @@ import com.crowstar.deeztrackermobile.features.deezer.DeezerRepository
 import com.crowstar.deeztrackermobile.features.deezer.Playlist
 import com.crowstar.deeztrackermobile.features.deezer.Track
 import com.crowstar.deeztrackermobile.features.download.DownloadManager
-import com.crowstar.deeztrackermobile.features.preview.PreviewPlayer
 import com.crowstar.deeztrackermobile.features.player.PlayerController
 import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylistRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,7 +19,6 @@ import javax.inject.Inject
 class PlaylistViewModel @Inject constructor(
     private val repository: DeezerRepository,
     val downloadManager: DownloadManager,
-    private val previewPlayer: PreviewPlayer,
     val playerController: PlayerController,
     val playlistRepository: LocalPlaylistRepository
 ) : ViewModel() {
@@ -36,9 +34,6 @@ class PlaylistViewModel @Inject constructor(
 
     val downloadState = downloadManager.downloadState
     val downloadRefreshTrigger = downloadManager.downloadRefreshTrigger
-
-    val playingUrl = previewPlayer.playingUrl
-    val previewPosition = previewPlayer.positionMs
     val playlists = playlistRepository.playlists
 
     fun loadPlaylist(playlistId: Long) {
@@ -83,13 +78,5 @@ class PlaylistViewModel @Inject constructor(
 
     fun resetDownloadState() {
         downloadManager.resetState()
-    }
-
-    fun togglePreview(url: String) {
-        previewPlayer.toggle(url)
-    }
-
-    fun stopPreview() {
-        previewPlayer.stop()
     }
 }

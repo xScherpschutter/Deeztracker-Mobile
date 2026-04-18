@@ -21,7 +21,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.crowstar.deeztrackermobile.features.player.PlayerController
-import com.crowstar.deeztrackermobile.features.preview.PreviewPlayer
 import com.crowstar.deeztrackermobile.navigation.AppNavigation
 import com.crowstar.deeztrackermobile.ui.utils.LocaleHelper
 import com.crowstar.deeztrackermobile.ui.theme.DeeztrackerMobileTheme
@@ -35,9 +34,6 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var playerController: PlayerController
-
-    @Inject
-    lateinit var previewPlayer: PreviewPlayer
 
     private var currentBoost by mutableStateOf(1.0f)
     private var showVolumeSlider by mutableStateOf(false)
@@ -134,7 +130,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        previewPlayer.release()
     }
 }
 
