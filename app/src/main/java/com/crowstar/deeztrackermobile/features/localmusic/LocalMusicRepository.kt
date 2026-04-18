@@ -71,7 +71,7 @@ class LocalMusicRepository @Inject constructor(
                 val artist = cursor.getString(artistColumn) ?: "Unknown Artist"
                 val album = cursor.getString(albumColumn) ?: "Unknown Album"
                 val duration = cursor.getLong(durationColumn)
-                val filePath = cursor.getString(dataColumn)
+                val filePath = cursor.getString(dataColumn) ?: ""
                 val size = cursor.getLong(sizeColumn)
                 val albumId = cursor.getLong(albumIdColumn)
                 val mimeType = cursor.getString(mimeTypeColumn) ?: "audio/mpeg"
@@ -79,23 +79,25 @@ class LocalMusicRepository @Inject constructor(
                 val dateAdded = cursor.getLong(dateAddedColumn)
                 val dateModified = cursor.getLong(dateModifiedColumn)
 
-                tracks.add(
-                    LocalTrack(
-                        id = id,
-                        title = title,
-                        artist = artist,
-                        album = album,
-                        duration = duration,
-                        filePath = filePath,
-                        size = size,
-                        albumId = albumId,
-                        albumArtUri = getAlbumArtUri(albumId),
-                        mimeType = mimeType,
-                        track = trackNumber,
-                        dateAdded = dateAdded,
-                        dateModified = dateModified
+                if (filePath.isNotEmpty()) {
+                    tracks.add(
+                        LocalTrack(
+                            id = id,
+                            title = title,
+                            artist = artist,
+                            album = album,
+                            duration = duration,
+                            filePath = filePath,
+                            size = size,
+                            albumId = albumId,
+                            albumArtUri = getAlbumArtUri(albumId),
+                            mimeType = mimeType,
+                            track = trackNumber,
+                            dateAdded = dateAdded,
+                            dateModified = dateModified
+                        )
                     )
-                )
+                }
             }
         }
 
@@ -257,7 +259,13 @@ class LocalMusicRepository @Inject constructor(
 
     suspend fun getDownloadedTracks(downloadPaths: List<String>): List<LocalTrack> = withContext(Dispatchers.IO) {
         val allTracks = getAllTracks()
-        allTracks.filter { track -> downloadPaths.any { path -> track.filePath.endsWith(path) } }
+        if (downloadPaths.isEmpty()) return@withContext emptyList()
+        
+        allTracks.filter { track -> 
+            downloadPaths.any { path -> 
+                track.filePath.contains(path, ignoreCase = true) 
+            } 
+        }
     }
 
     suspend fun deleteTrack(track: LocalTrack): Boolean = withContext(Dispatchers.IO) {

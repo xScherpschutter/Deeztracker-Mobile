@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.ExecutionException
@@ -138,7 +140,7 @@ class PlayerController @Inject constructor(
                     }
                     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                         updateState()
-                        syncCurrentTrack(mediaItem)
+                        syncCurrentTrack(mediaItem, reason)
                     }
                     override fun onRepeatModeChanged(repeatMode: Int) {
                         updateState()
@@ -154,19 +156,33 @@ class PlayerController @Inject constructor(
         }, MoreExecutors.directExecutor())
     }
 
-    private fun syncCurrentTrack(targetMediaItem: MediaItem? = null) {
+    private fun syncCurrentTrack(targetMediaItem: MediaItem? = null, reason: Int = -1) {
         val player = mediaController ?: return
         val itemToSync = targetMediaItem ?: player.currentMediaItem ?: return
         val mediaId = itemToSync.mediaId.toLongOrNull() ?: return
         
-        val track = _currentQueue.value.find { it.id == mediaId }
+        val currentTrack = _playerState.value.currentTrack
         
+        // Skip sync if the transition was caused by playlist metadata changes BUT the mediaId is the same.
+        // This prevents flickering/re-loading when shuffling or moving items.
+        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED && mediaId == currentTrack?.id) {
+            Log.d(TAG, "syncCurrentTrack: Redundant sync ignored for $mediaId")
+            return
+        }
+
+        val queue = _currentQueue.value
+        val track = queue.find { it.id == mediaId }
+        
+        Log.d(TAG, "syncCurrentTrack: mediaId=$mediaId found=${track != null} queueSize=${queue.size} reason=$reason")
+
         if (track != null) {
-            if (_playerState.value.currentTrack?.id != track.id || _playerState.value.lyrics.isEmpty()) {
+            if (currentTrack?.id != track.id || _playerState.value.lyrics.isEmpty()) {
                  _playerState.update { it.copy(currentTrack = track) }
                  checkFavoriteStatus()
                  fetchLyrics(track)
             }
+        } else {
+             Log.w(TAG, "syncCurrentTrack: Track NOT found in queue for mediaId $mediaId")
         }
     }
 
@@ -449,68 +465,80 @@ class PlayerController @Inject constructor(
         mediaController?.seekTo(position)
     }
 
+    private val shuffleMutex = Mutex()
+
     fun setShuffle(enabled: Boolean) {
         val player = mediaController ?: return
-        val currentQueueList = _currentQueue.value
-        if (currentQueueList.isEmpty()) return
+        if (_currentQueue.value.isEmpty()) return
 
-        val currentIndex = player.currentMediaItemIndex
-        val currentTrackId = player.currentMediaItem?.mediaId ?: return
-        
         controllerScope.launch {
-            if (enabled) {
-                // Store original queue if we don't have it
-                if (originalQueue == null) {
-                    originalQueue = currentQueueList.toList()
+            shuffleMutex.withLock {
+                val currentTrackId = player.currentMediaItem?.mediaId ?: return@withLock
+                val currentIndex = player.currentMediaItemIndex
+                val currentQueueList = _currentQueue.value
+                
+                Log.d(TAG, "setShuffle: enabled=$enabled currentIndex=$currentIndex currentTrackId=$currentTrackId")
+
+                if (enabled) {
+                    // Enable shuffle
+                    if (originalQueue == null) {
+                        originalQueue = currentQueueList.toList()
+                    }
+                    
+                    val targetQueue = currentQueueList.toMutableList()
+                    val playingTrack = targetQueue.find { it.id.toString() == currentTrackId }
+                    
+                    if (playingTrack != null) {
+                        // 1. Move current playing track to top gaplessly
+                        if (currentIndex != 0) {
+                            player.moveMediaItem(currentIndex, 0)
+                        }
+                        
+                        // 2. Shuffle others
+                        targetQueue.remove(playingTrack)
+                        targetQueue.shuffle()
+                        val finalQueue = listOf(playingTrack) + targetQueue
+                        
+                        // 3. Update internal queue FIRST so syncCurrentTrack finds it
+                        _currentQueue.value = finalQueue
+                        
+                        // 4. Create and replace items after index 0
+                        val shuffledItems = createMediaItems(targetQueue)
+                        if (shuffledItems.isNotEmpty()) {
+                             player.replaceMediaItems(1, player.mediaItemCount, shuffledItems)
+                        }
+                    }
+                } else {
+                    // Disable shuffle
+                    originalQueue?.let { original ->
+                        val targetIndexInOriginal = original.indexOfFirst { it.id.toString() == currentTrackId }.coerceAtLeast(0)
+                        Log.d(TAG, "setShuffle(disabled): restoring original order. targetIndex=$targetIndexInOriginal")
+
+                        // 1. Move back to original position
+                        if (currentIndex != targetIndexInOriginal) {
+                            player.moveMediaItem(currentIndex, targetIndexInOriginal)
+                        }
+                        
+                        // 2. Update internal queue
+                        _currentQueue.value = original
+                        
+                        // 3. Restore ranges before and after
+                        val itemsBefore = createMediaItems(original.subList(0, targetIndexInOriginal))
+                        val itemsAfter = createMediaItems(original.subList(targetIndexInOriginal + 1, original.size))
+                        
+                        if (targetIndexInOriginal > 0) {
+                             player.replaceMediaItems(0, targetIndexInOriginal, itemsBefore)
+                        }
+                        if (targetIndexInOriginal < original.size - 1) {
+                             player.replaceMediaItems(targetIndexInOriginal + 1, player.mediaItemCount, itemsAfter)
+                        }
+                    }
+                    originalQueue = null
                 }
                 
-                val targetQueue = currentQueueList.toMutableList()
-                val playingTrack = targetQueue.find { it.id.toString() == currentTrackId }
-                
-                if (playingTrack != null) {
-                    // 1. Move playing track to top gaplessly
-                    if (currentIndex != 0) {
-                        player.moveMediaItem(currentIndex, 0)
-                    }
-                    
-                    // 2. Shuffle rest of queue
-                    targetQueue.remove(playingTrack)
-                    targetQueue.shuffle()
-                    val finalQueue = listOf(playingTrack) + targetQueue
-                    
-                    _currentQueue.value = finalQueue
-                    // 3. Replace only the items after the first one (shuffled)
-                    if (finalQueue.size > 1) {
-                        player.replaceMediaItems(1, player.mediaItemCount, createMediaItems(targetQueue))
-                    }
-                }
-            } else {
-                // Restore original order
-                originalQueue?.let { original ->
-                    val targetIndexInOriginal = original.indexOfFirst { it.id.toString() == currentTrackId }.coerceAtLeast(0)
-                    
-                    // 1. Move current to its original position gaplessly
-                    if (currentIndex != targetIndexInOriginal) {
-                        player.moveMediaItem(currentIndex, targetIndexInOriginal)
-                    }
-                    
-                    // 2. Restore range before current track
-                    if (targetIndexInOriginal > 0) {
-                        player.replaceMediaItems(0, targetIndexInOriginal, createMediaItems(original.subList(0, targetIndexInOriginal)))
-                    }
-                    
-                    // 3. Restore range after current track
-                    if (targetIndexInOriginal < original.size - 1) {
-                        player.replaceMediaItems(targetIndexInOriginal + 1, player.mediaItemCount, createMediaItems(original.subList(targetIndexInOriginal + 1, original.size)))
-                    }
-                    
-                    _currentQueue.value = original
-                }
-                originalQueue = null
+                _playerState.update { it.copy(isShuffleEnabled = enabled) }
+                updateState()
             }
-            
-            _playerState.update { it.copy(isShuffleEnabled = enabled) }
-            updateState()
         }
     }
 

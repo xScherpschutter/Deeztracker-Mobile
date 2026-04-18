@@ -118,12 +118,6 @@ class MusicService : MediaLibraryService() {
         player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 updatePlayerState()
-                if (playbackState == Player.STATE_ENDED) {
-                    if (player.hasNextMediaItem()) {
-                        player.seekToNextMediaItem()
-                        player.play()
-                    }
-                }
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
