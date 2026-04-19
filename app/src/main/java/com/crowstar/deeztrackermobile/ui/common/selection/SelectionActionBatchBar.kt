@@ -1,6 +1,8 @@
 package com.crowstar.deeztrackermobile.ui.common.selection
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -8,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -46,18 +49,20 @@ fun SelectionActionBatchBar(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Selection Info
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Left Side: Controls & Badge
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.wrapContentWidth()
+            ) {
                 IconButton(onClick = onClose) {
                     Icon(Icons.Default.Close, contentDescription = stringResource(R.string.selection_close), tint = Color.White)
                 }
                 
                 if (showSelectAll) {
-                    // Master Checkbox Toggle
                     IconButton(onClick = onToggleSelectAll) {
                         Icon(
                             imageVector = if (isAllSelected) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
@@ -68,18 +73,31 @@ fun SelectionActionBatchBar(
                 }
                 
                 Spacer(modifier = Modifier.width(4.dp))
-                Column {
+                
+                // The Badge: Compact numeric display
+                Box(
+                    modifier = Modifier
+                        .sizeIn(minWidth = 28.dp, minHeight = 28.dp)
+                        .padding(horizontal = 4.dp)
+                        .clip(CircleShape)
+                        .background(Primary),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = stringResource(R.string.selection_count_format, selectedCount),
+                        text = "$selectedCount",
                         color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp)
                     )
                 }
             }
 
-            // Actions
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Right Side: Actions
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.wrapContentWidth()
+            ) {
                 when (context) {
                     SelectionContext.LOCAL -> {
                         ActionButton(icon = Icons.Default.Delete, tint = Color.Red, onClick = onDelete)
@@ -115,7 +133,7 @@ private fun ActionButton(
             imageVector = icon,
             contentDescription = null,
             tint = tint,
-            modifier = Modifier.size(26.dp)
+            modifier = Modifier.size(24.dp)
         )
     }
 }
