@@ -141,8 +141,8 @@ fun PlaylistScreen(
                                 selectionViewModel.toggleSelection(
                                     SelectedTrack.Remote(
                                         track = track,
-                                        source = playlist?.title,
-                                        backupAlbumArt = playlist?.pictureBig ?: playlist?.pictureMedium
+                                        source = track.album?.title ?: playlist?.title,
+                                        backupAlbumArt = track.album?.coverBig ?: track.album?.coverMedium ?: playlist?.pictureBig ?: playlist?.pictureMedium
                                     )
                                 )
                             } else {
@@ -154,12 +154,18 @@ fun PlaylistScreen(
                                 context = SelectionContext.REMOTE, 
                                 initialTrack = SelectedTrack.Remote(
                                     track = track,
-                                    source = playlist?.title,
-                                    backupAlbumArt = playlist?.pictureBig ?: playlist?.pictureMedium
+                                    source = track.album?.title ?: playlist?.title,
+                                    backupAlbumArt = track.album?.coverBig ?: track.album?.coverMedium ?: playlist?.pictureBig ?: playlist?.pictureMedium
                                 )
                             )
                         },
-                        onAddToQueue = { viewModel.playerController.addToQueue(track) },
+                        onAddToQueue = { 
+                            viewModel.playerController.addToQueue(
+                                track = track,
+                                source = track.album?.title ?: playlist?.title,
+                                backupAlbumArt = track.album?.coverBig ?: track.album?.coverMedium ?: playlist?.pictureBig ?: playlist?.pictureMedium
+                            ) 
+                        },
                         playlistTitle = playlist?.title,
                         playlistArt = playlist?.pictureBig ?: playlist?.pictureMedium
                     )
@@ -284,7 +290,7 @@ private fun PlaylistTrackItem(
         TrackOptionsMenu(
             track = SelectedTrack.Remote(
                 track = track,
-                source = playlistTitle,
+                source = track.album?.title ?: playlistTitle,
                 backupAlbumArt = track.album?.coverBig ?: track.album?.coverMedium ?: playlistArt
             ),
             onAddToQueue = onAddToQueue
