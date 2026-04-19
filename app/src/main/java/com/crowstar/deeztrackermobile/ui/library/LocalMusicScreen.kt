@@ -36,6 +36,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectionViewModel
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectedTrack
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectionContext
 import coil.compose.AsyncImage
 import com.crowstar.deeztrackermobile.features.localmusic.LocalTrack
 import com.crowstar.deeztrackermobile.ui.theme.BackgroundDark
@@ -70,6 +75,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.launch
 import com.crowstar.deeztrackermobile.ui.common.AlphabeticalFastScroller
 import com.crowstar.deeztrackermobile.ui.common.MarqueeText
+import com.crowstar.deeztrackermobile.ui.common.PlaylistActionHoster
 import com.crowstar.deeztrackermobile.features.localmusic.TrackMetadata
 import com.crowstar.deeztrackermobile.ui.library.EditTrackDialog
 import com.crowstar.deeztrackermobile.ui.utils.LocalSnackbarController
@@ -77,7 +83,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.hilt.navigation.compose.hiltViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun LocalMusicScreen(
     onTrackClick: (LocalTrack, List<LocalTrack>, String?) -> Unit,
@@ -85,7 +91,10 @@ fun LocalMusicScreen(
     onArtistClick: (LocalArtist) -> Unit,
     onImportPlaylist: () -> Unit,
     onAddToQueue: ((LocalTrack) -> Unit)? = null,
+    selectionViewModel: SelectionViewModel,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp,
+    onSelectAllUpdate: (() -> Unit) -> Unit = {},
+    onTrackCountUpdate: (Int) -> Unit = {},
     viewModel: LocalMusicViewModel = hiltViewModel()
 ) {
     val tracks by viewModel.tracks.collectAsState()
@@ -101,23 +110,19 @@ fun LocalMusicScreen(
     val snackbarController = LocalSnackbarController.current
     val localMusicTitle = stringResource(R.string.local_music_title)
     
-    // Search Query State - Persist across navigation
     var searchQuery by rememberSaveable { mutableStateOf("") }
     
-    // Re-apply filter when loading completes or query changes (handles screen restoration)
     LaunchedEffect(isLoading, searchQuery) {
         if (!isLoading) {
              viewModel.searchTracks(searchQuery)
         }
     }
     
-    // Scroll State - Persist across navigation
     val tracksListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     val albumsGridState = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() }
     val artistsGridState = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() }
     val playlistsListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     
-    // Context Menu Actions
     fun shareTrack(track: LocalTrack) {
         val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
             type = "audio/*"
@@ -130,10 +135,7 @@ fun LocalMusicScreen(
         }
     }
 
-
-
     val deleteIntentSender by viewModel.deleteIntentSender.collectAsState()
-    
     val deleteLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
@@ -150,11 +152,13 @@ fun LocalMusicScreen(
         }
     }
 
-    var trackForPlaylist by remember { mutableStateOf<LocalTrack?>(null) }
     var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
 
-    // Edit Metadata State
+    LaunchedEffect(selectedPlaylistId) {
+        selectionViewModel.exitSelectionMode()
+    }
+
     var trackToEdit by remember { mutableStateOf<LocalTrack?>(null) }
     var metadataToEdit by remember { mutableStateOf<TrackMetadata?>(null) }
     val metadataEditor = remember { com.crowstar.deeztrackermobile.features.localmusic.MetadataEditor(context) }
@@ -196,7 +200,6 @@ fun LocalMusicScreen(
         )
     }
 
-    // Permissions
     var hasPermission by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -231,14 +234,33 @@ fun LocalMusicScreen(
 
     val selectedPlaylist = playlists.find { it.id == selectedPlaylistId }
 
+    // DYNAMIC SELECT ALL LOGIC
+    val downloadTrigger by viewModel.downloadManager.downloadRefreshTrigger.collectAsState()
+    val playlistTracksWithState = remember(selectedPlaylist, unfilteredTracks, downloadTrigger) {
+        selectedPlaylist?.let { viewModel.getPlaylistTracksUiState(it, unfilteredTracks) } ?: emptyList()
+    }
+
+    LaunchedEffect(selectedPlaylist, tracks, playlistTracksWithState, selectedView) {
+        if (selectedPlaylist != null) {
+            val pTracks = playlistTracksWithState.map { it.track }
+            onTrackCountUpdate(pTracks.size)
+            onSelectAllUpdate {
+                selectionViewModel.selectAll(pTracks.map { SelectedTrack.Local(it) })
+            }
+        } else if (selectedView == 0) { // Songs Tab
+            onTrackCountUpdate(tracks.size)
+            onSelectAllUpdate {
+                selectionViewModel.selectAll(tracks.map { SelectedTrack.Local(it) })
+            }
+        } else {
+            onTrackCountUpdate(0)
+            onSelectAllUpdate { }
+        }
+    }
+
     if (selectedPlaylist != null) {
         BackHandler(enabled = selectedPlaylistId != null) {
             selectedPlaylistId = null
-        }
-        
-        val downloadTrigger by viewModel.downloadManager.downloadRefreshTrigger.collectAsState()
-        val playlistTracksWithState = remember(selectedPlaylist, unfilteredTracks, downloadTrigger) {
-            viewModel.getPlaylistTracksUiState(selectedPlaylist, unfilteredTracks)
         }
         
         Surface(
@@ -271,6 +293,7 @@ fun LocalMusicScreen(
                     onShareTrack = { track -> shareTrack(track) },
                     onAddToQueue = { track -> onAddToQueue?.invoke(track) },
                     onEditTrack = { track -> trackToEdit = track },
+                    selectionViewModel = selectionViewModel,
                     contentPadding = contentPadding
                 )
             }
@@ -286,13 +309,11 @@ fun LocalMusicScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Header Section (Integrated manually since we're in a global Scaffold now)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(BackgroundDark)
             ) {
-                // Header Row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -313,7 +334,7 @@ fun LocalMusicScreen(
                         modifier = Modifier.weight(1f)
                     )
                     
-                    if (selectedView == 3) { // Playlists Tab
+                    if (selectedView == 3) {
                          IconButton(onClick = onImportPlaylist) {
                              Icon(Icons.Default.Input, contentDescription = "Import Playlist", tint = Color.White)
                          }
@@ -331,7 +352,6 @@ fun LocalMusicScreen(
                     }
                 }
 
-                // Search Bar
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { 
@@ -358,7 +378,6 @@ fun LocalMusicScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Tabs
                 TabRow(
                     selectedTabIndex = selectedView,
                     containerColor = BackgroundDark,
@@ -393,7 +412,6 @@ fun LocalMusicScreen(
                 }
             }
 
-            // Content List
             if (!hasPermission) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -421,21 +439,35 @@ fun LocalMusicScreen(
                     CircularProgressIndicator(color = Primary)
                 }
             } else {
-                // View Switching Logic
                 Box(modifier = Modifier.fillMaxSize()) {
                     when (selectedView) {
-                        0 -> LocalTracksList(
-                            tracks = tracks,
-                            state = tracksListState,
-                            onTrackClick = { track, list -> onTrackClick(track, list, localMusicTitle) },
-                            onShare = { track -> shareTrack(track) },
-                            onDelete = { track -> viewModel.requestDeleteTrack(track) },
-                            onEdit = { track -> trackToEdit = track },
-                            onAddToPlaylist = { track -> trackForPlaylist = track },
-                            onAddToQueue = { track -> onAddToQueue?.invoke(track) },
-                            totalStorage = totalStorage,
-                            contentPadding = contentPadding
-                        )
+                        0 -> {
+                            val selectedTracksFlow by selectionViewModel.selectedTracks.collectAsState()
+                            val isSelectionMode by selectionViewModel.isSelectionMode.collectAsState()
+                            
+                            LocalTracksList(
+                                tracks = tracks,
+                                state = tracksListState,
+                                selectedTracks = selectedTracksFlow.map { it.id }.toSet(),
+                                isSelectionMode = isSelectionMode,
+                                onTrackClick = { track, list -> 
+                                    if (isSelectionMode) {
+                                        selectionViewModel.toggleSelection(SelectedTrack.Local(track))
+                                    } else {
+                                        onTrackClick(track, list, localMusicTitle)
+                                    }
+                                },
+                                onTrackLongClick = { track ->
+                                    selectionViewModel.enterSelectionMode(SelectionContext.LOCAL, SelectedTrack.Local(track))
+                                },
+                                onShare = { track -> shareTrack(track) },
+                                onDelete = { track -> viewModel.requestDeleteTrack(track) },
+                                onEdit = { track -> trackToEdit = track },
+                                onAddToQueue = { track -> onAddToQueue?.invoke(track) },
+                                totalStorage = totalStorage,
+                                contentPadding = contentPadding
+                            )
+                        }
                         1 -> LocalAlbumsGrid(albums, albumsGridState, onAlbumClick, contentPadding)
                         2 -> LocalArtistsGrid(artists, artistsGridState, onArtistClick, contentPadding)
                         3 -> LocalPlaylistsScreen(
@@ -460,21 +492,6 @@ fun LocalMusicScreen(
             }
         }
 
-        // Overlay dialogs
-        if (trackForPlaylist != null) {
-            com.crowstar.deeztrackermobile.ui.playlist.AddToPlaylistBottomSheet(
-                playlists = playlists,
-                onDismiss = { trackForPlaylist = null },
-                onPlaylistClick = { playlist ->
-                    trackForPlaylist?.let { track ->
-                       viewModel.addTrackToPlaylist(playlist, track)
-                    }
-                    trackForPlaylist = null
-                },
-                onCreateNewPlaylist = { showCreatePlaylistDialog = true }
-            )
-        }
-
         if (showCreatePlaylistDialog) {
             com.crowstar.deeztrackermobile.ui.playlist.CreatePlaylistDialog(
                 onDismiss = { showCreatePlaylistDialog = false },
@@ -495,18 +512,19 @@ fun LocalMusicScreen(
 fun LocalTracksList(
     tracks: List<LocalTrack>,
     state: LazyListState = rememberLazyListState(),
+    selectedTracks: Set<Long> = emptySet(),
+    isSelectionMode: Boolean = false,
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
+    onTrackLongClick: (LocalTrack) -> Unit = {},
     onShare: (LocalTrack) -> Unit,
     onDelete: (LocalTrack) -> Unit,
     onEdit: (LocalTrack) -> Unit,
-    onAddToPlaylist: (LocalTrack) -> Unit,
     onAddToQueue: ((LocalTrack) -> Unit)? = null,
     totalStorage: Long,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     val scope = rememberCoroutineScope()
     
-    // Group tracks by first letter and create index map
     val (letterIndexMap, currentLetter) = remember(tracks) {
         val grouped = mutableMapOf<Char, Int>()
         tracks.forEachIndexed { index, track ->
@@ -524,7 +542,6 @@ fun LocalTracksList(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Stats Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -540,9 +557,8 @@ fun LocalTracksList(
                 
                 Spacer(modifier = Modifier.width(12.dp))
                 
-                // Simple visual bar representation
                 val totalSize = tracks.sumOf { it.size }
-                val progress = if (totalStorage > 0) totalSize.ScaffoldContentProvider(totalStorage.toFloat()) else 0f
+                val progress = if (totalStorage > 0) totalSize.toFloat() / totalStorage.toFloat() else 0f
                 
                 Box(
                     modifier = Modifier
@@ -553,7 +569,7 @@ fun LocalTracksList(
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(progress.coerceIn(0.01f, 1f)) // Ensure at least a tiny sliver is visible if > 0
+                            .fillMaxWidth(progress.coerceIn(0.01f, 1f))
                             .fillMaxHeight()
                             .background(Primary)
                     )
@@ -572,23 +588,24 @@ fun LocalTracksList(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = state,
-                contentPadding = PaddingValues(bottom = 16.dp + contentPadding, end = 36.dp) // Space for fast scroller + Dynamic Bottom Padding
+                contentPadding = PaddingValues(bottom = 16.dp + contentPadding, end = 36.dp)
             ) {
                 items(tracks, key = { it.id }) { track ->
                     LocalTrackItem(
                         track = track,
+                        isSelected = selectedTracks.contains(track.id),
+                        inSelectionMode = isSelectionMode,
                         onShare = { onShare(track) },
                         onDelete = { onDelete(track) },
                         onEdit = { onEdit(track) },
-                        onAddToPlaylist = { onAddToPlaylist(track) },
                         onAddToQueue = { onAddToQueue?.invoke(track) },
-                        onClick = { onTrackClick(track, tracks) }
+                        onClick = { onTrackClick(track, tracks) },
+                        onLongClick = { onTrackLongClick(track) }
                     )
                 }
             }
         }
         
-        // Sync fast scroller with manual scroll position
         LaunchedEffect(state.firstVisibleItemIndex) {
             val firstVisibleTrack = tracks.getOrNull(state.firstVisibleItemIndex)
             if (firstVisibleTrack != null) {
@@ -599,7 +616,6 @@ fun LocalTracksList(
             }
         }
         
-        // Fast Scroller Overlay
         AlphabeticalFastScroller(
             modifier = Modifier.align(Alignment.CenterEnd),
             bottomInset = contentPadding,
@@ -611,7 +627,6 @@ fun LocalTracksList(
                         state.scrollToItem(index)
                         currentLetter.value = letter
                     } else {
-                        // Find next available letter
                         val availableLetters = letterIndexMap.keys.sorted()
                         val nextLetter = availableLetters.firstOrNull { it >= letter }
                         if (nextLetter != null) {
@@ -627,8 +642,6 @@ fun LocalTracksList(
     }
 }
 
-private fun Long.ScaffoldContentProvider(total: Float): Float = this.toFloat() / total
-
 @Composable
 fun LocalAlbumsGrid(
     albums: List<LocalAlbum>, 
@@ -636,7 +649,6 @@ fun LocalAlbumsGrid(
     onAlbumClick: (LocalAlbum) -> Unit,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
-    // Placeholder for Albums Grid
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         state = state,
@@ -696,7 +708,6 @@ fun LocalArtistsGrid(
     onArtistClick: (LocalArtist) -> Unit,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
-    // Placeholder for Artists Grid
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         state = state,
@@ -705,7 +716,7 @@ fun LocalArtistsGrid(
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(artists, key = { it.name }) { artist ->
-            ArtistGridItem(artist = artist, onClick = { onArtistClick(artist) })
+            ArtistGridItem(artist = artist, onClick = { artist.let { onArtistClick(it) } })
         }
     }
 }
@@ -746,195 +757,6 @@ fun ArtistGridItem(artist: LocalArtist, onClick: () -> Unit) {
             maxLines = 1,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
-        )
-    }
-}
-
-@Composable
-fun LocalTrackItem(
-    track: LocalTrack,
-    onShare: (() -> Unit)? = null,
-    onDelete: () -> Unit,
-    onEdit: (() -> Unit)? = null,
-    onAddToPlaylist: (() -> Unit)? = null,
-    onAddToQueue: (() -> Unit)? = null,
-    onClick: () -> Unit,
-    deleteLabel: String = stringResource(R.string.action_delete),
-    showAllOptions: Boolean = true
-) {
-    var showMenu by remember { mutableStateOf(false) }
-    var showDetails by remember { mutableStateOf(false) }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { 
-                android.util.Log.d("DeezTracker", "LocalTrackItem clicked: ${track.title}")
-                onClick() 
-            }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Album Art
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(SurfaceDark),
-            contentAlignment = Alignment.Center
-        ) {
-            com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
-                model = track.albumArtUri,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        // Info
-        Column(modifier = Modifier.weight(1f)) {
-            MarqueeText(
-                text = track.title ?: "",
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                MarqueeText(
-                    text = track.artist ?: "",
-                    color = TextGray,
-                    fontSize = 12.sp,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-                
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                // Format Badge
-                FormatBadge(track.mimeType)
-                
-                if (track.size > 0L) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    
-                    Text(
-                        text = track.getFormattedSize().replace(" ", ""), // Compact size
-                        color = TextGray,
-                        fontSize = 12.sp
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        // Menu
-        Box {
-            IconButton(
-                onClick = { showMenu = true },
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    Icons.Default.MoreVert,
-                    contentDescription = stringResource(R.string.player_options),
-                    tint = TextGray
-                )
-            }
-            
-            DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false },
-                modifier = Modifier.background(SurfaceDark)
-            ) {
-                if (showAllOptions) {
-                    if (onShare != null) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_share), color = Color.White) },
-                            onClick = { 
-                                showMenu = false
-                                onShare()
-                            }
-                        )
-                    }
-                    if (onAddToPlaylist != null) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_add_to_playlist), color = Color.White) },
-                            onClick = {
-                                showMenu = false
-                                onAddToPlaylist()
-                            }
-                        )
-                    }
-                    if (onAddToQueue != null) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_add_to_queue), color = Color.White) },
-                            onClick = {
-                                showMenu = false
-                                onAddToQueue()
-                            }
-                        )
-                    }
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_details), color = Color.White) },
-                        onClick = { 
-                            showMenu = false 
-                            showDetails = true
-                        }
-                    )
-                    if (onEdit != null) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_edit), color = Color.White) },
-                            onClick = { 
-                                showMenu = false
-                                onEdit()
-                            }
-                        )
-                    }
-                }
-                DropdownMenuItem(
-                    text = { Text(deleteLabel, color = Color.Red) },
-                    onClick = { 
-                        showMenu = false
-                        onDelete()
-                    }
-                )
-            }
-        }
-    }
-
-    if (showDetails) {
-        com.crowstar.deeztrackermobile.ui.common.TrackDetailsDialog(
-            track = track,
-            onDismiss = { showDetails = false }
-        )
-    }
-}
-
-
-
-@Composable
-fun FormatBadge(mimeType: String) {
-    val (text, color) = when {
-        mimeType.contains("flac") -> "FLAC" to Color(0xFF00A2E8) // Blue
-        mimeType.contains("wav") -> "WAV" to Color(0xFFFFC107) // Amber
-        mimeType.contains("mpeg") || mimeType.contains("mp3") -> "MP3" to TextGray
-        mimeType.contains("mp4") || mimeType.contains("aac") -> "AAC" to TextGray
-        else -> "AUDIO" to TextGray
-    }
-    
-    val backgroundColor = if (text == "FLAC" || text == "WAV") color.copy(alpha = 0.2f) else SurfaceDark
-    val textColor = if (text == "FLAC" || text == "WAV") color else TextGray
-
-    Box(
-        modifier = Modifier
-            .background(backgroundColor, RoundedCornerShape(4.dp))
-            .padding(horizontal = 4.dp, vertical = 2.dp)
-    ) {
-        Text(
-            text = text,
-            color = textColor,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold
         )
     }
 }

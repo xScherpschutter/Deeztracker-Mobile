@@ -23,7 +23,7 @@ class DownloadsViewModel @Inject constructor(
     private val application: Application,
     private val repository: LocalMusicRepository,
     private val playlistRepository: LocalPlaylistRepository,
-    private val downloadManager: DownloadManager
+    val downloadManager: DownloadManager
 ) : AndroidViewModel(application) {
 
     private val _tracks = MutableStateFlow<List<LocalTrack>>(emptyList())

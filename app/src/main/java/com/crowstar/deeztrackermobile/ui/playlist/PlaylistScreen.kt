@@ -19,6 +19,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectionViewModel
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectedTrack
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectionContext
 import coil.compose.AsyncImage
 import com.crowstar.deeztrackermobile.features.deezer.Playlist
 import com.crowstar.deeztrackermobile.features.deezer.Track
@@ -33,23 +38,18 @@ import com.crowstar.deeztrackermobile.ui.common.MarqueeText
 import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.R
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-
-
 import com.crowstar.deeztrackermobile.features.localmusic.toPlaylistTrack
 import com.crowstar.deeztrackermobile.ui.utils.LocalSnackbarController
-import com.crowstar.deeztrackermobile.ui.utils.SnackbarController
-import androidx.compose.runtime.CompositionLocalProvider
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PlaylistScreen(
     playlistId: Long,
     onBackClick: () -> Unit,
+    selectionViewModel: SelectionViewModel,
+    contentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: PlaylistViewModel = hiltViewModel()
 ) {
     val playlist by viewModel.playlist.collectAsState()
@@ -57,215 +57,150 @@ fun PlaylistScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     
     val context = LocalContext.current
-    val downloadState by viewModel.downloadState.collectAsState()
-    val downloadedKeys by viewModel.downloadManager.downloadedKeys.collectAsState()
-    val activeDownloads by viewModel.downloadManager.activeDownloads.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val downloadManager = viewModel.downloadManager
+    val downloadedKeys by downloadManager.downloadedKeys.collectAsState()
+    val activeDownloads by downloadManager.activeDownloads.collectAsState()
+    val selectedTracks by selectionViewModel.selectedTracks.collectAsState()
+    val isSelectionMode by selectionViewModel.isSelectionMode.collectAsState()
+    
     val scope = rememberCoroutineScope()
-    val snackbarController = remember { SnackbarController(snackbarHostState, scope) }
+    val snackbarController = LocalSnackbarController.current
 
-    var trackToAddToPlaylist by remember { mutableStateOf<com.crowstar.deeztrackermobile.features.deezer.Track?>(null) }
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
-    val localPlaylists by viewModel.playlists.collectAsState()
 
     LaunchedEffect(playlistId) {
         viewModel.loadPlaylist(playlistId)
     }
-    
-    LaunchedEffect(downloadState) {
-        when (val state = downloadState) {
-            is DownloadState.Completed -> {
-                snackbarHostState.showSnackbar(
-                    message = context.getString(R.string.notification_download_completed, state.title),
-                    duration = SnackbarDuration.Short
-                )
-                viewModel.resetDownloadState()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.Default.ArrowBack, stringResource(R.string.action_back), tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
+        },
+        containerColor = BackgroundDark
+    ) { padding ->
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Primary)
             }
-            is DownloadState.Error -> {
-                snackbarHostState.showSnackbar(
-                    message = context.getString(R.string.notification_download_failed, state.message),
-                    duration = SnackbarDuration.Short
-                )
-                viewModel.resetDownloadState()
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(bottom = contentPadding)
+            ) {
+                item {
+                    playlist?.let { playlistData ->
+                        PlaylistHeader(playlistData)
+                    }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = {
+                            playlist?.let { playlistData ->
+                                viewModel.startPlaylistDownload(playlistData.id, playlistData.title)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                        shape = RoundedCornerShape(24.dp)
+                    ) {
+                        Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.action_download_playlist), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
+                items(tracks.size) { index ->
+                    val track = tracks[index]
+                    val isDownloaded = downloadedKeys.contains(
+                        downloadManager.generateTrackKey(track.title ?: "", track.artist?.name ?: "")
+                    )
+                    
+                    PlaylistTrackItem(
+                        track = track,
+                        index = index + 1,
+                        isDownloaded = isDownloaded,
+                        isDownloading = activeDownloads.contains(track.id.toString()),
+                        isSelected = selectedTracks.any { it.id == track.id },
+                        inSelectionMode = isSelectionMode,
+                        onDownloadClick = {
+                            viewModel.startTrackDownload(track.id, track.title ?: "Unknown Track")
+                        },
+                        onStreamClick = {
+                            if (isSelectionMode) {
+                                selectionViewModel.toggleSelection(
+                                    SelectedTrack.Remote(
+                                        track = track,
+                                        source = playlist?.title,
+                                        backupAlbumArt = playlist?.pictureBig ?: playlist?.pictureMedium
+                                    )
+                                )
+                            } else {
+                                viewModel.playPlaylist(index)
+                            }
+                        },
+                        onLongClick = {
+                            selectionViewModel.enterSelectionMode(
+                                context = SelectionContext.REMOTE, 
+                                initialTrack = SelectedTrack.Remote(
+                                    track = track,
+                                    source = playlist?.title,
+                                    backupAlbumArt = playlist?.pictureBig ?: playlist?.pictureMedium
+                                )
+                            )
+                        },
+                        onAddToQueue = { viewModel.playerController.addToQueue(track) },
+                        playlistTitle = playlist?.title,
+                        playlistArt = playlist?.pictureBig ?: playlist?.pictureMedium
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(80.dp))
+                }
             }
-            else -> { /* Idle or Downloading - no snackbar */ }
         }
     }
 
-    CompositionLocalProvider(LocalSnackbarController provides snackbarController) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("") },
-                    navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(Icons.Default.ArrowBack, stringResource(R.string.action_back), tint = Color.White)
-                        }
-                    },
-                    actions = {
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent
+    if (showCreatePlaylistDialog) {
+        com.crowstar.deeztrackermobile.ui.playlist.CreatePlaylistDialog(
+            onDismiss = { showCreatePlaylistDialog = false },
+            onCreate = { newPlaylistName ->
+                scope.launch {
+                    viewModel.playlistRepository.createPlaylist(newPlaylistName)
+                    snackbarController.showSnackbar(
+                        context.getString(R.string.toast_playlist_created, newPlaylistName)
                     )
-                )
-            },
-
-            containerColor = BackgroundDark,
-            snackbarHost = { SnackbarHost(snackbarHostState) }
-        ) { padding ->
-            if (isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = Primary)
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                ) {
-                    // Playlist Header
-                    item {
-                        playlist?.let { playlistData ->
-                            PlaylistHeader(playlistData)
-                        }
-                    }
-
-                    // Download Playlist Button
-                    item {
-                        Spacer(modifier = Modifier.height(24.dp))
-                        val isDownloading = downloadState is DownloadState.Downloading
-                        Button(
-                            onClick = {
-                                playlist?.let { playlistData ->
-                                    viewModel.startPlaylistDownload(playlistData.id, playlistData.title)
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .height(48.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Primary
-                            ),
-                            shape = RoundedCornerShape(24.dp)
-                        ) {
-                            if (isDownloading && (downloadState as? DownloadState.Downloading)?.itemId == playlistId.toString()) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    color = Color.White,
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.action_downloading), fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                            } else {
-                                Icon(
-                                    Icons.Default.Download,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.action_download_playlist), fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(24.dp))
-                    }
-
-                    // Tracks List
-                    items(tracks.size) { index ->
-                        val track = tracks[index]
-                            // FAST CHECK: O(1) in-memory check
-                            val isDownloaded = downloadedKeys.contains(
-                                viewModel.downloadManager.generateTrackKey(
-                                    track.title ?: "",
-                                    track.artist?.name ?: ""
-                                )
-                            )
-                            
-                            PlaylistTrackItem(
-                                track = track,
-                                index = index + 1,
-                                isDownloaded = isDownloaded,
-                                isDownloading = activeDownloads.contains(track.id.toString()),
-                                onDownloadClick = {
-                                    viewModel.startTrackDownload(track.id, track.title ?: "Unknown Track")
-                                },
-                                onStreamClick = {
-                                    viewModel.playPlaylist(index)
-                                },
-                                onAddToPlaylist = { trackToAddToPlaylist = track },
-                                onAddToQueue = { viewModel.playerController.addToQueue(track) }
-                            )
-
-                        }
-
-                    item {
-                        Spacer(modifier = Modifier.height(100.dp))
-                    }
-                }
+                showCreatePlaylistDialog = false
             }
-        }
-
-        if (trackToAddToPlaylist != null) {
-            com.crowstar.deeztrackermobile.ui.playlist.AddToPlaylistBottomSheet(
-                playlists = localPlaylists,
-                onDismiss = { trackToAddToPlaylist = null },
-                onPlaylistClick = { playlist ->
-                    val trackToSave = trackToAddToPlaylist
-                    scope.launch {
-                        viewModel.playlistRepository.addTrackToPlaylist(
-                            playlist.id, 
-                            trackToSave?.toPlaylistTrack() ?: return@launch
-                        )
-                    }
-                    trackToAddToPlaylist = null
-                },
-                onCreateNewPlaylist = { showCreatePlaylistDialog = true }
-            )
-        }
-
-        if (showCreatePlaylistDialog) {
-            com.crowstar.deeztrackermobile.ui.playlist.CreatePlaylistDialog(
-                onDismiss = { showCreatePlaylistDialog = false },
-                onCreate = { newPlaylistName ->
-                    scope.launch {
-                        viewModel.playlistRepository.createPlaylist(newPlaylistName)
-                        snackbarController.showSnackbar(
-                            context.getString(R.string.toast_playlist_created, newPlaylistName)
-                        )
-                    }
-                    showCreatePlaylistDialog = false
-                }
-            )
-        }
+        )
     }
 }
 
 @Composable
 private fun PlaylistHeader(playlist: Playlist) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Playlist Cover
         AsyncImage(
             model = playlist.pictureXl ?: playlist.pictureBig,
             contentDescription = playlist.title,
-            modifier = Modifier
-                .size(240.dp)
-                .clip(RoundedCornerShape(12.dp)),
+            modifier = Modifier.size(240.dp).clip(RoundedCornerShape(12.dp)),
             contentScale = ContentScale.Crop
         )
-
         Spacer(modifier = Modifier.height(24.dp))
-
-        // Playlist Title
         MarqueeText(
             text = playlist.title ?: "",
             fontSize = 24.sp,
@@ -274,10 +209,7 @@ private fun PlaylistHeader(playlist: Playlist) {
             modifier = Modifier.fillMaxWidth(),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
-
         Spacer(modifier = Modifier.height(8.dp))
-
-        // Creator Name
         MarqueeText(
             text = playlist.creator?.name ?: "Unknown Creator",
             fontSize = 16.sp,
@@ -285,16 +217,12 @@ private fun PlaylistHeader(playlist: Playlist) {
             modifier = Modifier.fillMaxWidth(),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
-
         Spacer(modifier = Modifier.height(8.dp))
-
-        // Playlist Info
         val duration = playlist.duration?.let { 
             val hours = it / 3600
             val minutes = (it % 3600) / 60
             if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
         } ?: ""
-        
         Text(
             text = "${playlist.nbTracks ?: 0} Tracks • $duration",
             fontSize = 12.sp,
@@ -303,96 +231,63 @@ private fun PlaylistHeader(playlist: Playlist) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PlaylistTrackItem(
     track: Track,
     index: Int,
     isDownloaded: Boolean = false,
     isDownloading: Boolean = false,
+    isSelected: Boolean = false,
+    inSelectionMode: Boolean = false,
     onDownloadClick: () -> Unit = {},
     onStreamClick: () -> Unit = {},
-    onAddToPlaylist: () -> Unit = {},
-    onAddToQueue: () -> Unit = {}
+    onLongClick: () -> Unit = {},
+    onAddToQueue: () -> Unit = {},
+    playlistTitle: String?,
+    playlistArt: String?
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                if (index % 2 == 0) SurfaceDark.copy(alpha = 0.3f) else Color.Transparent
+                if (isSelected) Primary.copy(alpha = 0.15f)
+                else if (index % 2 == 0) SurfaceDark.copy(alpha = 0.3f) 
+                else Color.Transparent
             )
-            .clickable(onClick = onStreamClick)
+            .combinedClickable(onClick = onStreamClick, onLongClick = onLongClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Track Cover
+        if (inSelectionMode) {
+            Checkbox(checked = isSelected, onCheckedChange = { onStreamClick() }, colors = CheckboxDefaults.colors(checkedColor = Primary))
+            Spacer(modifier = Modifier.width(8.dp))
+        }
         AsyncImage(
             model = track.album?.coverSmall,
-            contentDescription = track.title,
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(4.dp)),
+            contentDescription = null,
+            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(4.dp)),
             contentScale = ContentScale.Crop
         )
-
         Spacer(modifier = Modifier.width(12.dp))
-
-        // Track Info
         Column(modifier = Modifier.weight(1f)) {
-            MarqueeText(
-                text = track.title,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White,
-                modifier = Modifier.fillMaxWidth()
-            )
-            MarqueeText(
-                text = track.artist?.name ?: "Unknown Artist",
-                fontSize = 12.sp,
-                color = TextGray,
-                modifier = Modifier.fillMaxWidth()
-            )
+            MarqueeText(text = track.title ?: "", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.fillMaxWidth())
+            MarqueeText(text = track.artist?.name ?: "Unknown Artist", fontSize = 12.sp, color = TextGray, modifier = Modifier.fillMaxWidth())
         }
-
-        // Duration
-        Text(
-            text = formatDuration(track.duration ?: 0),
-            fontSize = 12.sp,
-            color = TextGray,
-            modifier = Modifier.padding(horizontal = 12.dp)
+        Text(text = formatDuration(track.duration ?: 0), fontSize = 12.sp, color = TextGray, modifier = Modifier.padding(horizontal = 12.dp))
+        IconButton(onClick = onDownloadClick, enabled = !isDownloading && !isDownloaded) {
+            if (isDownloaded) Icon(Icons.Default.Check, contentDescription = null, tint = Color.Green, modifier = Modifier.size(20.dp))
+            else if (isDownloading) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Primary, strokeWidth = 2.dp)
+            else Icon(Icons.Default.Download, contentDescription = null, tint = Primary, modifier = Modifier.size(20.dp))
+        }
+        
+        TrackOptionsMenu(
+            track = SelectedTrack.Remote(
+                track = track,
+                source = playlistTitle,
+                backupAlbumArt = track.album?.coverBig ?: track.album?.coverMedium ?: playlistArt
+            ),
+            onAddToQueue = onAddToQueue
         )
-
-        // Download Button
-        IconButton(
-            onClick = onDownloadClick,
-            enabled = !isDownloading && !isDownloaded
-        ) {
-            when {
-                isDownloaded -> {
-                    Icon(
-                        Icons.Default.Check,
-                        contentDescription = stringResource(R.string.desc_downloaded),
-                        tint = Color.Green,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                isDownloading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Primary,
-                        strokeWidth = 2.dp
-                    )
-                }
-                else -> {
-                    Icon(
-                        Icons.Default.Download,
-                        contentDescription = "Download track",
-                        tint = Primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        }
-
-        TrackOptionsMenu(onAddToPlaylist = onAddToPlaylist, onAddToQueue = onAddToQueue)
     }
 }

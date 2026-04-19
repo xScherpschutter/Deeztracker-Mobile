@@ -32,8 +32,13 @@ import com.crowstar.deeztrackermobile.R
 import androidx.compose.ui.text.style.TextAlign
 import com.crowstar.deeztrackermobile.ui.common.MarqueeText
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.foundation.ExperimentalFoundationApi
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectionViewModel
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectedTrack
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectionContext
+import com.crowstar.deeztrackermobile.ui.library.LocalTrackItem
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun LocalAlbumDetailScreen(
     albumId: Long,
@@ -41,22 +46,43 @@ fun LocalAlbumDetailScreen(
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
     onPlayAlbum: (List<LocalTrack>) -> Unit,
     onAddToQueue: ((LocalTrack) -> Unit)? = null,
+    selectionViewModel: SelectionViewModel,
+    contentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: LocalMusicViewModel = hiltViewModel()
 ) {
     val albums by viewModel.albums.collectAsState()
-    val tracks by viewModel.loadedAlbumTracks.collectAsState()
+    val unfilteredTracks by viewModel.unfilteredTracks.collectAsState()
+    
+    val tracks = remember(unfilteredTracks, albumId) {
+        unfilteredTracks.filter { it.albumId == albumId }
+    }
+    
+    val selectedTracks by selectionViewModel.selectedTracks.collectAsState()
+    val isSelectionMode by selectionViewModel.isSelectionMode.collectAsState()
     
     val album = albums.find { it.id == albumId }
 
-    LaunchedEffect(albumId) {
-        viewModel.loadTracksForAlbum(albumId)
+    val deleteLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            viewModel.onDeleteSuccess()
+        }
+        viewModel.resetDeleteIntentSender()
     }
 
-    if (album == null) {
-         Box(modifier = Modifier.fillMaxSize().background(BackgroundDark), contentAlignment = Alignment.Center) {
-             CircularProgressIndicator(color = Primary)
-         }
-         return
+    val deleteIntentSender by viewModel.deleteIntentSender.collectAsState()
+    LaunchedEffect(deleteIntentSender) {
+        deleteIntentSender?.let { sender ->
+            val request = androidx.activity.result.IntentSenderRequest.Builder(sender).build()
+            deleteLauncher.launch(request)
+        }
+    }
+
+    LaunchedEffect(tracks) {
+        if (tracks.isEmpty() && !viewModel.isLoading.value) {
+            onBackClick()
+        }
     }
 
     Scaffold(
@@ -68,119 +94,82 @@ fun LocalAlbumDetailScreen(
                         Icon(Icons.Default.ArrowBack, stringResource(R.string.action_back), tint = Color.White)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundDark)
             )
         },
         containerColor = BackgroundDark
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(16.dp)
-        ) {
-            item {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
-                        model = album.albumArtUri,
-                        modifier = Modifier.size(200.dp).clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    MarqueeText(
-                        text = album.title ?: "",
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    MarqueeText(
-                        text = album.artist ?: "",
-                        color = TextGray,
-                        fontSize = 16.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                     Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = { onPlayAlbum(tracks) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                        shape = RoundedCornerShape(24.dp)
+        if (album == null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Primary)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(bottom = 16.dp + contentPadding)
+            ) {
+                item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                         Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
-                         Spacer(modifier = Modifier.width(8.dp))
-                         Text(stringResource(R.string.action_play_album), color = Color.White)
-                    }
-                     Spacer(modifier = Modifier.height(24.dp))
-                }
-            }
+                        com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
+                            model = album.albumArtUri,
+                            modifier = Modifier.size(200.dp).clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
 
-            // Tracks
-            items(tracks, key = { it.id }) { track ->
-                LocalTrackItemSimple(
-                    track = track, 
-                    onClick = { onTrackClick(track, tracks) },
-                    onAddToQueue = { onAddToQueue?.invoke(track) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun LocalTrackItemSimple(
-    track: LocalTrack, 
-    onClick: () -> Unit,
-    onAddToQueue: (() -> Unit)? = null
-) {
-    var showMenu by remember { mutableStateOf(false) }
-    
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        val trackNumber = track.track?.rem(1000) ?: 0
-        Text(
-            text = if (trackNumber > 0) "$trackNumber" else "",
-            color = TextGray,
-            fontSize = 14.sp,
-            modifier = Modifier.width(32.dp),
-            textAlign = TextAlign.End
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            MarqueeText(text = track.title ?: "", color = Color.White, fontSize = 16.sp, modifier = Modifier.fillMaxWidth())
-            MarqueeText(text = track.artist ?: "", color = TextGray, fontSize = 12.sp, modifier = Modifier.fillMaxWidth())
-        }
-        Text(
-            text = track.getFormattedDuration(),
-            color = TextGray,
-            fontSize = 12.sp
-        )
-        if (onAddToQueue != null) {
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.player_options), tint = TextGray)
-                }
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    modifier = Modifier.background(SurfaceDark)
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_add_to_queue), color = Color.White) },
-                        onClick = {
-                            showMenu = false
-                            onAddToQueue()
+                        MarqueeText(
+                            text = album.title ?: "",
+                            color = Color.White,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        MarqueeText(
+                            text = album.artist ?: "",
+                            color = TextGray,
+                            fontSize = 16.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                         Spacer(modifier = Modifier.height(24.dp))
+                        Button(
+                            onClick = { onPlayAlbum(tracks) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                            shape = RoundedCornerShape(24.dp)
+                        ) {
+                             Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
+                             Spacer(modifier = Modifier.width(8.dp))
+                             Text(stringResource(R.string.action_play_album), color = Color.White)
                         }
+                         Spacer(modifier = Modifier.height(24.dp))
+                    }
+                }
+
+                // Tracks
+                items(tracks, key = { it.id }) { track ->
+                    LocalTrackItem(
+                        track = track,
+                        isSelected = selectedTracks.any { it.id == track.id },
+                        inSelectionMode = isSelectionMode,
+                        onClick = { 
+                            if (isSelectionMode) {
+                                selectionViewModel.toggleSelection(SelectedTrack.Local(track))
+                            } else {
+                                onTrackClick(track, tracks) 
+                            }
+                        },
+                        onLongClick = {
+                            selectionViewModel.enterSelectionMode(SelectionContext.LOCAL, SelectedTrack.Local(track))
+                        },
+                        onDelete = { viewModel.requestDeleteTrack(track) },
+                        onAddToQueue = { onAddToQueue?.invoke(track) },
+                        trackNumber = track.track?.rem(1000)
                     )
                 }
             }

@@ -27,8 +27,8 @@ data class PlaylistTrackUiState(
 
 @HiltViewModel
 class LocalMusicViewModel @Inject constructor(
-    private val repository: LocalMusicRepository,
-    private val playlistRepository: LocalPlaylistRepository,
+    val repository: LocalMusicRepository,
+    val playlistRepository: LocalPlaylistRepository,
     val downloadManager: com.crowstar.deeztrackermobile.features.download.DownloadManager
 ) : ViewModel() {
     
@@ -50,12 +50,6 @@ class LocalMusicViewModel @Inject constructor(
     private val _selectedView = MutableStateFlow(0)
     val selectedView: StateFlow<Int> = _selectedView.asStateFlow()
 
-    private val _loadedAlbumTracks = MutableStateFlow<List<LocalTrack>>(emptyList())
-    val loadedAlbumTracks: StateFlow<List<LocalTrack>> = _loadedAlbumTracks.asStateFlow()
-
-    private val _loadedArtistTracks = MutableStateFlow<List<LocalTrack>>(emptyList())
-    val loadedArtistTracks: StateFlow<List<LocalTrack>> = _loadedArtistTracks.asStateFlow()
-
     private val _totalStorage = MutableStateFlow<Long>(0L)
     val totalStorage: StateFlow<Long> = _totalStorage.asStateFlow()
 
@@ -72,6 +66,13 @@ class LocalMusicViewModel @Inject constructor(
 
     init {
         loadMusic()
+        
+        // React to global library changes
+        viewModelScope.launch {
+            repository.libraryUpdateTrigger.collect {
+                loadMusic()
+            }
+        }
     }
 
     fun loadMusic() {
@@ -101,18 +102,6 @@ class LocalMusicViewModel @Inject constructor(
                 _isLoading.value = false
             }
         }
-    }
-
-    fun loadTracksForAlbum(albumId: Long) {
-         viewModelScope.launch {
-             _loadedAlbumTracks.value = repository.getTracksForAlbum(albumId)
-         }
-    }
-
-    fun loadTracksForArtist(artistName: String) {
-         viewModelScope.launch {
-             _loadedArtistTracks.value = repository.getTracksForArtist(artistName)
-         }
     }
 
     fun setSelectedView(index: Int) {
@@ -197,7 +186,7 @@ class LocalMusicViewModel @Inject constructor(
     fun onDeleteSuccess() {
         viewModelScope.launch {
             trackPendingDeletion = null
-            loadMusic()
+            repository.notifyLibraryChanged()
         }
     }
 

@@ -301,12 +301,13 @@ class PlayerController @Inject constructor(
         }
     }
 
-    fun playDeezerArtist(artistId: Long, artistName: String) {
+    fun playDeezerArtist(artistId: Long, artistName: String, startIndex: Int = 0) {
         controllerScope.launch {
             try {
                 val tracks = deezerRepository.getArtistTopTracks(artistId, 50).data.map { it.toLocalTrack() }
                 if (tracks.isNotEmpty()) {
-                    playTrack(tracks[0], tracks, "$artistName Top Tracks")
+                    val startTrack = if (startIndex in tracks.indices) tracks[startIndex] else tracks[0]
+                    playTrack(startTrack, tracks, "$artistName Top Tracks")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load artist tracks", e)

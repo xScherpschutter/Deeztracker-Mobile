@@ -12,14 +12,21 @@ import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.R
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectedTrack
 
 @Composable
 fun TrackOptionsMenu(
-    onAddToPlaylist: () -> Unit,
+    track: SelectedTrack,
     onAddToQueue: (() -> Unit)? = null,
+    onShare: (() -> Unit)? = null,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
+    onShowDetails: (() -> Unit)? = null,
+    deleteLabel: String = stringResource(R.string.action_delete),
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var trackForPlaylist by remember { mutableStateOf<SelectedTrack?>(null) }
 
     Box(modifier = modifier) {
         IconButton(onClick = { showMenu = true }) {
@@ -35,33 +42,70 @@ fun TrackOptionsMenu(
             onDismissRequest = { showMenu = false },
             modifier = Modifier.background(SurfaceDark)
         ) {
+            // Standard Options
             DropdownMenuItem(
-                text = { 
-                    Text(
-                        text = stringResource(R.string.action_add_to_playlist),
-                        color = Color.White 
-                    ) 
-                },
+                text = { Text(stringResource(R.string.action_add_to_playlist), color = Color.White) },
                 onClick = {
                     showMenu = false
-                    onAddToPlaylist()
+                    trackForPlaylist = track
                 }
             )
             
-            if (onAddToQueue != null) {
+            onAddToQueue?.let { action ->
                 DropdownMenuItem(
-                    text = { 
-                        Text(
-                            text = stringResource(R.string.action_add_to_queue),
-                            color = Color.White 
-                        ) 
-                    },
+                    text = { Text(stringResource(R.string.action_add_to_queue), color = Color.White) },
                     onClick = {
                         showMenu = false
-                        onAddToQueue()
+                        action()
+                    }
+                )
+            }
+
+            // Optional Local-specific or extra options
+            onShare?.let { action ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_share), color = Color.White) },
+                    onClick = {
+                        showMenu = false
+                        action()
+                    }
+                )
+            }
+
+            onShowDetails?.let { action ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_details), color = Color.White) },
+                    onClick = {
+                        showMenu = false
+                        action()
+                    }
+                )
+            }
+
+            onEdit?.let { action ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_edit), color = Color.White) },
+                    onClick = {
+                        showMenu = false
+                        action()
+                    }
+                )
+            }
+
+            onDelete?.let { action ->
+                DropdownMenuItem(
+                    text = { Text(deleteLabel, color = if (deleteLabel == stringResource(R.string.action_remove)) Color.White else Color.Red) },
+                    onClick = {
+                        showMenu = false
+                        action()
                     }
                 )
             }
         }
     }
+
+    PlaylistActionHoster(
+        track = trackForPlaylist,
+        onDismiss = { trackForPlaylist = null }
+    )
 }

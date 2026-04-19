@@ -2,6 +2,11 @@ package com.crowstar.deeztrackermobile.ui.search
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectionViewModel
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectedTrack
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectionContext
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,6 +66,7 @@ import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import com.crowstar.deeztrackermobile.ui.common.MarqueeText
 import com.crowstar.deeztrackermobile.ui.common.TrackOptionsMenu
 import com.crowstar.deeztrackermobile.ui.common.TrackArtwork
+import com.crowstar.deeztrackermobile.ui.common.PlaylistActionHoster
 import kotlinx.coroutines.launch
 import com.crowstar.deeztrackermobile.ui.utils.formatDuration
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -75,6 +81,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.crowstar.deeztrackermobile.features.player.PlayerController
 import com.crowstar.deeztrackermobile.features.localmusic.LocalPlaylistRepository
 import com.crowstar.deeztrackermobile.features.localmusic.toPlaylistTrack
+import com.crowstar.deeztrackermobile.ui.utils.LocalSnackbarController
+import androidx.compose.runtime.CompositionLocalProvider
+
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val repository: DeezerRepository,
@@ -88,12 +97,13 @@ class SearchViewModel @Inject constructor(
     val playlists = playlistRepository.playlists
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SearchScreen(
     onArtistClick: (Long) -> Unit = {},
     onPlaylistClick: (Long) -> Unit = {},
     onAlbumClick: (Long) -> Unit = {},
+    selectionViewModel: SelectionViewModel,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
@@ -114,13 +124,13 @@ fun SearchScreen(
     val downloadState by downloadManager.downloadState.collectAsState()
     val downloadedKeys by viewModel.downloadedKeys.collectAsState()
     val activeDownloads by downloadManager.activeDownloads.collectAsState()
+    val selectedTracks by selectionViewModel.selectedTracks.collectAsState()
+    val isSelectionMode by selectionViewModel.isSelectionMode.collectAsState()
 
     val context = LocalContext.current
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarController = LocalSnackbarController.current
 
-    var trackToAddToPlaylist by remember { mutableStateOf<com.crowstar.deeztrackermobile.features.deezer.Track?>(null) }
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
-    val localPlaylists by viewModel.playlists.collectAsState()
 
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var artists by remember { mutableStateOf<List<Artist>>(emptyList()) }
@@ -181,6 +191,7 @@ fun SearchScreen(
     }
 
     LaunchedEffect(selectedTabIndex) {
+        selectionViewModel.exitSelectionMode()
         if (query.isNotEmpty() && hasSearched) {
             performSearch(isNewSearch = true)
         }
@@ -212,26 +223,6 @@ fun SearchScreen(
             }
     }
 
-    LaunchedEffect(downloadState) {
-        when (val state = downloadState) {
-            is DownloadState.Completed -> {
-                snackbarHostState.showSnackbar(
-                    message = context.getString(R.string.notification_download_completed, state.title),
-                    duration = SnackbarDuration.Short
-                )
-                downloadManager.resetState()
-            }
-            is DownloadState.Error -> {
-                snackbarHostState.showSnackbar(
-                    message = context.getString(R.string.notification_download_failed, state.message),
-                    duration = SnackbarDuration.Short
-                )
-                downloadManager.resetState()
-            }
-            else -> {}
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -249,8 +240,7 @@ fun SearchScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundDark)
             )
         },
-        containerColor = BackgroundDark,
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        containerColor = BackgroundDark
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -324,7 +314,7 @@ fun SearchScreen(
                 } else {
                     LazyColumn(
                         state = listState,
-                        contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp + contentPadding, start = 16.dp, end = 16.dp),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = contentPadding, start = 16.dp, end = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
@@ -343,11 +333,32 @@ fun SearchScreen(
                                         track = track,
                                         isDownloaded = isDownloaded,
                                         isDownloading = activeDownloads.contains(track.id.toString()),
+                                        isSelected = selectedTracks.any { it.id == track.id },
+                                        inSelectionMode = isSelectionMode,
                                         onDownloadClick = { downloadManager.startTrackDownload(track.id, track.title ?: "Unknown Track") },
                                         onStreamClick = {
-                                            viewModel.playerController.playDeezerTrackWithRadio(track)
+                                            if (isSelectionMode) {
+                                                selectionViewModel.toggleSelection(
+                                                    SelectedTrack.Remote(
+                                                        track = track,
+                                                        source = track.album?.title,
+                                                        backupAlbumArt = track.album?.coverBig ?: track.album?.coverMedium
+                                                    )
+                                                )
+                                            } else {
+                                                viewModel.playerController.playDeezerTrackWithRadio(track)
+                                            }
                                         },
-                                        onAddToPlaylist = { trackToAddToPlaylist = track },
+                                        onLongClick = {
+                                            selectionViewModel.enterSelectionMode(
+                                                context = SelectionContext.REMOTE, 
+                                                initialTrack = SelectedTrack.Remote(
+                                                    track = track,
+                                                    source = track.album?.title,
+                                                    backupAlbumArt = track.album?.coverBig ?: track.album?.coverMedium
+                                                )
+                                            )
+                                        },
                                         onAddToQueue = { viewModel.playerController.addToQueue(track) }
                                     )
                                 }
@@ -377,33 +388,14 @@ fun SearchScreen(
         }
     }
 
-    if (trackToAddToPlaylist != null) {
-        com.crowstar.deeztrackermobile.ui.playlist.AddToPlaylistBottomSheet(
-            playlists = localPlaylists,
-            onDismiss = { trackToAddToPlaylist = null },
-            onPlaylistClick = { playlist ->
-                val trackToSave = trackToAddToPlaylist
-                scope.launch {
-                    viewModel.playlistRepository.addTrackToPlaylist(
-                        playlist.id, 
-                        trackToSave?.toPlaylistTrack() ?: return@launch
-                    )
-                }
-                trackToAddToPlaylist = null
-            },
-            onCreateNewPlaylist = { showCreatePlaylistDialog = true }
-        )
-    }
-
     if (showCreatePlaylistDialog) {
         com.crowstar.deeztrackermobile.ui.playlist.CreatePlaylistDialog(
             onDismiss = { showCreatePlaylistDialog = false },
             onCreate = { newPlaylistName ->
                 scope.launch {
                     viewModel.playlistRepository.createPlaylist(newPlaylistName)
-                    snackbarHostState.showSnackbar(
-                        message = context.getString(R.string.toast_playlist_created, newPlaylistName),
-                        duration = SnackbarDuration.Short
+                    snackbarController.showSnackbar(
+                        context.getString(R.string.toast_playlist_created, newPlaylistName)
                     )
                 }
                 showCreatePlaylistDialog = false
@@ -411,25 +403,39 @@ fun SearchScreen(
         )
     }
 }
-
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TrackItem(
     track: Track,
     isDownloaded: Boolean = false,
     isDownloading: Boolean = false,
+    isSelected: Boolean = false,
+    inSelectionMode: Boolean = false,
     onDownloadClick: () -> Unit = {},
     onStreamClick: () -> Unit = {},
-    onAddToPlaylist: () -> Unit = {},
+    onLongClick: () -> Unit = {},
     onAddToQueue: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .clickable { onStreamClick() }
+            .background(if (isSelected) Primary.copy(alpha = 0.15f) else Color.Transparent)
+            .combinedClickable(
+                onClick = onStreamClick,
+                onLongClick = onLongClick
+            )
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (inSelectionMode) {
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onStreamClick() },
+                colors = CheckboxDefaults.colors(checkedColor = Primary)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
         Box(contentAlignment = Alignment.Center) {
             TrackArtwork(
                 model = track.album?.coverMedium,
@@ -482,7 +488,14 @@ fun TrackItem(
             }
         }
 
-        TrackOptionsMenu(onAddToPlaylist = onAddToPlaylist, onAddToQueue = onAddToQueue)
+        TrackOptionsMenu(
+            track = SelectedTrack.Remote(
+                track = track,
+                source = track.album?.title,
+                backupAlbumArt = track.album?.coverBig ?: track.album?.coverMedium
+            ),
+            onAddToQueue = onAddToQueue
+        )
     }
 }
 

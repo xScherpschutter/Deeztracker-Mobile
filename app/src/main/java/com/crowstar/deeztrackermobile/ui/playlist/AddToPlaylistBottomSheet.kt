@@ -29,6 +29,7 @@ import com.crowstar.deeztrackermobile.ui.theme.Primary
 import com.crowstar.deeztrackermobile.ui.theme.SurfaceDark
 import com.crowstar.deeztrackermobile.ui.theme.TextGray
 import androidx.compose.ui.platform.LocalContext
+import com.crowstar.deeztrackermobile.ui.common.PlaylistMosaic
 import com.crowstar.deeztrackermobile.ui.utils.LocalSnackbarController
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -136,36 +137,33 @@ fun PlaylistItem(
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Icon Box
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(
-                    if (isFavorite) Brush.linearGradient(
-                        colors = listOf(Color(0xFF2196F3), Color(0xFF64B5F6)) // Blue gradient
-                    ) else Brush.linearGradient(
-                        colors = listOf(Color(0xFFB0BEC5), Color(0xFFECEFF1)) // Grey/White
-                         // Or use an image if we implement playlist covers
-                    )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-              if (isFavorite) {
-                  Icon(
-                      Icons.Default.Favorite, 
-                      contentDescription = null, 
-                      tint = Color.White,
-                      modifier = Modifier.size(24.dp)
-                  )
-              } else {
-                   Icon(
-                      Icons.Default.MusicNote, 
-                      contentDescription = null, 
-                      tint = Color.Black.copy(alpha=0.5f),
-                      modifier = Modifier.size(24.dp)
-                  )
-              }
+        // Icon Box or Mosaic
+        if (isFavorite) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(Color(0xFF2196F3), Color(0xFF64B5F6))
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Favorite,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        } else {
+            PlaylistMosaic(
+                covers = playlist.tracks.take(4).map { it.albumArtUri },
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            )
         }
 
         Spacer(modifier = Modifier.width(16.dp))

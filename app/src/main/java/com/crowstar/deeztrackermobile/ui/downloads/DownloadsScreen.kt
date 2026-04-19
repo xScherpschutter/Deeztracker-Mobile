@@ -7,8 +7,13 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.IntentSenderRequest
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectionViewModel
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectedTrack
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectionContext
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.res.stringResource
@@ -60,11 +65,12 @@ import java.io.File
 import androidx.hilt.navigation.compose.hiltViewModel
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun DownloadsScreen(
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
     onAddToQueue: ((LocalTrack) -> Unit)? = null,
+    selectionViewModel: SelectionViewModel,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: DownloadsViewModel = hiltViewModel()
 ) {
@@ -72,6 +78,20 @@ fun DownloadsScreen(
     val playlists by viewModel.playlists.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val deleteIntentSender by viewModel.deleteIntentSender.collectAsState()
+    val selectedTracks by selectionViewModel.selectedTracks.collectAsState()
+    val isSelectionMode by selectionViewModel.isSelectionMode.collectAsState()
+    val downloadedKeys by viewModel.downloadManager.downloadedKeys.collectAsState()
+    
+    // Refresh when new songs are downloaded
+    LaunchedEffect(downloadedKeys) {
+        viewModel.loadDownloadedMusic()
+    }
+
+    // Clear selection if tracks change (e.g. deletion)
+    LaunchedEffect(tracks.size) {
+        selectionViewModel.exitSelectionMode()
+    }
+    
     val context = LocalContext.current
     val snackbarController = LocalSnackbarController.current
     val scope = rememberCoroutineScope()
@@ -304,12 +324,23 @@ fun DownloadsScreen(
                     LazyColumn(
                         state = listState,
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp + contentPadding, end = 36.dp) // Space for fast scroller + Dynamic Bottom Padding
+                        contentPadding = PaddingValues(bottom = contentPadding, end = 36.dp) // Space for fast scroller + Dynamic Bottom Padding
                     ) {
                         items(tracks, key = { it.id }) { track ->
                             DownloadedTrackItem(
                                 track = track,
-                                onClick = { onTrackClick(track, tracks) },
+                                isSelected = selectedTracks.any { it.id == track.id },
+                                inSelectionMode = isSelectionMode,
+                                onClick = { 
+                                    if (isSelectionMode) {
+                                        selectionViewModel.toggleSelection(SelectedTrack.Local(track))
+                                    } else {
+                                        onTrackClick(track, tracks) 
+                                    }
+                                },
+                                onLongClick = {
+                                    selectionViewModel.enterSelectionMode(SelectionContext.LOCAL, SelectedTrack.Local(track))
+                                },
                                 onDelete = { viewModel.deleteTrack(track) },
                                 onShare = { shareTrack(track) },
                                 onEdit = { trackToEdit = track },
@@ -361,11 +392,14 @@ fun DownloadsScreen(
         }
     }
 }
-
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DownloadedTrackItem(
     track: LocalTrack,
+    isSelected: Boolean = false,
+    inSelectionMode: Boolean = false,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
     onDelete: () -> Unit,
     onShare: () -> Unit,
     onEdit: () -> Unit,
@@ -379,11 +413,22 @@ fun DownloadedTrackItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceDark)
-            .clickable(onClick = onClick)
+            .background(if (isSelected) Primary.copy(alpha = 0.15f) else SurfaceDark)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (inSelectionMode) {
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onClick() },
+                colors = CheckboxDefaults.colors(checkedColor = Primary)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
         // Album Art
         com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
             model = track.albumArtUri,

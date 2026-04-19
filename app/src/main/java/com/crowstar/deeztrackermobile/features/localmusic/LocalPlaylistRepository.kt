@@ -156,6 +156,39 @@ class LocalPlaylistRepository @Inject constructor(
         }
     }
 
+    suspend fun addTracksToPlaylist(playlistId: String, tracks: List<PlaylistTrack>) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val currentPlaylists = _playlists.value
+            var changed = false
+            val updated = currentPlaylists.map { playlist ->
+                if (playlist.id == playlistId || (playlistId == "favorites" && playlist.name == "Favorites")) {
+                    val newTracks = tracks.filter { t -> !playlist.tracks.any { it.id == t.id } }
+                    if (newTracks.isNotEmpty()) {
+                        changed = true
+                        playlist.copy(tracks = playlist.tracks + newTracks)
+                    } else playlist
+                } else playlist
+            }
+
+            if (changed) {
+                savePlaylistsToFile(updated)
+                _playlists.value = updated
+            }
+        }
+    }
+
+    suspend fun removeTracksFromPlaylist(playlistId: String, trackIds: List<Long>) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val current = _playlists.value.map { playlist ->
+                 if (playlist.id == playlistId || (playlistId == "favorites" && playlist.name == "Favorites")) {
+                    playlist.copy(tracks = playlist.tracks.filter { it.id !in trackIds })
+                } else playlist
+            }
+            savePlaylistsToFile(current)
+            _playlists.value = current
+        }
+    }
+
     suspend fun removeTrackFromPlaylist(playlistId: String, trackId: Long) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val current = _playlists.value.map { playlist ->

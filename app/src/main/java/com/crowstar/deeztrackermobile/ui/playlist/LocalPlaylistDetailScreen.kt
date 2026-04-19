@@ -40,6 +40,10 @@ import androidx.compose.ui.text.style.TextAlign
 
 import com.crowstar.deeztrackermobile.ui.library.PlaylistTrackUiState
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectionViewModel
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectedTrack
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectionContext
 import com.crowstar.deeztrackermobile.ui.common.PlaylistMosaic
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,9 +59,12 @@ fun LocalPlaylistDetailScreen(
     onShareTrack: (LocalTrack) -> Unit,
     onEditTrack: (LocalTrack) -> Unit,
     onAddToQueue: ((LocalTrack) -> Unit)? = null,
+    selectionViewModel: SelectionViewModel,
     contentPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    val selectedTracks by selectionViewModel.selectedTracks.collectAsState()
+    val isSelectionMode by selectionViewModel.isSelectionMode.collectAsState()
     
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -161,11 +168,25 @@ fun LocalPlaylistDetailScreen(
             items(playlistTracks, key = { it.track.id }) { uiState ->
                 LocalTrackItem(
                     track = uiState.track,
-                    onClick = { onTrackClick(uiState.track) },
+                    isSelected = selectedTracks.any { it.id == uiState.track.id },
+                    inSelectionMode = isSelectionMode,
+                    onClick = { 
+                        if (isSelectionMode) {
+                            selectionViewModel.toggleSelection(SelectedTrack.Local(uiState.track))
+                        } else {
+                            onTrackClick(uiState.track)
+                        }
+                    },
+                    onLongClick = {
+                        selectionViewModel.enterSelectionMode(
+                            context = SelectionContext.LOCAL_PLAYLIST, 
+                            initialTrack = SelectedTrack.Local(uiState.track),
+                            playlistId = playlist.id
+                        )
+                    },
                     onShare = if (uiState.isDownloaded) { { onShareTrack(uiState.track) } } else null,
                     onDelete = { onRemoveTrack(uiState) },
                     onEdit = if (uiState.isDownloaded) { { onEditTrack(uiState.track) } } else null,
-                    onAddToPlaylist = null,
                     onAddToQueue = { onAddToQueue?.invoke(uiState.track) },
                     deleteLabel = stringResource(R.string.action_remove),
                     showAllOptions = uiState.isDownloaded

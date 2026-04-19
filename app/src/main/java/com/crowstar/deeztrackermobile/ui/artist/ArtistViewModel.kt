@@ -64,9 +64,9 @@ class ArtistViewModel @Inject constructor(
         }
     }
 
-    fun playArtistTopTracks() {
+    fun playArtistTopTracks(startIndex: Int = 0) {
         val artistData = _artist.value ?: return
-        playerController.playDeezerArtist(artistData.id, artistData.name)
+        playerController.playDeezerArtist(artistData.id, artistData.name, startIndex)
     }
 
     fun startTrackDownload(trackId: Long, title: String) {

@@ -34,8 +34,13 @@ import androidx.compose.ui.res.stringResource
 import com.crowstar.deeztrackermobile.R
 import com.crowstar.deeztrackermobile.ui.common.MarqueeText
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.foundation.ExperimentalFoundationApi
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectionViewModel
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectedTrack
+import com.crowstar.deeztrackermobile.ui.common.selection.SelectionContext
+import com.crowstar.deeztrackermobile.ui.library.LocalTrackItem
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun LocalArtistDetailScreen(
     artistName: String,
@@ -43,14 +48,42 @@ fun LocalArtistDetailScreen(
     onTrackClick: (LocalTrack, List<LocalTrack>) -> Unit,
     onPlayArtist: (List<LocalTrack>) -> Unit,
     onAddToQueue: ((LocalTrack) -> Unit)? = null,
+    selectionViewModel: SelectionViewModel,
+    contentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: LocalMusicViewModel = hiltViewModel()
 ) {
-    val tracks by viewModel.loadedArtistTracks.collectAsState()
+    val unfilteredTracks by viewModel.unfilteredTracks.collectAsState()
     
-    LaunchedEffect(artistName) {
-        viewModel.loadTracksForArtist(artistName)
+    val tracks = remember(unfilteredTracks, artistName) {
+        unfilteredTracks.filter { it.artist == artistName }
     }
 
+    val selectedTracks by selectionViewModel.selectedTracks.collectAsState()
+    val isSelectionMode by selectionViewModel.isSelectionMode.collectAsState()
+
+    val deleteLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            viewModel.onDeleteSuccess()
+        }
+        viewModel.resetDeleteIntentSender()
+    }
+
+    val deleteIntentSender by viewModel.deleteIntentSender.collectAsState()
+    LaunchedEffect(deleteIntentSender) {
+        deleteIntentSender?.let { sender ->
+            val request = androidx.activity.result.IntentSenderRequest.Builder(sender).build()
+            deleteLauncher.launch(request)
+        }
+    }
+
+    LaunchedEffect(tracks) {
+        if (tracks.isEmpty() && !viewModel.isLoading.value) {
+            onBackClick()
+        }
+    }
+    
     Scaffold(
         topBar = {
             TopAppBar(
@@ -60,7 +93,7 @@ fun LocalArtistDetailScreen(
                         Icon(Icons.Default.ArrowBack, stringResource(R.string.action_back), tint = Color.White)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundDark)
             )
         },
         containerColor = BackgroundDark
@@ -69,21 +102,49 @@ fun LocalArtistDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(16.dp)
+            contentPadding = PaddingValues(bottom = 16.dp + contentPadding)
         ) {
             item {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    MarqueeText(
-                        text = artistName ?: "",
+                    Box(
+                        modifier = Modifier
+                            .size(160.dp)
+                            .clip(CircleShape)
+                            .background(SurfaceDark),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(80.dp),
+                            tint = TextGray
+                        )
+                        
+                        val firstTrack = tracks.firstOrNull()
+                        if (firstTrack != null) {
+                            com.crowstar.deeztrackermobile.ui.common.TrackArtwork(
+                                model = firstTrack.albumArtUri,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = artistName,
                         color = Color.White,
-                        fontSize = 24.sp,
+                        fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     )
+
                     Text(
                         text = stringResource(R.string.stats_playlist_tracks_format, tracks.size),
                         color = TextGray,
@@ -105,67 +166,23 @@ fun LocalArtistDetailScreen(
 
             // Tracks
             items(tracks, key = { it.id }) { track ->
-                ArtistTrackItem(
-                    track = track, 
-                    onClick = { onTrackClick(track, tracks) },
+                LocalTrackItem(
+                    track = track,
+                    isSelected = selectedTracks.any { it.id == track.id },
+                    inSelectionMode = isSelectionMode,
+                    onClick = { 
+                        if (isSelectionMode) {
+                            selectionViewModel.toggleSelection(SelectedTrack.Local(track))
+                        } else {
+                            onTrackClick(track, tracks) 
+                        }
+                    },
+                    onLongClick = {
+                        selectionViewModel.enterSelectionMode(SelectionContext.LOCAL, SelectedTrack.Local(track))
+                    },
+                    onDelete = { viewModel.requestDeleteTrack(track) },
                     onAddToQueue = { onAddToQueue?.invoke(track) }
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ArtistTrackItem(
-    track: LocalTrack, 
-    onClick: () -> Unit,
-    onAddToQueue: (() -> Unit)? = null
-) {
-    var showMenu by remember { mutableStateOf(false) }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        val trackNumber = track.track?.rem(1000) ?: 0
-        Text(
-            text = if (trackNumber > 0) "$trackNumber" else "",
-            color = TextGray,
-            fontSize = 14.sp,
-            modifier = Modifier.width(32.dp),
-            textAlign = TextAlign.End
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            MarqueeText(text = track.title ?: "", color = Color.White, fontSize = 16.sp, modifier = Modifier.fillMaxWidth())
-            MarqueeText(text = track.artist ?: "", color = TextGray, fontSize = 12.sp, modifier = Modifier.fillMaxWidth())
-        }
-        Text(
-            text = track.getFormattedDuration(),
-            color = TextGray,
-            fontSize = 12.sp
-        )
-        if (onAddToQueue != null) {
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.player_options), tint = TextGray)
-                }
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    modifier = Modifier.background(SurfaceDark)
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_add_to_queue), color = Color.White) },
-                        onClick = {
-                            showMenu = false
-                            onAddToQueue()
-                        }
-                    )
-                }
             }
         }
     }
