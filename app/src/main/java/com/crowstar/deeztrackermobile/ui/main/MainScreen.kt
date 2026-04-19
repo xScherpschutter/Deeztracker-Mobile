@@ -273,7 +273,10 @@ fun MainScreen(
                             val countToRemove = tracksCopy.size
                             if (pid != null && tracksCopy.isNotEmpty()) {
                                 scope.launch {
-                                    val ids = tracksCopy.map { it.id }
+                                    val ids = tracksCopy.map { st ->
+                                        if (st is SelectedTrack.Local && st.originalId != null) st.originalId
+                                        else st.id
+                                    }
                                     viewModel.playlistRepository.removeTracksFromPlaylist(pid, ids)
                                     snackbarController.showSnackbar(context.getString(R.string.selection_removed_from_playlist, countToRemove))
                                 }
@@ -337,12 +340,15 @@ fun MainScreen(
             com.crowstar.deeztrackermobile.ui.playlist.AddToPlaylistBottomSheet(
                 playlists = localPlaylists,
                 onDismiss = { showAddToPlaylist = false },
-                onPlaylistClick = { playlist ->
+                        onPlaylistClick = { playlist ->
                     scope.launch {
                         val tracksToSave = selectedTracks.map { st ->
                             when (st) {
                                 is SelectedTrack.Local -> st.track.toPlaylistTrack()
-                                is SelectedTrack.Remote -> st.track.toPlaylistTrack()
+                                is SelectedTrack.Remote -> st.track.toPlaylistTrack(
+                                    albumArtUri = st.backupAlbumArt,
+                                    albumTitle = st.source
+                                )
                             }
                         }
                         viewModel.playlistRepository.addTracksToPlaylist(playlist.id, tracksToSave)
@@ -369,7 +375,10 @@ fun MainScreen(
                         val tracksToSave = selectedTracks.map { st ->
                             when (st) {
                                 is SelectedTrack.Local -> st.track.toPlaylistTrack()
-                                is SelectedTrack.Remote -> st.track.toPlaylistTrack()
+                                is SelectedTrack.Remote -> st.track.toPlaylistTrack(
+                                    albumArtUri = st.backupAlbumArt,
+                                    albumTitle = st.source
+                                )
                             }
                         }
                         viewModel.playlistRepository.addTracksToPlaylist(newId, tracksToSave)

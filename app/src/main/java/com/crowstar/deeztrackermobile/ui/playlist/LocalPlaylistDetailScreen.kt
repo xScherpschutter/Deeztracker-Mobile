@@ -165,14 +165,16 @@ fun LocalPlaylistDetailScreen(
                 }
             }
         } else {
-            items(playlistTracks, key = { it.track.id }) { uiState ->
+            items(playlistTracks, key = { it.originalId }) { uiState ->
                 LocalTrackItem(
                     track = uiState.track,
-                    isSelected = selectedTracks.any { it.id == uiState.track.id },
+                    isSelected = selectedTracks.any { 
+                        (it as? SelectedTrack.Local)?.originalId == uiState.originalId 
+                    },
                     inSelectionMode = isSelectionMode,
                     onClick = { 
                         if (isSelectionMode) {
-                            selectionViewModel.toggleSelection(SelectedTrack.Local(uiState.track))
+                            selectionViewModel.toggleSelection(SelectedTrack.Local(uiState.track, uiState.originalId))
                         } else {
                             onTrackClick(uiState.track)
                         }
@@ -180,7 +182,7 @@ fun LocalPlaylistDetailScreen(
                     onLongClick = {
                         selectionViewModel.enterSelectionMode(
                             context = SelectionContext.LOCAL_PLAYLIST, 
-                            initialTrack = SelectedTrack.Local(uiState.track),
+                            initialTrack = SelectedTrack.Local(uiState.track, uiState.originalId),
                             playlistId = playlist.id
                         )
                     },

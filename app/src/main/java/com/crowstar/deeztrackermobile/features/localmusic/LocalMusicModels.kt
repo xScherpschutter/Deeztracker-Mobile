@@ -110,12 +110,15 @@ fun LocalTrack.toPlaylistTrack(): PlaylistTrack {
     )
 }
 
-fun com.crowstar.deeztrackermobile.features.deezer.Track.toPlaylistTrack(albumArtUri: String? = null): PlaylistTrack {
+fun com.crowstar.deeztrackermobile.features.deezer.Track.toPlaylistTrack(
+    albumArtUri: String? = null,
+    albumTitle: String? = null
+): PlaylistTrack {
     return PlaylistTrack(
         id = this.id,
         title = this.title ?: "Unknown Title",
         artist = this.artist?.name ?: "Unknown Artist",
-        album = this.album?.title ?: "Unknown Album",
+        album = albumTitle ?: this.album?.title ?: "Unknown Album",
         albumId = this.album?.id ?: 0L,
         duration = (this.duration?.toLong() ?: 0L) * 1000,
         albumArtUri = albumArtUri ?: this.album?.coverBig ?: this.album?.coverMedium,

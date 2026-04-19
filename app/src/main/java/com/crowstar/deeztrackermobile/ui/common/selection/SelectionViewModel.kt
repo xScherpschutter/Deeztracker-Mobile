@@ -21,7 +21,10 @@ sealed class SelectedTrack {
     abstract val title: String
     abstract val artist: String
 
-    data class Local(val track: LocalTrack) : SelectedTrack() {
+    data class Local(
+        val track: LocalTrack,
+        val originalId: Long? = null
+    ) : SelectedTrack() {
         override val id = track.id
         override val title = track.title
         override val artist = track.artist
@@ -62,8 +65,19 @@ class SelectionViewModel @Inject constructor() : ViewModel() {
 
     fun toggleSelection(track: SelectedTrack) {
         _selectedTracks.update { current ->
-            if (current.any { it.id == track.id }) {
-                val next = current.filterNot { it.id == track.id }.toSet()
+            val isAlreadySelected = if (track is SelectedTrack.Local && track.originalId != null) {
+                current.any { it is SelectedTrack.Local && it.track.id == track.track.id && it.originalId == track.originalId }
+            } else {
+                current.any { it.id == track.id }
+            }
+
+            if (isAlreadySelected) {
+                val next = if (track is SelectedTrack.Local && track.originalId != null) {
+                    current.filterNot { it is SelectedTrack.Local && it.track.id == track.track.id && it.originalId == track.originalId }.toSet()
+                } else {
+                    current.filterNot { it.id == track.id }.toSet()
+                }
+                
                 if (next.isEmpty()) {
                     _isSelectionMode.value = false
                 }

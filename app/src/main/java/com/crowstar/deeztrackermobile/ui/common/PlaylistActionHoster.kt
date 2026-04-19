@@ -48,7 +48,10 @@ fun PlaylistActionHoster(
                 scope.launch {
                     val playlistTrack = when (track) {
                         is SelectedTrack.Local -> track.track.toPlaylistTrack()
-                        is SelectedTrack.Remote -> track.track.toPlaylistTrack(albumArtUri = track.backupAlbumArt)
+                        is SelectedTrack.Remote -> track.track.toPlaylistTrack(
+                            albumArtUri = track.backupAlbumArt,
+                            albumTitle = track.source
+                        )
                     }
                     viewModel.playlistRepository.addTrackToPlaylist(playlist.id, playlistTrack)
                     snackbarController.showSnackbar(
@@ -75,7 +78,10 @@ fun PlaylistActionHoster(
                     val newId = viewModel.playlistRepository.createPlaylist(newName)
                     val playlistTrack = when (track) {
                         is SelectedTrack.Local -> track.track.toPlaylistTrack()
-                        is SelectedTrack.Remote -> track.track.toPlaylistTrack(albumArtUri = track.backupAlbumArt)
+                        is SelectedTrack.Remote -> track.track.toPlaylistTrack(
+                            albumArtUri = track.backupAlbumArt,
+                            albumTitle = track.source
+                        )
                     }
                     viewModel.playlistRepository.addTrackToPlaylist(newId, playlistTrack)
                     snackbarController.showSnackbar(

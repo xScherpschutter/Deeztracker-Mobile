@@ -242,10 +242,9 @@ fun LocalMusicScreen(
 
     LaunchedEffect(selectedPlaylist, tracks, playlistTracksWithState, selectedView) {
         if (selectedPlaylist != null) {
-            val pTracks = playlistTracksWithState.map { it.track }
-            onTrackCountUpdate(pTracks.size)
+            onTrackCountUpdate(playlistTracksWithState.size)
             onSelectAllUpdate {
-                selectionViewModel.selectAll(pTracks.map { SelectedTrack.Local(it) })
+                selectionViewModel.selectAll(playlistTracksWithState.map { SelectedTrack.Local(it.track, it.originalId) })
             }
         } else if (selectedView == 0) { // Songs Tab
             onTrackCountUpdate(tracks.size)
