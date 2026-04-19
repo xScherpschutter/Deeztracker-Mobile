@@ -121,7 +121,6 @@ fun SearchScreen(
     val scope = rememberCoroutineScope()
     
     val downloadManager = viewModel.downloadManager
-    val downloadState by downloadManager.downloadState.collectAsState()
     val downloadedKeys by viewModel.downloadedKeys.collectAsState()
     val activeDownloads by downloadManager.activeDownloads.collectAsState()
     val selectedTracks by selectionViewModel.selectedTracks.collectAsState()

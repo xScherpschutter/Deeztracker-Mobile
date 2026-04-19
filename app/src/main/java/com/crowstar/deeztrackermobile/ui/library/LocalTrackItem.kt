@@ -36,7 +36,6 @@ fun LocalTrackItem(
     onShare: (() -> Unit)? = null,
     onDelete: () -> Unit,
     onEdit: (() -> Unit)? = null,
-    onAddToPlaylist: (() -> Unit)? = null, // No longer strictly needed for UI but kept for compatibility if needed
     onAddToQueue: (() -> Unit)? = null,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
