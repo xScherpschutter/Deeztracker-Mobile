@@ -132,6 +132,19 @@
     <string name="new_playlist_name">Playlist Name</string>
     <string name="toast_playlist_created">Playlist \u2018%s\u2019 created</string>
     <string name="artist_songs_count_format">%d songs</string>
+    <string name="artist_albums_title">Albums</string>
+    <string name="artist_top_tracks_title">Top Tracks</string>
+    <string name="artist_featured_label">Featured Artist</string>
+    
+    <string name="selection_count_format">%d selected</string>
+    <string name="selection_close">Close selection</string>
+    <string name="selection_toggle_all">Toggle select all</string>
+    <string name="selection_added_to_queue">Added %d tracks to queue</string>
+    <string name="selection_started_download">Started downloading %d tracks</string>
+    <string name="selection_removed_from_playlist">Removed %d tracks from playlist</string>
+    <string name="selection_share_chooser">Share tracks</string>
+
+    <string name="player_shuffle_label">Shuffle</string>
     
     <!-- Search Screen -->
     <string name="search_title">Search</string>

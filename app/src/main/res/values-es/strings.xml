@@ -132,6 +132,19 @@
     <string name="new_playlist_name">Nombre de Playlist</string>
     <string name="toast_playlist_created">Playlist \u2018%s\u2019 creada</string>
     <string name="artist_songs_count_format">%d canciones</string>
+    <string name="artist_albums_title">Álbumes</string>
+    <string name="artist_top_tracks_title">Mejores canciones</string>
+    <string name="artist_featured_label">Artista destacado</string>
+    
+    <string name="selection_count_format">%d seleccionados</string>
+    <string name="selection_close">Cerrar selección</string>
+    <string name="selection_toggle_all">Alternar seleccionar todo</string>
+    <string name="selection_added_to_queue">Añadidas %d canciones a la cola</string>
+    <string name="selection_started_download">Iniciada descarga de %d canciones</string>
+    <string name="selection_removed_from_playlist">Quitadas %d canciones de la playlist</string>
+    <string name="selection_share_chooser">Compartir pistas</string>
+
+    <string name="player_shuffle_label">Aleatorio</string>
     
     <!-- Search Screen -->
     <string name="search_title">Buscar</string>

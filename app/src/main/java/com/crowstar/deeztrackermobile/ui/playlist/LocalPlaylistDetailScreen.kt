@@ -152,7 +152,7 @@ fun LocalPlaylistDetailScreen(
                     ) {
                          Icon(Icons.Default.Shuffle, contentDescription = null, tint = Color.White)
                          Spacer(modifier = Modifier.width(8.dp))
-                         Text("Shuffle", color = Color.White)
+                         Text(stringResource(R.string.player_shuffle_label), color = Color.White)
                     }
                 }
             }

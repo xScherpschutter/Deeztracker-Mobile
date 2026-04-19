@@ -154,7 +154,7 @@ fun MainScreen(
             putParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, ArrayList(uris))
             addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(android.content.Intent.createChooser(intent, "Share tracks"))
+        context.startActivity(android.content.Intent.createChooser(intent, context.getString(R.string.selection_share_chooser)))
     }
 
     // Handle download state changes
@@ -275,7 +275,7 @@ fun MainScreen(
                                 scope.launch {
                                     val ids = tracksCopy.map { it.id }
                                     viewModel.playlistRepository.removeTracksFromPlaylist(pid, ids)
-                                    snackbarController.showSnackbar("Removed $countToRemove tracks from playlist")
+                                    snackbarController.showSnackbar(context.getString(R.string.selection_removed_from_playlist, countToRemove))
                                 }
                                 selectionViewModel.exitSelectionMode()
                             }
@@ -294,7 +294,7 @@ fun MainScreen(
                             }
                             selectionViewModel.exitSelectionMode()
                             scope.launch {
-                                snackbarController.showSnackbar("Added $countToAdd tracks to queue")
+                                snackbarController.showSnackbar(context.getString(R.string.selection_added_to_queue, countToAdd))
                             }
                         },
                         onAddToPlaylist = {
@@ -314,7 +314,7 @@ fun MainScreen(
                             }
                             selectionViewModel.exitSelectionMode()
                             scope.launch {
-                                snackbarController.showSnackbar("Started downloading $downloadCount tracks")
+                                snackbarController.showSnackbar(context.getString(R.string.selection_started_download, downloadCount))
                             }
                         }
                     )

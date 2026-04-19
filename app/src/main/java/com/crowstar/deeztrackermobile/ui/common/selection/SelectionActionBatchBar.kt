@@ -53,7 +53,7 @@ fun SelectionActionBatchBar(
             // Selection Info
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onClose) {
-                    Icon(Icons.Default.Close, contentDescription = "Close selection", tint = Color.White)
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.selection_close), tint = Color.White)
                 }
                 
                 if (showSelectAll) {
@@ -61,7 +61,7 @@ fun SelectionActionBatchBar(
                     IconButton(onClick = onToggleSelectAll) {
                         Icon(
                             imageVector = if (isAllSelected) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
-                            contentDescription = "Toggle select all",
+                            contentDescription = stringResource(R.string.selection_toggle_all),
                             tint = if (isAllSelected) Primary else Color.White
                         )
                     }
@@ -70,7 +70,7 @@ fun SelectionActionBatchBar(
                 Spacer(modifier = Modifier.width(4.dp))
                 Column {
                     Text(
-                        text = "$selectedCount selected",
+                        text = stringResource(R.string.selection_count_format, selectedCount),
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold

@@ -119,7 +119,7 @@ fun ArtistScreen(
                     item {
                         Spacer(modifier = Modifier.height(32.dp))
                         Text(
-                            text = "Albums",
+                            text = stringResource(R.string.artist_albums_title),
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
@@ -144,7 +144,7 @@ fun ArtistScreen(
                     item {
                         Spacer(modifier = Modifier.height(32.dp))
                         Text(
-                            text = "Top Tracks",
+                            text = stringResource(R.string.artist_top_tracks_title),
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
@@ -244,7 +244,7 @@ private fun ArtistHeader(artist: Artist) {
             )
         )
         Column(modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)) {
-            Text(text = "Featured Artist", fontSize = 12.sp, color = Primary, fontWeight = FontWeight.Medium)
+            Text(text = stringResource(R.string.artist_featured_label), fontSize = 12.sp, color = Primary, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(8.dp))
             MarqueeText(text = artist.name ?: "", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(4.dp))
