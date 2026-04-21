@@ -452,7 +452,7 @@ class RusteerDataSource(
                 bytesToServe
             } catch (e: Exception) {
                 Log.e("RusteerDataSource", "Error reading chunk for $trackId", e)
-                C.RESULT_END_OF_INPUT
+                throw java.io.IOException(e)
             }
         }
     }

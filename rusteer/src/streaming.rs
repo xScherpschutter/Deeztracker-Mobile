@@ -372,13 +372,21 @@ fn start_background_download(buffer: SharedBuffer, track_id: String, media_url: 
                                         // Write the final partial block BEFORE marking complete
                                         // so readers woken up by notify_waiters() will find it.
                                         if !chunk_buffer.is_empty() {
-                                            let mut blocks = buffer.blocks.lock().unwrap();
-                                            if !blocks.contains_key(&block_index) {
-                                                blocks.insert(block_index, chunk_buffer.clone());
+                                            let total_size_known = buffer.total_size.load(Ordering::SeqCst);
+                                            let assumed_final_pos = block_index * BLOCK_SIZE + chunk_buffer.len() as u64;
+
+                                            let is_true_eof = total_size_known > 0 && assumed_final_pos >= total_size_known;
+                                            
+                                            if is_true_eof {
+                                                let mut blocks = buffer.blocks.lock().unwrap();
+                                                if !blocks.contains_key(&block_index) {
+                                                    blocks.insert(block_index, chunk_buffer.clone());
+                                                }
+                                                drop(blocks);
+                                                buffer.download_pos.store(assumed_final_pos, Ordering::SeqCst);
+                                            } else {
+                                                debug!("[Stream:{}] Discarding incomplete block at {} due to dropped connection.", track_id, block_index);
                                             }
-                                            drop(blocks);
-                                            let final_pos = block_index * BLOCK_SIZE + chunk_buffer.len() as u64;
-                                            buffer.download_pos.store(final_pos, Ordering::SeqCst);
                                         }
                                         break;
                                     }
@@ -551,12 +559,21 @@ async fn spot_download_blocks(
 
     if consumed < data_slice.len() && !buffer.has_block(block_index) {
         let raw = &data_slice[consumed..];
-        let processed = if block_index % 3 == 0 {
-            crypto::decrypt_blowfish_chunk(raw, key)
+        
+        let total_size_known = buffer.total_size.load(Ordering::SeqCst);
+        let assumed_final_pos = block_index * BLOCK_SIZE + raw.len() as u64;
+        let is_true_eof = total_size_known > 0 && assumed_final_pos >= total_size_known;
+        
+        if is_true_eof {
+            let processed = if block_index % 3 == 0 {
+                crypto::decrypt_blowfish_chunk(raw, key)
+            } else {
+                raw.to_vec()
+            };
+            buffer.blocks.lock().unwrap().insert(block_index, processed);
         } else {
-            raw.to_vec()
-        };
-        buffer.blocks.lock().unwrap().insert(block_index, processed);
+            debug!("[Stream:{}] Spot download returned trailing partial data at {}. Discarding to avoid EOF poison.", track_id, block_index);
+        }
     }
 
     buffer.notify.notify_waiters();
