@@ -30,7 +30,7 @@ build_apk:
     - export ANDROID_NDK_HOME="/home/crowstar/Android/Sdk/ndk"
     - cargo ndk -t arm64-v8a -t armeabi-v7a -t x86 -t x86_64 build --release
     - cargo build --release
-    - cargo run --features uniffi/cli --bin uniffi-bindgen generate --library target/release/librusteer.so --language kotlin --out-dir out --no-format
+    - cargo run --package uniffi --features cli --bin uniffi-bindgen generate --library target/release/librusteer.so --language kotlin --out-dir out --no-format
     
     # 2. Deploy libraries and bindings to the Android project
     - cd ..
