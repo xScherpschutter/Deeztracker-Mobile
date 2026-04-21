@@ -23,8 +23,6 @@ cache:
 
 build_apk:
   stage: build
-  tags:
-    - linux
   script:
     # 1. Build Rust engine and generate UniFFI bindings using local cargo-ndk
     - cd rusteer
