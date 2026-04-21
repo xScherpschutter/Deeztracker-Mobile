@@ -45,10 +45,7 @@ build_apk:
     # 3. Decode Keystore and build the APK using local gradlew
     - echo "$KEYSTORE_BASE64" | base64 -d > deeztracker.jks
     - chmod +x gradlew
-    - ./gradlew assembleRelease \
-      -PstorePassword="$KEYSTORE_PASSWORD" \
-      -PkeyAlias="$KEY_ALIAS" \
-      -PkeyPassword="$KEY_PASSWORD"
+    - ./gradlew assembleRelease -PstorePassword="$KEYSTORE_PASSWORD" -PkeyAlias="$KEY_ALIAS" -PkeyPassword="$KEY_PASSWORD"
   artifacts:
     name: "deeztracker-mobile-$CI_COMMIT_TAG"
     paths:
