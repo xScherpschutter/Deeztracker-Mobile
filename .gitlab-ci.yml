@@ -1,53 +1,35 @@
-# Base image with JDK 17
-image: eclipse-temurin:17-jdk-jammy
+# Local Shell Runner Configuration
+# This workflow uses the local environment of the machine (no Docker image needed)
+# All comments are in English as requested.
 
 variables:
-  ANDROID_SDK_ROOT: "/opt/android-sdk"
-  ANDROID_NDK_VERSION: "26.1.10909125"
-  ANDROID_NDK_HOME: "$ANDROID_SDK_ROOT/ndk/$ANDROID_NDK_VERSION"
-  CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
-  # Prevent Gradle from using too much memory in CI
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+  # Using local paths from your system
+  ANDROID_HOME: "/home/crowstar/android-sdk"
+  ANDROID_NDK_HOME: "/home/crowstar/Android/Sdk/ndk"
+  # Add local binaries to PATH for the runner
+  PATH: "$PATH:$HOME/.cargo/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin"
 
 stages:
   - build
   - release
 
-# Cache to speed up Gradle and Rust builds
+# Using your local environment, no need for complex caching of toolchains
+# Standard Gradle cache is still useful
 cache:
   key: "$CI_COMMIT_REF_SLUG"
   paths:
     - .gradle/caches
     - .gradle/wrapper
-    - .cargo/bin
-    - .cargo/registry
-    - rusteer/target
-
-before_script:
-  - apt-get update && apt-get install -y curl wget unzip git build-essential
-  
-  # Install Android SDK (Command Line Tools)
-  - mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
-  - wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O tools.zip
-  - unzip -q tools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
-  - mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
-  - export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools
-  
-  # Accept licenses and install SDK/NDK
-  - yes | sdkmanager --licenses > /dev/null
-  - sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;$ANDROID_NDK_VERSION"
-  
-  # Install Rust and Android targets
-  - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-  - export PATH=$PATH:$CARGO_HOME/bin
-  - rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
-  - cargo install cargo-ndk
 
 build_apk:
   stage: build
+  tags:
+    - linux
   script:
-    # 1. Build Rust engine and generate UniFFI bindings
+    # 1. Build Rust engine and generate UniFFI bindings using local cargo-ndk
     - cd rusteer
+    # Ensure Android NDK home is exported as in your memory
+    - export ANDROID_NDK_HOME="/home/crowstar/Android/Sdk/ndk"
     - cargo ndk -t arm64-v8a -t armeabi-v7a -t x86 -t x86_64 build --release
     - cargo build --release
     - cargo run --features uniffi/cli --bin uniffi-bindgen generate --library target/release/librusteer.so --language kotlin --out-dir out --no-format
@@ -62,10 +44,10 @@ build_apk:
     - mkdir -p app/src/main/java/com/crowstar/deeztrackermobile/features/rusteer
     - cp rusteer/out/uniffi/rusteer/rusteer.kt app/src/main/java/com/crowstar/deeztrackermobile/features/rusteer/rusteer.kt
 
-    # 3. Decode Keystore and build the APK
+    # 3. Decode Keystore and build the APK using local gradlew
+    # We assume KEYSTORE_BASE64, KEY_ALIAS, etc. are set in GitLab CI variables
     - echo "$KEYSTORE_BASE64" | base64 -d > deeztracker.jks
     - chmod +x gradlew
-    # Environment variables from GitLab are automatically picked up by build.gradle.kts
     - ./gradlew assembleRelease
   artifacts:
     name: "deeztracker-mobile-$CI_COMMIT_TAG"
@@ -87,7 +69,7 @@ gitlab_release:
     - echo "Starting release publication for $CI_COMMIT_TAG"
   release:
     name: "Release $CI_COMMIT_TAG"
-    description: "Automatic build of Deeztracker Mobile from GitLab CI. Includes updated Rusteer engine."
+    description: "Automatic build from local runner. Includes updated Rusteer engine."
     tag_name: "$CI_COMMIT_TAG"
     assets:
       links:
