@@ -3,16 +3,15 @@
 # All comments are in English as requested.
 
 variables:
-  # Using local paths from your system
-  ANDROID_HOME: "/home/crowstar/android-sdk"
+  # Using local paths from your system (matching your Android Studio setup)
+  ANDROID_HOME: "/home/crowstar/Android/Sdk"
   ANDROID_NDK_HOME: "/home/crowstar/Android/Sdk/ndk"
 
 stages:
   - build
   - release
 
-# Using your local environment, no need for complex caching of toolchains
-# Standard Gradle cache is still useful
+# Standard Gradle cache remains useful
 cache:
   key: "$CI_COMMIT_REF_SLUG"
   paths:
@@ -22,8 +21,9 @@ cache:
 build_apk:
   stage: build
   script:
-    # 0. Setup Environment Paths (Ensuring system paths are preserved)
-    - export PATH="$PATH:/home/crowstar/.cargo/bin:/home/crowstar/android-sdk/platform-tools:/home/crowstar/android-sdk/cmdline-tools/latest/bin"
+    # 0. Setup Environment (Inheriting from your local shell, but being explicit)
+    - export PATH="$PATH:$HOME/.cargo/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin"
+    - rustup default stable || true
     # 1. Build Rust engine and generate UniFFI bindings using local cargo-ndk
     - cd rusteer
     # Ensure Android NDK home is exported as in your memory
@@ -43,7 +43,6 @@ build_apk:
     - cp rusteer/out/uniffi/rusteer/rusteer.kt app/src/main/java/com/crowstar/deeztrackermobile/features/rusteer/rusteer.kt
 
     # 3. Decode Keystore and build the APK using local gradlew
-    # We assume KEYSTORE_BASE64, KEY_ALIAS, etc. are set in GitLab CI variables
     - echo "$KEYSTORE_BASE64" | base64 -d > deeztracker.jks
     - chmod +x gradlew
     - ./gradlew assembleRelease
