@@ -8,6 +8,11 @@ license = "MIT"
 [lib]
 crate-type = ["cdylib"]
 
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/uniffi-bindgen.rs"
+required-features = ["uniffi/cli"]
+
 [dependencies]
 # HTTP client with cookie support
 reqwest = { version = "0.12", features = ["json", "cookies", "stream"] }
