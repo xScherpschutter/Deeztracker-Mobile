@@ -1,0 +1,95 @@
+# Base image with JDK 17
+image: eclipse-temurin:17-jdk-jammy
+
+variables:
+  ANDROID_SDK_ROOT: "/opt/android-sdk"
+  ANDROID_NDK_VERSION: "26.1.10909125"
+  ANDROID_NDK_HOME: "$ANDROID_SDK_ROOT/ndk/$ANDROID_NDK_VERSION"
+  CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
+  # Prevent Gradle from using too much memory in CI
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+
+stages:
+  - build
+  - release
+
+# Cache to speed up Gradle and Rust builds
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - .gradle/caches
+    - .gradle/wrapper
+    - .cargo/bin
+    - .cargo/registry
+    - rusteer/target
+
+before_script:
+  - apt-get update && apt-get install -y curl wget unzip git build-essential
+  
+  # Install Android SDK (Command Line Tools)
+  - mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+  - wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O tools.zip
+  - unzip -q tools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
+  - mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
+  - export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools
+  
+  # Accept licenses and install SDK/NDK
+  - yes | sdkmanager --licenses > /dev/null
+  - sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;$ANDROID_NDK_VERSION"
+  
+  # Install Rust and Android targets
+  - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  - export PATH=$PATH:$CARGO_HOME/bin
+  - rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
+  - cargo install cargo-ndk
+
+build_apk:
+  stage: build
+  script:
+    # 1. Build Rust engine and generate UniFFI bindings
+    - cd rusteer
+    - cargo ndk -t arm64-v8a -t armeabi-v7a -t x86 -t x86_64 build --release
+    - cargo build --release
+    - cargo run --features uniffi/cli --bin uniffi-bindgen generate --library target/release/librusteer.so --language kotlin --out-dir out --no-format
+    
+    # 2. Deploy libraries and bindings to the Android project
+    - cd ..
+    - mkdir -p app/src/main/jniLibs/arm64-v8a app/src/main/jniLibs/armeabi-v7a app/src/main/jniLibs/x86 app/src/main/jniLibs/x86_64
+    - cp rusteer/target/aarch64-linux-android/release/librusteer.so app/src/main/jniLibs/arm64-v8a/
+    - cp rusteer/target/armv7-linux-androideabi/release/librusteer.so app/src/main/jniLibs/armeabi-v7a/
+    - cp rusteer/target/i686-linux-android/release/librusteer.so app/src/main/jniLibs/x86/
+    - cp rusteer/target/x86_64-linux-android/release/librusteer.so app/src/main/jniLibs/x86_64/
+    - mkdir -p app/src/main/java/com/crowstar/deeztrackermobile/features/rusteer
+    - cp rusteer/out/uniffi/rusteer/rusteer.kt app/src/main/java/com/crowstar/deeztrackermobile/features/rusteer/rusteer.kt
+
+    # 3. Decode Keystore and build the APK
+    - echo "$KEYSTORE_BASE64" | base64 -d > deeztracker.jks
+    - chmod +x gradlew
+    # Environment variables from GitLab are automatically picked up by build.gradle.kts
+    - ./gradlew assembleRelease
+  artifacts:
+    name: "deeztracker-mobile-$CI_COMMIT_TAG"
+    paths:
+      - app/build/outputs/apk/release/*.apk
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/
+
+gitlab_release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs:
+    - job: build_apk
+      artifacts: true
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/
+  script:
+    - echo "Starting release publication for $CI_COMMIT_TAG"
+  release:
+    name: "Release $CI_COMMIT_TAG"
+    description: "Automatic build of Deeztracker Mobile from GitLab CI. Includes updated Rusteer engine."
+    tag_name: "$CI_COMMIT_TAG"
+    assets:
+      links:
+        - name: "Download APK (Release)"
+          url: "${CI_PROJECT_URL}/-/jobs/artifacts/${CI_COMMIT_TAG}/download?job=build_apk"
