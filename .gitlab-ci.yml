@@ -6,8 +6,6 @@ variables:
   # Using local paths from your system
   ANDROID_HOME: "/home/crowstar/android-sdk"
   ANDROID_NDK_HOME: "/home/crowstar/Android/Sdk/ndk"
-  # Add local binaries to PATH for the runner
-  PATH: "$PATH:$HOME/.cargo/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin"
 
 stages:
   - build
@@ -24,6 +22,8 @@ cache:
 build_apk:
   stage: build
   script:
+    # 0. Setup Environment Paths (Ensuring system paths are preserved)
+    - export PATH="$PATH:/home/crowstar/.cargo/bin:/home/crowstar/android-sdk/platform-tools:/home/crowstar/android-sdk/cmdline-tools/latest/bin"
     # 1. Build Rust engine and generate UniFFI bindings using local cargo-ndk
     - cd rusteer
     # Ensure Android NDK home is exported as in your memory
