@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -276,6 +277,16 @@ fun DownloadsScreen(
                     .padding(bottom = 16.dp, top = 8.dp),
                 placeholder = { Text(stringResource(R.string.downloads_search_hint), color = TextGray) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextGray) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = {
+                            searchQuery = ""
+                            viewModel.filter("")
+                        }) {
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close), tint = TextGray)
+                        }
+                    }
+                },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = SurfaceDark,

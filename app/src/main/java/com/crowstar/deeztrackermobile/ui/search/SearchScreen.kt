@@ -266,6 +266,16 @@ fun SearchScreen(
                             modifier = Modifier.fillMaxWidth(),
                             placeholder = { Text(stringResource(R.string.search_hint), color = TextGray) },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextGray) },
+                            trailingIcon = {
+                                if (query.isNotEmpty()) {
+                                    IconButton(onClick = {
+                                        query = ""
+                                        hasSearched = false
+                                    }) {
+                                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close), tint = TextGray)
+                                    }
+                                }
+                            },
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = SurfaceDark,

@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Input
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
@@ -362,6 +363,16 @@ fun LocalMusicScreen(
                         .padding(horizontal = 16.dp),
                     placeholder = { Text(stringResource(R.string.local_search_hint), color = TextGray) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextGray) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = {
+                                searchQuery = ""
+                                viewModel.searchTracks("")
+                            }) {
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close), tint = TextGray)
+                            }
+                        }
+                    },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = SurfaceDark,
