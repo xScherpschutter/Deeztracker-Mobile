@@ -42,8 +42,8 @@ build_apk:
     - mkdir -p app/src/main/java/com/crowstar/deeztrackermobile/features/rusteer
     - cp rusteer/out/uniffi/rusteer/rusteer.kt app/src/main/java/com/crowstar/deeztrackermobile/features/rusteer/rusteer.kt
 
-    # 3. Decode Keystore and build the APK using local gradlew
-    - echo "$KEYSTORE_BASE64" | base64 -d > deeztracker.jks
+    # 3. Handle Keystore and build the APK
+    - if [ ! -f deeztracker.jks ]; then echo "$KEYSTORE_BASE64" | base64 -d > deeztracker.jks; fi
     - chmod +x gradlew
     - ./gradlew assembleRelease -PstorePassword="$KEYSTORE_PASSWORD" -PkeyAlias="$KEY_ALIAS" -PkeyPassword="$KEY_PASSWORD"
   artifacts:

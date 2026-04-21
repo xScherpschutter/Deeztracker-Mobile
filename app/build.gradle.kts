@@ -34,15 +34,14 @@ android {
             }
 
             storeFile = file("../deeztracker.jks")
-            storePassword = project.findProperty("storePassword")?.toString() 
-                ?: keystoreProperties["storePassword"] as String? 
-                ?: System.getenv("KEYSTORE_PASSWORD")
-            keyAlias = project.findProperty("keyAlias")?.toString() 
-                ?: keystoreProperties["keyAlias"] as String? 
-                ?: System.getenv("KEY_ALIAS")
-            keyPassword = project.findProperty("keyPassword")?.toString() 
-                ?: keystoreProperties["keyPassword"] as String? 
-                ?: System.getenv("KEY_PASSWORD")
+            
+            val pStorePassword = project.findProperty("storePassword")?.toString()
+            val pKeyAlias = project.findProperty("keyAlias")?.toString()
+            val pKeyPassword = project.findProperty("keyPassword")?.toString()
+
+            storePassword = if (!pStorePassword.isNullOrBlank()) pStorePassword else (keystoreProperties["storePassword"] as String? ?: System.getenv("KEYSTORE_PASSWORD"))
+            keyAlias = if (!pKeyAlias.isNullOrBlank()) pKeyAlias else (keystoreProperties["keyAlias"] as String? ?: System.getenv("KEY_ALIAS"))
+            keyPassword = if (!pKeyPassword.isNullOrBlank()) pKeyPassword else (keystoreProperties["keyPassword"] as String? ?: System.getenv("KEY_PASSWORD"))
         }
     }
 
