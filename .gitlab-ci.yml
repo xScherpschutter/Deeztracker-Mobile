@@ -45,7 +45,13 @@ build_apk:
     # 3. Handle Keystore and build the APK
     - if [ ! -f deeztracker.jks ]; then echo "$KEYSTORE_BASE64" | base64 -d > deeztracker.jks; fi
     - chmod +x gradlew
-    - ./gradlew assembleRelease -PstorePassword="$KEYSTORE_PASSWORD" -PkeyAlias="$KEY_ALIAS" -PkeyPassword="$KEY_PASSWORD"
+    - |
+      if [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+        echo "ERROR: One or more signing variables are empty in GitLab CI settings."
+        echo "Check: KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD"
+        exit 1
+      fi
+    - ./gradlew assembleRelease "-PstorePassword=${KEYSTORE_PASSWORD}" "-PkeyAlias=${KEY_ALIAS}" "-PkeyPassword=${KEY_PASSWORD}"
   artifacts:
     name: "deeztracker-mobile-$CI_COMMIT_TAG"
     paths:
