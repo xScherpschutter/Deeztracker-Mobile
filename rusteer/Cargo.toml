@@ -15,8 +15,7 @@ required-features = ["uniffi/cli"]
 
 [dependencies]
 # HTTP client with cookie support
-reqwest = { version = "0.12", features = ["json", "cookies", "stream"] }
-openssl = { version = "0.10", features = ["vendored"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "cookies", "stream", "rustls-tls"] }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
