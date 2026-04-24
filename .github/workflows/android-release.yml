@@ -62,8 +62,8 @@ jobs:
           # 1. Install Rust targets
           rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
           
-          # 2. Install cargo-ndk
-          cargo install cargo-ndk
+          # 2. Install cargo-ndk if not present
+          command -v cargo-ndk >/dev/null 2>&1 || cargo install cargo-ndk
           
           # 3. Build Rust project for all platforms
           cd rusteer
