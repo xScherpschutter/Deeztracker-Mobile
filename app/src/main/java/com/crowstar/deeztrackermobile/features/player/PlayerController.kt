@@ -50,6 +50,8 @@ class PlayerController @Inject constructor(
 ) {
 
     private val TAG = "PlayerController"
+    private val PREFS_NAME = "music_prefs"
+    private val KEY_SHUFFLE = "shuffle_mode"
     private val controllerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val _playerState = MutableStateFlow(PlayerState())
@@ -66,6 +68,11 @@ class PlayerController @Inject constructor(
     private var lyricsJob: kotlinx.coroutines.Job? = null
 
     init {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val savedShuffle = prefs.getBoolean(KEY_SHUFFLE, false)
+        _playerState.update { it.copy(isShuffleEnabled = savedShuffle) }
+        Log.d(TAG, "Init: Loaded shuffle=$savedShuffle")
+
         initializeController()
         controllerScope.launch {
             playlistRepository.loadPlaylists()
@@ -538,6 +545,8 @@ class PlayerController @Inject constructor(
                 }
                 
                 _playerState.update { it.copy(isShuffleEnabled = enabled) }
+                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit().putBoolean(KEY_SHUFFLE, enabled).apply()
                 updateState()
             }
         }
@@ -650,7 +659,6 @@ class PlayerController @Inject constructor(
                 isPlaying = player.isPlaying,
                 duration = duration,
                 currentPosition = currentPos,
-                // isShuffleEnabled remains as managed manually by setShuffle and playTrack
                 repeatMode = appRepeatMode,
                 volume = player.volume,
                 currentLyricIndex = lyricIndex

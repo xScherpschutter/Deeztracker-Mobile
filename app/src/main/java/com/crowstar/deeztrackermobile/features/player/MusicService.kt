@@ -63,6 +63,7 @@ class MusicService : MediaLibraryService() {
         private const val KEY_LAST_TRACK_ID = "last_track_id"
         private const val KEY_LAST_POSITION = "last_position"
         private const val KEY_SHUFFLE_MODE = "shuffle_mode"
+        private const val KEY_REPEAT_MODE = "repeat_mode"
         const val CMD_SET_VOLUME = "SET_VOLUME"
         const val KEY_VOLUME = "volume"
     }
@@ -125,6 +126,14 @@ class MusicService : MediaLibraryService() {
                 if (!isPlaying) {
                     savePlaybackState()
                 }
+            }
+
+            override fun onRepeatModeChanged(repeatMode: Int) {
+                savePlaybackState()
+            }
+
+            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                savePlaybackState()
             }
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -286,9 +295,10 @@ class MusicService : MediaLibraryService() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val lastTrackPath = prefs.getString(KEY_LAST_TRACK_ID, null)
         val lastPosition = prefs.getLong(KEY_LAST_POSITION, 0L)
-        val shuffleMode = prefs.getBoolean(KEY_SHUFFLE_MODE, false)
+        val repeatMode = prefs.getInt(KEY_REPEAT_MODE, Player.REPEAT_MODE_OFF)
 
-        player.shuffleModeEnabled = shuffleMode
+        // Do not set player.shuffleModeEnabled here, PlayerController manages it manually
+        player.repeatMode = repeatMode
 
         if (lastTrackPath != null) {
             val uri = if (lastTrackPath.startsWith("rusteer://")) {
@@ -309,14 +319,17 @@ class MusicService : MediaLibraryService() {
     }
 
     private fun savePlaybackState() {
-        val currentMediaItem = player.currentMediaItem ?: return
+        val currentMediaItem = player.currentMediaItem
         // Use full URI as ID to distinguish between local and streaming
-        val path = currentMediaItem.localConfiguration?.uri?.toString()
+        val path = currentMediaItem?.localConfiguration?.uri?.toString()
         
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().apply {
-            putString(KEY_LAST_TRACK_ID, path)
-            putLong(KEY_LAST_POSITION, player.currentPosition)
-            putBoolean(KEY_SHUFFLE_MODE, player.shuffleModeEnabled)
+            path?.let { putString(KEY_LAST_TRACK_ID, it) }
+            if (path != null) {
+                putLong(KEY_LAST_POSITION, player.currentPosition)
+            }
+            // Shuffle mode is managed manually by PlayerController and persisted there
+            putInt(KEY_REPEAT_MODE, player.repeatMode)
             apply()
         }
     }
