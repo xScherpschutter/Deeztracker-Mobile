@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>A modern Android music application for downloading and playing music offline</strong>
+  <strong>A modern Android music application for streaming, downloading and playing music</strong>
 </p>
 
 <p align="center">
@@ -18,17 +18,17 @@
 
 ## Overview
 
-Deeztracker Mobile is a feature-rich Android application that allows users to download music from Deezer for offline playback. Built with modern Android development practices using Kotlin and Jetpack Compose, it offers a sleek, intuitive interface with full offline music library management.
+Deeztracker Mobile is a feature-rich Android application that allows users to stream and download music from Deezer. Built with modern Android development practices using Kotlin and Jetpack Compose, it offers a sleek, intuitive interface for both online streaming and full offline music library management.
 
 ---
 
 ## Features
 
 ### Search & Discovery
-- Track Search: Find and download individual songs
-- Album Search: Browse and download complete albums
+- Track Search: Find and stream/download individual songs
+- Album Search: Browse and stream/download complete albums
 - Artist Search: Explore artist discographies with top tracks and albums
-- Playlist Search: Import and download entire playlists
+- Playlist Search: Import and stream/download entire playlists
 
 <p align="center">
   <img src="preview/SearchTracks.png" alt="Track Search" width="200"/>
@@ -36,6 +36,12 @@ Deeztracker Mobile is a feature-rich Android application that allows users to do
   <img src="preview/ArtistSearch.png" alt="Artist Search" width="200"/>
   <img src="preview/PlaylistSearch.png" alt="Playlist Search" width="200"/>
 </p>
+
+### High-Quality Streaming
+- Direct Streaming: Listen to any track from Deezer instantly without downloading
+- Quality Selection: Choose between MP3 128kbps, 320kbps, or FLAC (HiFi)
+- Smart Caching: Proactive pre-loading for smooth, gapless playback
+- Low Latency: Optimized Rust-based streaming engine for fast start times
 
 ### Download Management
 - Download individual tracks, complete albums, or full playlists
@@ -66,6 +72,7 @@ Deeztracker Mobile is a feature-rich Android application that allows users to do
 
 ### Music Player
 - Full-featured music player with beautiful UI
+- Support for both streaming and local playback
 - Album art display with blurred background
 - Play/Pause, Next, Previous controls
 - Shuffle and Repeat modes (Off, Repeat All, Repeat One)
@@ -81,11 +88,11 @@ Deeztracker Mobile is a feature-rich Android application that allows users to do
 
 ### Playlist Management
 - Create custom playlists
-- Add downloaded tracks to playlists
+- Add downloaded tracks or streaming tracks to playlists
 - Import playlists from Deezer
 
 ### Settings & Customization
-- Audio Quality: Choose between MP3_128, MP3_320, or FLAC
+- Audio Quality: Choose between MP3_128, MP3_320, or FLAC for both streaming and downloads
 - Language: English and Spanish support
 - Download Location: Save to Music or Downloads folder
 
@@ -95,7 +102,7 @@ Deeztracker Mobile is a feature-rich Android application that allows users to do
 
 ### Authentication
 - Secure login with Deezer ARL token
-- Premium account support for high-quality downloads
+- Premium account support for high-quality streaming and downloads
 
 ---
 
@@ -111,7 +118,7 @@ Deeztracker Mobile is a feature-rich Android application that allows users to do
 | **Media Playback** | Media3 (ExoPlayer) |
 | **Image Loading** | Coil |
 | **Native Bridge** | UniFFI (Rust bindings) |
-| **Download Engine** | Rusteer (Custom Rust library) |
+| **Download & Streaming Engine** | Rusteer (Custom Rust library) |
 
 ---
 
@@ -119,7 +126,7 @@ Deeztracker Mobile is a feature-rich Android application that allows users to do
 
 - Android 7.0 (API 24) or higher
 - Valid Deezer ARL token
-- Internet connection for downloading content
+- Internet connection for streaming and downloading content
 - Storage permission for saving music files
 
 ---
